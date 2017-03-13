@@ -1,12 +1,7 @@
-# Halide to CPU/FPGA
+# Halide to CoreIR
 ============
 
-The current compiler is based on Halide release 2016/08/04 (https://github.com/halide/Halide/releases).
-
-Intructions for building examples can be found at the wiki page:
-https://github.com/jingpu/Halide-HLS/wiki
-
-A paper is available at https://arxiv.org/abs/1610.09405
+This repository is an extension which is used to compile to CoreIR. This is part of a flow to compile to a custom CGRA.
 
 If you want to build the compiler in other settings, please refer to the original readme:
 https://github.com/jingpu/Halide-HLS/blob/HLS/README.orig.md
@@ -20,5 +15,5 @@ Build Status
 |------------------------------|
 | [![linux build status][1]][2]|
 
-[1]: https://travis-ci.com/jingpu/Halide-HLS.svg?token=owCmkoBUqDAizEoitXzn&branch=HLS
-[2]: https://travis-ci.com/jingpu/Halide-HLS
+[1]: https://travis-ci.com/jeffsetter/Halide-CoreIR.svg?token=c5sWyL49ni2uzrTByeMU&branch=CoreIR
+[2]: https://travis-ci.com/jeffsetter/Halide-CoreIR
