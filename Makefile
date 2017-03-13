@@ -283,6 +283,9 @@ SOURCE_FILES = \
   Closure.cpp \
   CodeGen_ARM.cpp \
   CodeGen_C.cpp \
+  CodeGen_CoreIR_Base.cpp \
+  CodeGen_CoreIR_Target.cpp \
+  CodeGen_CoreIR_Testbench.cpp \
   CodeGen_GPU_Dev.cpp \
   CodeGen_GPU_Host.cpp \
   CodeGen_Hexagon.cpp \
@@ -301,6 +304,9 @@ SOURCE_FILES = \
   CodeGen_PowerPC.cpp \
   CodeGen_PTX_Dev.cpp \
   CodeGen_Renderscript_Dev.cpp \
+  CodeGen_Rigel_Base.cpp \
+  CodeGen_Rigel_Target.cpp \
+  CodeGen_Rigel_Testbench.cpp \
   CodeGen_X86.cpp \
   CodeGen_Zynq_C.cpp \
   CodeGen_Zynq_LLVM.cpp \
@@ -1199,6 +1205,11 @@ test_hls_apps: $(LIB_DIR)/libHalide.a $(BIN_DIR)/libHalide.$(SHARED_EXT) $(INCLU
 	  make -C apps/hls_examples/$$app clean all HALIDE_BIN_PATH=$(CURDIR) HALIDE_SRC_PATH=$(ROOT_DIR) || exit; \
 	done
 
+ALL_COREIR_APPS = pointwise
+test_coreir:  $(LIB_DIR)/libHalide.a $(BIN_DIR)/libHalide.$(SHARED_EXT) $(INCLUDE_DIR)/Halide.h $(INCLUDE_DIR)/HalideRuntime.h
+	for app in $(ALL_COREIR_APPS); do \
+	  make -C apps/coreir_examples/$$app clean all HALIDE_BIN_PATH=$(CURDIR) HALIDE_SRC_PATH=$(ROOT_DIR) || exit; \
+	done
 .PHONY: test_python
 test_python: $(LIB_DIR)/libHalide.a
 	mkdir -p python_bindings
