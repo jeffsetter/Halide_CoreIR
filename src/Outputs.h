@@ -42,6 +42,14 @@ struct Outputs {
      * output is desired. */
     std::string hls_source_name;
 
+    /** The name of the emitted Rigel source file. Empty if no C source file
+     * output is desired. */
+    std::string rigel_source_name;
+
+    /** The name of the emitted CoreIR source file. Empty if no C source file
+     * output is desired. */
+    std::string coreir_source_name;
+
     /** The name of the emitted Zynq C source file. Empty if no C source file
      * output is desired. */
     std::string zynq_c_source_name;
@@ -113,6 +121,22 @@ struct Outputs {
         updated.hls_source_name = hls_source_name;
         return updated;
     }
+
+    /** Make a new Outputs struct that emits everything this one does
+     * and also a Rigel source file with the given name. */
+    Outputs rigel_source(const std::string &rigel_source_name) {
+        Outputs updated = *this;
+        updated.rigel_source_name = rigel_source_name;
+        return updated;
+    }  
+
+    /** Make a new Outputs struct that emits everything this one does
+     * and also a CoreIR source file with the given name. */
+    Outputs coreir_source(const std::string &coreir_source_name) {
+        Outputs updated = *this;
+        updated.coreir_source_name = coreir_source_name;
+        return updated;
+    }  
 
     /** Make a new Outputs struct that emits everything this one does
      * and also a Zynq C source file with the given name. */

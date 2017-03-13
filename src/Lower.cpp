@@ -60,7 +60,7 @@
 
 namespace Halide {
 namespace Internal {
-
+  
 using std::set;
 using std::ostringstream;
 using std::string;
