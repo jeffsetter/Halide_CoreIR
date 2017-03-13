@@ -1,6 +1,6 @@
 dist: trusty
 sudo: required
-language: cpp
+language: c
 compiler:
   # Comment out for now to keep build matrix small
   #- clang
