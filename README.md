@@ -16,4 +16,4 @@ Build Status
 | [![linux build status][1]][2]|
 
 [1]: https://travis-ci.org/jeffsetter/Halide_CoreIR.svg?branch=master
-[2]: https://travis-ci.com/jeffsetter/Halide_CoreIR
+[2]: https://travis-ci.org/jeffsetter/Halide_CoreIR
