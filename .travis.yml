@@ -27,7 +27,7 @@ before_install:
   - export CC=${CC_}
   - sudo add-apt-repository --yes ppa:ubuntu-toolchain-r/test/
   - sudo apt-get update
-  - sudo apt-get git
+  - sudo apt-get install git
 install:
   - sudo apt-get -y --force-yes install ${CXX} ${CC} libedit-dev
   # Make gcc4.9 the default gcc version
