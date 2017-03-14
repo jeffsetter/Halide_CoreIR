@@ -13,6 +13,10 @@
 #include "Lerp.h"
 #include "Simplify.h"
 
+#include "context.hpp"
+#include "stdlib.hpp" 
+#include "passes.hpp" 
+
 namespace Halide {
 namespace Internal {
 
@@ -92,7 +96,7 @@ void CodeGen_CoreIR_Target::init_module() {
 
     // initialize the header file
     string module_name = "HALIDE_CODEGEN_RIGEL_TARGET_" + target_name + "_H";
-    std::transform(module_name.begin(), module_name.end(), module_name.begin(), toupper);
+    std::transform(module_name.begin(), module_name.end(), module_name.begin(), ::toupper);
     hdr_stream << "#ifndef " << module_name << '\n';
     hdr_stream << "#define " << module_name << "\n\n";
     hdr_stream << hls_header_includes << '\n';

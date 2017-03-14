@@ -253,6 +253,11 @@ endif
 endif
 LIBPNG_LIBS ?= $(LIBPNG_LIBS_DEFAULT)
 
+# Compiling for CoreIR requires some extra links
+COREIR_DIR ?= ../coreir
+COREIR_INCLUDES = -I$(COREIR_DIR)/src -I$(COREIR_DIR)/libs -fexceptions
+COREIR_LIBPATH = $(COREIR_DIR)/build/coreir.a
+
 # We're building into the current directory $(CURDIR). Find the Halide
 # repo root directory (the location of the makefile)
 THIS_MAKEFILE = $(realpath $(filter %Makefile, $(MAKEFILE_LIST)))
@@ -696,7 +701,7 @@ endif
 
 $(BIN_DIR)/libHalide.$(SHARED_EXT): $(LIB_DIR)/libHalide.a
 	@-mkdir -p $(BIN_DIR)
-	$(CXX) $(BUILD_BIT_SIZE) -shared $(OBJECTS) $(INITIAL_MODULES) $(LLVM_STATIC_LIBS) $(LLVM_LD_FLAGS) $(LLVM_SHARED_LIBS) $(LIBDL) -lz -lpthread -o $(BIN_DIR)/libHalide.$(SHARED_EXT)
+	$(CXX) $(BUILD_BIT_SIZE) -shared $(OBJECTS) $(INITIAL_MODULES) $(LLVM_STATIC_LIBS) $(LLVM_LD_FLAGS) $(LLVM_SHARED_LIBS) $(LIBDL) -lz -lpthread -o $(BIN_DIR)/libHalide.$(SHARED_EXT) $(COREIR_LIBPATH)
 ifeq ($(UNAME), Darwin)
 	install_name_tool -id $(CURDIR)/$(BIN_DIR)/libHalide.$(SHARED_EXT) $(BIN_DIR)/libHalide.$(SHARED_EXT)
 endif
@@ -781,7 +786,7 @@ $(BUILD_DIR)/BitWriter_3_2$(BITWRITER_VERSION)/%.o: $(SRC_DIR)/BitWriter_3_2$(BI
 
 $(BUILD_DIR)/%.o: $(SRC_DIR)/%.cpp $(SRC_DIR)/%.h $(BUILD_DIR)/llvm_ok
 	@-mkdir -p $(BUILD_DIR)
-	$(CXX) $(CXX_FLAGS) -c $< -o $@ -MMD -MP -MF $(BUILD_DIR)/$*.d -MT $(BUILD_DIR)/$*.o
+	$(CXX) $(CXX_FLAGS) $(COREIR_INCLUDES) -c $< -o $@ -MMD -MP -MF $(BUILD_DIR)/$*.d -MT $(BUILD_DIR)/$*.o
 
 .PHONY: clean
 clean:

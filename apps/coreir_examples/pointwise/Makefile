@@ -7,12 +7,16 @@ include ../../support/Makefile.inc
 include ../hls_support/Makefile.inc
 HLS_LOG = vivado_hls.log
 
+#### COREIR flags
+COREIR_DIR ?= ../../../../coreir
+COREIR_LIBPATH = $(COREIR_DIR)/build/coreir.a
+
 .PHONY: all run_hls
 all: out.png
 run_hls: $(HLS_LOG)
 
 pipeline: pipeline.cpp
-	$(CXX) $(CXXFLAGS) -Wall -g $^ $(LIB_HALIDE) -o $@ $(LDFLAGS) -ltinfo
+	$(CXX) $(CXXFLAGS) -Wall -g $^ $(LIB_HALIDE) $(COREIR_LIBPATH) -o $@ $(LDFLAGS) -ltinfo 
 
 pipeline_hls.cpp pipeline_native.o pipeline_zynq.o pipeline_cuda.o: pipeline
 	HL_DEBUG_CODEGEN=0 ./pipeline

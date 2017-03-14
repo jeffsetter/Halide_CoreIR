@@ -10,6 +10,9 @@
 #include "Lerp.h"
 #include "Simplify.h"
 
+#include "context.hpp"
+#include "passes.hpp" 
+
 namespace Halide {
 namespace Internal {
 
