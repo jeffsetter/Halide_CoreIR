@@ -12,6 +12,7 @@ fi
 # configure coreir
 pushd . && cd ../
 git clone https://github.com/rdaly525/coreir.git
+cd coreir
 make -C src
 make -C src ../build/coreir.so
 make -C tests
