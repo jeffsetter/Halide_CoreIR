@@ -86,15 +86,18 @@ CodeGen_CoreIR_Testbench::CodeGen_CoreIR_Testbench(ostream &tb_stream)
     stdlib = getStdlib(c);
 
     // add all generators from stdlib
-    gens["add2"] = stdlib->getGenerator("add2");
-    assert(add2);
+    std::vector<string> gen_names = {"add2_16", "mult2_16", "const_16"};
+    for (std::string gen_name : gen_names) {
+      gens[gen_name] = stdlib->getModule(gen_name);
+      assert(gens[gen_name]);
+    }
 
     // TODO: fix static module definition
-    CoreIR::Type* mult2Type = c->Record({
+    CoreIR::Type* design_type = c->Record({
 	{"in",c->Array(n,c->BitIn())},
 	{"out",c->Array(n,c->BitOut())}
     });
-    design_top = g->newModuleDecl("Mult2", mult2Type);
+    design_top = g->newModuleDecl("DesignTop", design_type);
     def = design_top->newModuleDef();
     self = def->sel("self");
 }
@@ -104,10 +107,14 @@ CodeGen_CoreIR_Testbench::~CodeGen_CoreIR_Testbench() {
   c->checkerrors();
   design_top->print();
 
-  if (typecheck(c,design_top)) c->die();
-
   bool err = false;
-  saveModule(design_top, "mult2.json", &err);
+
+  typecheck(c,design_top,&err);
+  if (err) {
+    cout << "failed typecheck" << endl;
+  }
+
+  saveModule(design_top, "design_top.json", &err);
   deleteContext(c);
   if (err) {
     cout << "Could not save json :(" << endl;
@@ -248,6 +255,27 @@ bool id_hw_input(const Expr e) {
   }
 }
 
+bool id_cnst(const Expr e) {
+  if (e.as<IntImm>() || e.as<UIntImm>()) {
+    return true;
+  } else {
+    return false;
+  }
+}
+
+int id_cnst_value(const Expr e) {
+  const IntImm* e_int = e.as<IntImm>();
+  const UIntImm* e_uint = e.as<UIntImm>();
+  if (e_int) {
+    return e_int->value;
+  } else if (e_uint) {
+    return e_uint->value;
+  } else {
+    cout << "invalid constant expr" <<endl;
+    return -1;
+  }
+}
+
 string CodeGen_CoreIR_Testbench::id_hw_section(Expr a, Expr b, Type t, char op_symbol) {
   bool is_input = id_hw_input(a) || id_hw_input(b);
   bool in_hw_section = hw_input_set.count(print_expr(a))>0 || hw_input_set.count(print_expr(b))>0;
@@ -266,11 +294,15 @@ string CodeGen_CoreIR_Testbench::id_hw_section(Expr a, Expr b, Type t, char op_s
 Wireable* CodeGen_CoreIR_Testbench::get_wire(Expr e) {
   if (id_hw_input(e)) {
     return self->sel("in");
+  } else if (id_cnst(e)) {
+    int cnst_value = id_cnst_value(e);
+    Wireable* cnst = def->addInstance("const",  gens["const_16"], c->newGenArgs({{"value",c->GInt(cnst_value)}}));
+    return cnst;
   } else  {
     Wireable* wire = hw_input_set[print_expr(e)];
 
     if (wire) { }
-    else { cout << "invalid/(cnst?) wire in tb: " << print_expr(e) << endl; return self->sel("in"); } // FIXME with constants
+    else { cout << "invalid wire in tb: " << print_expr(e) << endl; return self->sel("in"); }
     return wire;
   }
 }
@@ -284,8 +316,7 @@ void CodeGen_CoreIR_Testbench::visit(const Mul *op) {
 
     //    stream << "tb-performed a mult!!! which has a load... " << endl;
     // TODO: add unique name
-    // TODO: use multiplier
-    Wireable* mul = def->addInstanceGenerator("adder",gens["add2"],c->newGenArgs({{"w",c->GInt(n)}}));
+    Wireable* mul = def->addInstance("mult",gens["mult2_16"]);
     if (id_hw_input(op->a)) { stream << "mula: self.in" <<endl; } else { stream << "mula: " << print_expr(op->a) << endl; }
     if (id_hw_input(op->b)) { stream << "mulb: self.in" <<endl; } else { stream << "mulb: " << print_expr(op->b) << endl; }
     def->wire(get_wire(op->a), mul->sel("in0"));
@@ -296,6 +327,30 @@ void CodeGen_CoreIR_Testbench::visit(const Mul *op) {
     
   } else {
     //    stream << "tb-performed a mult!!! " <<endl;//<< print_type(op->a.type()) << " " << print_type(op->b.type()) << endl;
+  }
+  
+}
+
+void CodeGen_CoreIR_Testbench::visit(const Add *op) {
+  //  stream << "tb-saw a mult!!!!!!!!!!!!!!!!" << endl;
+  CodeGen_C::visit(op);
+  
+  string out_var = id_hw_section(op->a, op->b, op->type, '+');
+  if (out_var.compare("") != 0) {
+
+    //    stream << "tb-performed a mult!!! which has a load... " << endl;
+    // TODO: add unique name
+    Wireable* add = def->addInstance("adder",gens["add2_16"]);
+    if (id_hw_input(op->a)) { stream << "adda: self.in" <<endl; } else { stream << "adda: " << print_expr(op->a) << endl; }
+    if (id_hw_input(op->b)) { stream << "addb: self.in" <<endl; } else { stream << "addb: " << print_expr(op->b) << endl; }
+    def->wire(get_wire(op->a), add->sel("in0"));
+    def->wire(get_wire(op->b), add->sel("in1"));
+    hw_input_set[out_var] = add->sel("out");
+    out_var = id_hw_section(op->a, op->b, op->type, '+'); // must access output var last
+    stream << "addo: " << out_var << endl;
+    
+  } else {
+    //    stream << "tb-performed a add!!! " <<endl;//<< print_type(op->a.type()) << " " << print_type(op->b.type()) << endl;
   }
   
 }

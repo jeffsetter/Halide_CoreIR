@@ -33,6 +33,7 @@ protected:
     void visit(const Realize *);
     void visit(const Block *);
     void visit(const Mul *);
+    void visit(const Add *);
     void visit(const Store *);
 private:
     CodeGen_CoreIR_Target cg_target;
@@ -42,7 +43,7 @@ private:
     Context* c;
     Namespace* g;
     Namespace* stdlib;
-    std::map<std::string,Generator*> gens;
+    std::map<std::string,CoreIR::Module*> gens;
     ModuleDef* def;
     CoreIR::Module* design_top;
     Wireable* self;
