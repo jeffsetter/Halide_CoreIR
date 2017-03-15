@@ -86,6 +86,13 @@ string CodeGen_CoreIR_Base::print_stencil_pragma(const string &name) {
     return string();
 }
 
+  // let's print something out when we see a mult
+  void CodeGen_CoreIR_Base::visit(const Mul *op) {
+    stream << "ba-saw a mult!!!!!!!!!!!!!!!!" << endl;
+    CodeGen_C::visit(op);
+  }
+
+
 void CodeGen_CoreIR_Base::visit(const Call *op) {
     if (op->name == "linebuffer") {
         //IR: linebuffer(buffered.stencil_update.stream, buffered.stencil.stream, extent_0[, extent_1, ...])

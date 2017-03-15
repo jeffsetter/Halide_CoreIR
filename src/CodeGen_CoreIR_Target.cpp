@@ -14,7 +14,6 @@
 #include "Simplify.h"
 
 #include "context.hpp"
-#include "stdlib.hpp" 
 #include "passes.hpp" 
 
 namespace Halide {
@@ -208,6 +207,12 @@ void CodeGen_CoreIR_Target::CodeGen_CoreIR_C::add_kernel(Stmt stmt,
         }
     }
 }
+
+  // let's print something out when we see a mult
+  void CodeGen_CoreIR_Target::CodeGen_CoreIR_C::visit(const Mul *op) {
+    stream << "tg-saw a mult!!!!!!!!!!!!!!!!" << endl;
+    CodeGen_C::visit(op);
+  }
 
 // almost that same as CodeGen_C::visit(const For *)
 // we just add a 'HLS PIPELINE' pragma after the 'for' statement

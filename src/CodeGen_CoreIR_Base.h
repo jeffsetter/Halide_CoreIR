@@ -47,6 +47,7 @@ protected:
     void visit(const Call *);
     void visit(const Provide *);
     void visit(const Realize *);
+    void visit(const Mul *);
 };
 
 }

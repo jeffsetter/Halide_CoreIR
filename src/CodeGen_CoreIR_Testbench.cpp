@@ -11,9 +11,11 @@
 #include "Simplify.h"
 
 #include "context.hpp"
+#include "stdlib.hpp"
 #include "passes.hpp" 
 
 namespace Halide {
+
 namespace Internal {
 
 using std::ostream;
@@ -42,6 +44,7 @@ vector<CoreIR_Argument> CoreIR_Closure::arguments(const Scope<CodeGen_CoreIR_Bas
     for (const pair<string, Closure::BufferRef> &i : buffers) {
         debug(3) << "buffer: " << i.first << " " << i.second.size;
         if (i.second.read) debug(3) << " (read)";
+
         if (i.second.write) debug(3) << " (write)";
         debug(3) << "\n";
     }
@@ -75,6 +78,25 @@ CodeGen_CoreIR_Testbench::CodeGen_CoreIR_Testbench(ostream &tb_stream)
     cg_target.init_module();
 
     stream << hls_headers;
+
+    // set up coreir generation
+    n = 16;
+    c = newContext();
+    g = c->getGlobal();
+    stdlib = getStdlib(c);
+
+    // add all generators from stdlib
+    gens["add2"] = stdlib->getGenerator("add2");
+    assert(add2);
+
+    // TODO: fix static module definition
+    CoreIR::Type* mult2Type = c->Record({
+	{"in",c->Array(n,c->BitIn())},
+	{"out",c->Array(n,c->BitOut())}
+    });
+    CoreIR::Module* design_top = g->newModuleDecl("Mult2", mult2Type);
+    def = design_top->newModuleDef();
+    self = def->sel("self");
 }
 
 CodeGen_CoreIR_Testbench::~CodeGen_CoreIR_Testbench() {
@@ -107,6 +129,7 @@ void CodeGen_CoreIR_Testbench::visit(const ProducerConsumer *op) {
         CodeGen_CoreIR_Base::visit(op);
     }
 }
+
 
 void CodeGen_CoreIR_Testbench::visit(const Call *op) {
     if (op->name == "stream_subimage") {
@@ -201,6 +224,53 @@ void CodeGen_CoreIR_Testbench::visit(const Block *op) {
     CodeGen_CoreIR_Base::visit(op);
     return;
 }
+
+
+bool id_hw_input(const Expr e) {
+  if (e.as<Load>()) {
+    return true;
+  } else {
+    return false;
+  }
+}
+
+bool CodeGen_CoreIR_Testbench::id_hw_section(Expr a, Expr b, Type t, char op_symbol) {
+  bool is_input = id_hw_input(a) || id_hw_input(b);
+  bool in_hw_section = hw_input_set.count(print_expr(a))>0 || hw_input_set.count(print_expr(b))>0;
+
+  //  if (hw_input_set.size()>0) { stream << "a:" << print_expr(a) << " b:" << print_expr(b) << endl; }
+  if (is_input || in_hw_section) {
+    string out_var = print_assignment(t, print_expr(a) + " " + op_symbol + " " + print_expr(b));
+    hw_input_set.insert(out_var);
+    //    if (is_input) {stream << "input mult with output: " << out_var << endl; }
+    //    if (in_hw_section) {stream << "hw_section mult with output: " << out_var <<endl; }
+    return true;
+  } else {
+    return false;
+  }
+}
+
+// let's print something out when we see a mult
+void CodeGen_CoreIR_Testbench::visit(const Mul *op) {
+  //  stream << "tb-saw a mult!!!!!!!!!!!!!!!!" << endl;
+  CodeGen_C::visit(op);
+  if (id_hw_section(op->a, op->b, op->type, '*')) {
+    //    stream << "tb-performed a mult!!! which has a load... " << endl;
+  } else {
+    //    stream << "tb-performed a mult!!! " <<endl;//<< print_type(op->a.type()) << " " << print_type(op->b.type()) << endl;
+  }
+}
+
+// let's print something out when we see a mult
+void CodeGen_CoreIR_Testbench::visit(const Store *op) {
+  CodeGen_C::visit(op);
+  bool in_hw_section = hw_input_set.count(print_expr(op->value))>0;
+  //  if (hw_input_set.size()>0) { stream << "value:" << print_expr(op->value) << endl; }
+  if (in_hw_section){}// { stream << "store found operator" << endl; }
+}
+
+  // TODO: add more operators
+  // TODO: add better set of nodes in path (print_assignment/print_expr involves many operations under the hood)
 
 }
 }

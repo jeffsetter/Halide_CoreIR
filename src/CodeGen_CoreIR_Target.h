@@ -54,6 +54,7 @@ protected:
 
         using CodeGen_CoreIR_Base::visit;
 
+	void visit(const Mul *op);
         void visit(const For *op);
         void visit(const Allocate *op);
     };

@@ -12,6 +12,8 @@
 #include "Module.h"
 #include "Scope.h"
 
+#include "context.hpp"
+
 namespace Halide {
 
 namespace Internal {
@@ -30,9 +32,23 @@ protected:
     void visit(const Call *);
     void visit(const Realize *);
     void visit(const Block *);
-
+    void visit(const Mul *);
+    void visit(const Store *);
 private:
     CodeGen_CoreIR_Target cg_target;
+
+    // for coreir generation
+    uint8_t n;
+    Context* c;
+    Namespace* g;
+    Namespace* stdlib;
+    std::map<std::string,Generator*> gens;
+    ModuleDef* def;
+    Wireable* self;
+
+    std::set<std::string> hw_input_set;
+    bool id_hw_section(Expr a, Expr b, Type t, char op_symbol);
+
 };
 
 }
