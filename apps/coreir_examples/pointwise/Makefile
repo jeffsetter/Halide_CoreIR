@@ -57,11 +57,9 @@ clean:
 	rm -f pipeline run run_zynq
 	rm -f out.png out_zynq.png
 	rm -f pipeline_native.h pipeline_native.o
-	rm -f pipeline_hls.h pipeline_hls.cpp
+	rm -f pipeline_hls.h pipeline_hls.cpp hls_target.h hls_target.cpp
 	rm -f pipeline_coreir.h pipeline_coreir.cpp
 	rm -f pipeline_cuda.h pipeline_cuda.o
-	rm -f pipeline_zynq.h pipeline_zynq.c pipeline_zynq.o
-	rm -f run_zynq.o
-	rm -f hls_target.h hls_target.cpp
+	rm -f pipeline_zynq.h pipeline_zynq.c pipeline_zynq.o run_zynq.o
 	rm -f rigel_target.h rigel_target.t
-	rm -f *.html
+	rm -f *.html *.json

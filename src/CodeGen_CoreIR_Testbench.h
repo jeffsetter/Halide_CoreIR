@@ -44,10 +44,12 @@ private:
     Namespace* stdlib;
     std::map<std::string,Generator*> gens;
     ModuleDef* def;
+    CoreIR::Module* design_top;
     Wireable* self;
 
-    std::set<std::string> hw_input_set;
-    bool id_hw_section(Expr a, Expr b, Type t, char op_symbol);
+    std::map<std::string,Wireable*> hw_input_set;
+    std::string id_hw_section(Expr a, Expr b, Type t, char op_symbol);
+    Wireable* get_wire(Expr e);
 
 };
 

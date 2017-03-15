@@ -94,12 +94,26 @@ CodeGen_CoreIR_Testbench::CodeGen_CoreIR_Testbench(ostream &tb_stream)
 	{"in",c->Array(n,c->BitIn())},
 	{"out",c->Array(n,c->BitOut())}
     });
-    CoreIR::Module* design_top = g->newModuleDecl("Mult2", mult2Type);
+    design_top = g->newModuleDecl("Mult2", mult2Type);
     def = design_top->newModuleDef();
     self = def->sel("self");
 }
 
 CodeGen_CoreIR_Testbench::~CodeGen_CoreIR_Testbench() {
+  design_top->addDef(def);
+  c->checkerrors();
+  design_top->print();
+
+  if (typecheck(c,design_top)) c->die();
+
+  bool err = false;
+  saveModule(design_top, "mult2.json", &err);
+  deleteContext(c);
+  if (err) {
+    cout << "Could not save json :(" << endl;
+  } else {
+    cout << "We passed!!! (GREEN PASS) Yay!" << endl;
+  }
 }
 
 void CodeGen_CoreIR_Testbench::visit(const ProducerConsumer *op) {
@@ -234,39 +248,93 @@ bool id_hw_input(const Expr e) {
   }
 }
 
-bool CodeGen_CoreIR_Testbench::id_hw_section(Expr a, Expr b, Type t, char op_symbol) {
+string CodeGen_CoreIR_Testbench::id_hw_section(Expr a, Expr b, Type t, char op_symbol) {
   bool is_input = id_hw_input(a) || id_hw_input(b);
   bool in_hw_section = hw_input_set.count(print_expr(a))>0 || hw_input_set.count(print_expr(b))>0;
 
   //  if (hw_input_set.size()>0) { stream << "a:" << print_expr(a) << " b:" << print_expr(b) << endl; }
   if (is_input || in_hw_section) {
     string out_var = print_assignment(t, print_expr(a) + " " + op_symbol + " " + print_expr(b));
-    hw_input_set.insert(out_var);
+    return out_var;
     //    if (is_input) {stream << "input mult with output: " << out_var << endl; }
     //    if (in_hw_section) {stream << "hw_section mult with output: " << out_var <<endl; }
-    return true;
   } else {
-    return false;
+    return "";
   }
 }
 
-// let's print something out when we see a mult
+Wireable* CodeGen_CoreIR_Testbench::get_wire(Expr e) {
+  if (id_hw_input(e)) {
+    return self->sel("in");
+  } else  {
+    Wireable* wire = hw_input_set[print_expr(e)];
+
+    if (wire) { }
+    else { cout << "invalid/(cnst?) wire in tb: " << print_expr(e) << endl; return self->sel("in"); } // FIXME with constants
+    return wire;
+  }
+}
+
 void CodeGen_CoreIR_Testbench::visit(const Mul *op) {
   //  stream << "tb-saw a mult!!!!!!!!!!!!!!!!" << endl;
   CodeGen_C::visit(op);
-  if (id_hw_section(op->a, op->b, op->type, '*')) {
+  
+  string out_var = id_hw_section(op->a, op->b, op->type, '*');
+  if (out_var.compare("") != 0) {
+
     //    stream << "tb-performed a mult!!! which has a load... " << endl;
+    // TODO: add unique name
+    // TODO: use multiplier
+    Wireable* mul = def->addInstanceGenerator("adder",gens["add2"],c->newGenArgs({{"w",c->GInt(n)}}));
+    if (id_hw_input(op->a)) { stream << "mula: self.in" <<endl; } else { stream << "mula: " << print_expr(op->a) << endl; }
+    if (id_hw_input(op->b)) { stream << "mulb: self.in" <<endl; } else { stream << "mulb: " << print_expr(op->b) << endl; }
+    def->wire(get_wire(op->a), mul->sel("in0"));
+    def->wire(get_wire(op->b), mul->sel("in1"));
+    hw_input_set[out_var] = mul->sel("out");
+    out_var = id_hw_section(op->a, op->b, op->type, '*'); // must access output var last
+    stream << "mulo: " << out_var << endl;
+    
   } else {
     //    stream << "tb-performed a mult!!! " <<endl;//<< print_type(op->a.type()) << " " << print_type(op->b.type()) << endl;
   }
+  
 }
 
-// let's print something out when we see a mult
+
 void CodeGen_CoreIR_Testbench::visit(const Store *op) {
-  CodeGen_C::visit(op);
-  bool in_hw_section = hw_input_set.count(print_expr(op->value))>0;
-  //  if (hw_input_set.size()>0) { stream << "value:" << print_expr(op->value) << endl; }
-  if (in_hw_section){}// { stream << "store found operator" << endl; }
+    Type t = op->value.type();
+
+    bool type_cast_needed =
+        t.is_handle() ||
+        !allocations.contains(op->name) ||
+        allocations.get(op->name).type != t;
+
+    string id_index = print_expr(op->index);
+    string id_value = print_expr(op->value);
+    do_indent();
+
+    if (type_cast_needed) {
+        stream << "((const "
+               << print_type(t)
+               << " *)"
+               << print_name(op->name)
+               << ")";
+    } else {
+        stream << print_name(op->name);
+    }
+    stream << "["
+           << id_index
+           << "] = "
+           << id_value
+           << ";\n";
+
+  bool in_hw_section = hw_input_set.count(id_value)>0;
+  stream << "out: " << id_value << endl;
+  if (in_hw_section){
+    stream << "to out: " << id_value << endl;
+    def->wire(hw_input_set[id_value], self->sel("out"));
+  }
+  //  CodeGen_C::visit(op);
 }
 
   // TODO: add more operators
