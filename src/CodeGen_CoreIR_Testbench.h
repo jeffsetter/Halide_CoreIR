@@ -40,17 +40,17 @@ private:
 
     // for coreir generation
     uint8_t n;
-    Context* c;
-    Namespace* g;
-    Namespace* stdlib;
+    CoreIR::Context* c;
+    CoreIR::Namespace* g;
+    CoreIR::Namespace* stdlib;
     std::map<std::string,CoreIR::Module*> gens;
-    ModuleDef* def;
+    CoreIR::ModuleDef* def;
     CoreIR::Module* design_top;
-    Wireable* self;
+    CoreIR::Wireable* self;
 
-    std::map<std::string,Wireable*> hw_input_set;
+    std::map<std::string,CoreIR::Wireable*> hw_input_set;
     std::string id_hw_section(Expr a, Expr b, Type t, char op_symbol);
-    Wireable* get_wire(Expr e);
+    CoreIR::Wireable* get_wire(Expr e);
 
 };
 

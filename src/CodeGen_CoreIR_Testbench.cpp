@@ -81,13 +81,13 @@ CodeGen_CoreIR_Testbench::CodeGen_CoreIR_Testbench(ostream &tb_stream)
 
     // set up coreir generation
     n = 16;
-    c = newContext();
+    c = CoreIR::newContext();
     g = c->getGlobal();
     stdlib = getStdlib(c);
 
     // add all generators from stdlib
     std::vector<string> gen_names = {"add2_16", "mult2_16", "const_16"};
-    for (std::string gen_name : gen_names) {
+    for (auto gen_name : gen_names) {
       gens[gen_name] = stdlib->getModule(gen_name);
       assert(gens[gen_name]);
     }
@@ -109,13 +109,13 @@ CodeGen_CoreIR_Testbench::~CodeGen_CoreIR_Testbench() {
 
   bool err = false;
 
-  typecheck(c,design_top,&err);
+  CoreIR::typecheck(c,design_top,&err);
   if (err) {
     cout << "failed typecheck" << endl;
   }
 
-  saveModule(design_top, "design_top.json", &err);
-  deleteContext(c);
+  CoreIR::saveModule(design_top, "design_top.json", &err);
+  CoreIR::deleteContext(c);
   if (err) {
     cout << "Could not save json :(" << endl;
   } else {
@@ -291,15 +291,15 @@ string CodeGen_CoreIR_Testbench::id_hw_section(Expr a, Expr b, Type t, char op_s
   }
 }
 
-Wireable* CodeGen_CoreIR_Testbench::get_wire(Expr e) {
+CoreIR::Wireable* CodeGen_CoreIR_Testbench::get_wire(Expr e) {
   if (id_hw_input(e)) {
     return self->sel("in");
   } else if (id_cnst(e)) {
     int cnst_value = id_cnst_value(e);
-    Wireable* cnst = def->addInstance("const",  gens["const_16"], c->newGenArgs({{"value",c->GInt(cnst_value)}}));
+    CoreIR::Wireable* cnst = def->addInstance("const",  gens["const_16"], c->newGenArgs({{"value",c->GInt(cnst_value)}}));
     return cnst;
   } else  {
-    Wireable* wire = hw_input_set[print_expr(e)];
+    CoreIR::Wireable* wire = hw_input_set[print_expr(e)];
 
     if (wire) { }
     else { cout << "invalid wire in tb: " << print_expr(e) << endl; return self->sel("in"); }
@@ -316,7 +316,7 @@ void CodeGen_CoreIR_Testbench::visit(const Mul *op) {
 
     //    stream << "tb-performed a mult!!! which has a load... " << endl;
     // TODO: add unique name
-    Wireable* mul = def->addInstance("mult",gens["mult2_16"]);
+    CoreIR::Wireable* mul = def->addInstance("mult",gens["mult2_16"]);
     if (id_hw_input(op->a)) { stream << "mula: self.in" <<endl; } else { stream << "mula: " << print_expr(op->a) << endl; }
     if (id_hw_input(op->b)) { stream << "mulb: self.in" <<endl; } else { stream << "mulb: " << print_expr(op->b) << endl; }
     def->wire(get_wire(op->a), mul->sel("in0"));
@@ -340,7 +340,7 @@ void CodeGen_CoreIR_Testbench::visit(const Add *op) {
 
     //    stream << "tb-performed a mult!!! which has a load... " << endl;
     // TODO: add unique name
-    Wireable* add = def->addInstance("adder",gens["add2_16"]);
+    CoreIR::Wireable* add = def->addInstance("adder",gens["add2_16"]);
     if (id_hw_input(op->a)) { stream << "adda: self.in" <<endl; } else { stream << "adda: " << print_expr(op->a) << endl; }
     if (id_hw_input(op->b)) { stream << "addb: self.in" <<endl; } else { stream << "addb: " << print_expr(op->b) << endl; }
     def->wire(get_wire(op->a), add->sel("in0"));
