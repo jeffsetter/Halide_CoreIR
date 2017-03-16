@@ -41,9 +41,9 @@ if [ ${BUILD_SYSTEM} = 'CMAKE' ]; then
         ../
 
   # Build and run internal tests
-  make -j8 VERBOSE=1
+  make VERBOSE=1
   # Build docs
-  make -j8 doc
+  #make doc
 
   # Run correctness tests
   TESTCASES=$(find bin/ -iname 'correctness_*' | \
@@ -63,15 +63,15 @@ if [ ${BUILD_SYSTEM} = 'CMAKE' ]; then
       ${TESTCASE}
   done
 elif [ ${BUILD_SYSTEM} = 'MAKE' ]; then
-  export LLVM_CONFIG=/usr/local/llvm/bin/llvm-config
-  export CLANG=/usr/local/llvm/bin/clang
+  #export LLVM_CONFIG=/usr/local/llvm/bin/llvm-config
+  #export CLANG=/usr/local/llvm/bin/clang
   ${LLVM_CONFIG} --cxxflags --libdir --bindir
 
   # Build and run internal tests
-  make -j8
+  make
 
   # Build the docs and run the tests
-  make -j8 doc test_correctness test_generators test_coreir
+  make test_correctness test_generators test_coreir
 else
   echo "Unexpected BUILD_SYSTEM: \"${BUILD_SYSTEM}\""
   exit 1

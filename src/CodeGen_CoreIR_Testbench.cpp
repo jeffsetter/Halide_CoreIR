@@ -115,12 +115,19 @@ CodeGen_CoreIR_Testbench::~CodeGen_CoreIR_Testbench() {
   }
 
   CoreIR::saveModule(design_top, "design_top.json", &err);
-  CoreIR::deleteContext(c);
   if (err) {
     cout << "Could not save json :(" << endl;
   } else {
     cout << "We passed!!! (GREEN PASS) Yay!" << endl;
   }
+
+  CoreIR::Module* mod = CoreIR::loadModule(c,"design_top.json", &err);
+  if (err) {
+    cout << "failed to reload json" << endl;
+  }
+  mod->print();
+
+  CoreIR::deleteContext(c);
 }
 
 void CodeGen_CoreIR_Testbench::visit(const ProducerConsumer *op) {
@@ -315,8 +322,8 @@ void CodeGen_CoreIR_Testbench::visit(const Mul *op) {
   if (out_var.compare("") != 0) {
 
     //    stream << "tb-performed a mult!!! which has a load... " << endl;
-    // TODO: add unique name
-    CoreIR::Wireable* mul = def->addInstance("mult",gens["mult2_16"]);
+    string mult_name = "mult" + print_expr(op->a) + print_expr(op->b);
+    CoreIR::Wireable* mul = def->addInstance(mult_name,gens["mult2_16"]);
     if (id_hw_input(op->a)) { stream << "mula: self.in" <<endl; } else { stream << "mula: " << print_expr(op->a) << endl; }
     if (id_hw_input(op->b)) { stream << "mulb: self.in" <<endl; } else { stream << "mulb: " << print_expr(op->b) << endl; }
     def->wire(get_wire(op->a), mul->sel("in0"));
@@ -339,8 +346,8 @@ void CodeGen_CoreIR_Testbench::visit(const Add *op) {
   if (out_var.compare("") != 0) {
 
     //    stream << "tb-performed a mult!!! which has a load... " << endl;
-    // TODO: add unique name
-    CoreIR::Wireable* add = def->addInstance("adder",gens["add2_16"]);
+    string adder_name = "adder" + print_expr(op->a) + print_expr(op->b);
+    CoreIR::Wireable* add = def->addInstance(adder_name,gens["add2_16"]);
     if (id_hw_input(op->a)) { stream << "adda: self.in" <<endl; } else { stream << "adda: " << print_expr(op->a) << endl; }
     if (id_hw_input(op->b)) { stream << "addb: self.in" <<endl; } else { stream << "addb: " << print_expr(op->b) << endl; }
     def->wire(get_wire(op->a), add->sel("in0"));
