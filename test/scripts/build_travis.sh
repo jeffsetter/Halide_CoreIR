@@ -9,15 +9,6 @@ if [ ! -f ./.travis.yml ]; then
   exit 1
 fi
 
-# configure coreir
-pushd . && cd ../
-git clone https://github.com/rdaly525/coreir.git
-cd coreir
-make -C src
-make -C src ../build/coreir.so
-make -C tests
-popd
-
 : ${LLVM_VERSION:?"LLVM_VERSION must be specified"}
 : ${BUILD_SYSTEM:?"BUILD_SYSTEM must be specified"}
 : ${CXX:?"CXX must be specified"}
