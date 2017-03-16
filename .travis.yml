@@ -35,6 +35,7 @@ before_install:
   - export CC=${CC_}
   - export LLVM_CONFIG=${TRAVIS_BUILD_DIR}/llvm/bin/llvm-config
   - export CLANG=${TRAVIS_BUILD_DIR}/llvm/bin/clang
+  - export CORECONFIG="g++-4.9"
 
   #- sudo add-apt-repository --yes ppa:ubuntu-toolchain-r/test/
   #- sudo apt-get update
