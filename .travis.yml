@@ -38,6 +38,7 @@ before_install:
   - export LLVM_CONFIG=${TRAVIS_BUILD_DIR}/llvm/bin/llvm-config
   - export CLANG=${TRAVIS_BUILD_DIR}/llvm/bin/clang
   - export CORECONFIG="g++-4.9"
+  - export COREIR_DIR=${TRAVIS_BUILD_DIR}/coreir
 
 install:
   # Download the right llvm release
@@ -49,6 +50,7 @@ install:
   - make -C coreir/src
   - make -C coreir/src ../build/coreir.so
   - make -C coreir/tests
+  - mv coreir ${TRAVIS_BUILD_DIR}/coreir
 
 script:
   - test/scripts/build_travis.sh
