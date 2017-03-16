@@ -1,5 +1,4 @@
 # Halide to CoreIR
-============
 
 This repository is an extension which is used to compile to CoreIR. This is part of a flow to compile to a custom CGRA.
 
