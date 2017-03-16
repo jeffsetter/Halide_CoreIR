@@ -50,7 +50,6 @@ install:
   - make -C coreir/src
   - make -C coreir/src ../build/coreir.so
   - make -C coreir/tests
-  - mv coreir ${TRAVIS_BUILD_DIR}/coreir
 
 script:
   - test/scripts/build_travis.sh
