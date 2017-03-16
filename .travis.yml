@@ -8,7 +8,7 @@ compiler:
 addons:
   apt:
     packages:
-      - g++
+      - g++-4.9
       - libedit-dev
       - libpng-dev
 env:
