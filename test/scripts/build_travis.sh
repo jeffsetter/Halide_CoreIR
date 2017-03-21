@@ -61,8 +61,9 @@ elif [ ${BUILD_SYSTEM} = 'MAKE' ]; then
   # Build and run internal tests
   make
 
-  # Build the docs and run the tests
-  make test_correctness test_generators test_coreir
+  # Build run the tests
+#  make test_correctness
+  make test_generators test_coreir
 else
   echo "Unexpected BUILD_SYSTEM: \"${BUILD_SYSTEM}\""
   exit 1
