@@ -303,7 +303,7 @@ CoreIR::Wireable* CodeGen_CoreIR_Testbench::get_wire(Expr e) {
     return self->sel("in");
   } else if (id_cnst(e)) {
     int cnst_value = id_cnst_value(e);
-    CoreIR::Wireable* cnst = def->addInstance("const",  gens["const_16"], c->args({{"value",c->int2Arg(cnst_value)}}));
+    CoreIR::Wireable* cnst = def->addInstance("const",  gens["const_16"], Args({{"value",c->int2Arg(cnst_value)}}));
     return cnst;
   } else  {
     CoreIR::Wireable* wire = hw_input_set[print_expr(e)];
