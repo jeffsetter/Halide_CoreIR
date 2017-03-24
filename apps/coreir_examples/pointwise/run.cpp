@@ -50,8 +50,8 @@ void my_save_image(ImageType &im, const std::string &filename) {
 int main(int argc, char **argv) {
   // input size should be 1920x1080
     Image<uint8_t> input = load_image(argv[1]);
-    Image<uint8_t> out_native(input.width()-8, input.height()-8);
-    Image<uint8_t> out_hls(input.width()-8, input.height()-8);
+    Image<uint8_t> out_native(input.width(), input.height());
+    Image<uint8_t> out_hls(input.width(), input.height());
 
     printf("start.\n");
 
