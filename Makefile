@@ -1213,12 +1213,16 @@ test_hls_apps: $(LIB_DIR)/libHalide.a $(BIN_DIR)/libHalide.$(SHARED_EXT) $(INCLU
 ALL_COREIR_APPS = pointwise
 test_coreir:  $(LIB_DIR)/libHalide.a $(BIN_DIR)/libHalide.$(SHARED_EXT) $(INCLUDE_DIR)/Halide.h $(INCLUDE_DIR)/HalideRuntime.h
 	for app in $(ALL_COREIR_APPS); do \
-	  make -C apps/coreir_examples/$$app clean all HALIDE_BIN_PATH=$(CURDIR) HALIDE_SRC_PATH=$(ROOT_DIR) || exit; \
+	  $(MAKE) -C apps/coreir_examples/$$app clean all HALIDE_BIN_PATH=$(CURDIR) HALIDE_SRC_PATH=$(ROOT_DIR) || exit; \
 	done
+fulltest_coreir:
+	$(MAKE) test_coreir test_correctness test_generators
+
 .PHONY: test_python
 test_python: $(LIB_DIR)/libHalide.a
 	mkdir -p python_bindings
 	make -C python_bindings -f $(ROOT_DIR)/python_bindings/Makefile test
+
 
 # It's just for compiling the runtime, so Clang <3.5 *might* work,
 # but best to peg it to the minimum llvm version.

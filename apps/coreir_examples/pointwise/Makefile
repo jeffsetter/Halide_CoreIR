@@ -33,6 +33,9 @@ out.png: run
 out_cuda.png: run_cuda
 	CUDA_LAUNCH_BLOCKING=1 HL_NUM_THREADS=4 ./run_cuda ../../images/benchmark_8mp_gray.png
 
+design_top.json: pipeline
+	HL_DEBUG_CODEGEN=0 ./pipeline
+
 $(HLS_LOG): ../hls_support/run_hls.tcl pipeline_hls.cpp run.cpp
 	RUN_PATH=$(realpath ./) \
 	RUN_ARGS=$(realpath ./../../images/gray.png) \
