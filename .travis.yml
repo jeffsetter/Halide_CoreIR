@@ -39,6 +39,7 @@ before_install:
   - export CLANG=${TRAVIS_BUILD_DIR}/llvm/bin/clang
   - export CORECONFIG="g++-4.9"
   - export COREIR_DIR=${TRAVIS_BUILD_DIR}/coreir
+  - export TEST_HALIDE_GEN=true
 
 install:
   # Download the right llvm release
