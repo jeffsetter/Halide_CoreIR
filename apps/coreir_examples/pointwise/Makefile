@@ -64,5 +64,5 @@ clean:
 	rm -f pipeline_coreir.h pipeline_coreir.cpp
 	rm -f pipeline_cuda.h pipeline_cuda.o
 	rm -f pipeline_zynq.h pipeline_zynq.c pipeline_zynq.o run_zynq.o
-	rm -f rigel_target.h rigel_target.t
+	rm -f rigel_target.h rigel_target.t coreir_target.h coreir_target.t
 	rm -f *.html *.json

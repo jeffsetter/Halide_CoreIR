@@ -74,7 +74,7 @@ const string hls_headers =
 
 CodeGen_CoreIR_Testbench::CodeGen_CoreIR_Testbench(ostream &tb_stream)
     : CodeGen_CoreIR_Base(tb_stream, CPlusPlusImplementation, ""),
-      cg_target("rigel_target") {
+      cg_target("coreir_target") {
     cg_target.init_module();
 
     stream << hls_headers;
@@ -283,13 +283,13 @@ int id_cnst_value(const Expr e) {
   }
 }
 
-string CodeGen_CoreIR_Testbench::id_hw_section(Expr a, Expr b, Type t, char op_symbol) {
+  string CodeGen_CoreIR_Testbench::id_hw_section(Expr a, Expr b, Type t, char op_symbol, string a_name, string b_name) {
   bool is_input = id_hw_input(a) || id_hw_input(b);
-  bool in_hw_section = hw_input_set.count(print_expr(a))>0 || hw_input_set.count(print_expr(b))>0;
+  bool in_hw_section = hw_input_set.count(a_name)>0 || hw_input_set.count(b_name)>0;
+  string out_var = print_assignment(t, a_name + " " + op_symbol + " " + b_name);
 
   //  if (hw_input_set.size()>0) { stream << "a:" << print_expr(a) << " b:" << print_expr(b) << endl; }
   if (is_input || in_hw_section) {
-    string out_var = print_assignment(t, print_expr(a) + " " + op_symbol + " " + print_expr(b));
     return out_var;
     //    if (is_input) {stream << "input mult with output: " << out_var << endl; }
     //    if (in_hw_section) {stream << "hw_section mult with output: " << out_var <<endl; }
@@ -298,38 +298,41 @@ string CodeGen_CoreIR_Testbench::id_hw_section(Expr a, Expr b, Type t, char op_s
   }
 }
 
-CoreIR::Wireable* CodeGen_CoreIR_Testbench::get_wire(Expr e) {
+  CoreIR::Wireable* CodeGen_CoreIR_Testbench::get_wire(Expr e, string name) {
   if (id_hw_input(e)) {
     return self->sel("in");
   } else if (id_cnst(e)) {
     int cnst_value = id_cnst_value(e);
-    CoreIR::Wireable* cnst = def->addInstance("const",  gens["const_16"], Args({{"value",c->int2Arg(cnst_value)}}));
+    string cnst_name = "const" + name;
+    CoreIR::Wireable* cnst = def->addInstance(cnst_name,  gens["const_16"], Args({{"value",c->int2Arg(cnst_value)}}));
     return cnst;
   } else  {
-    CoreIR::Wireable* wire = hw_input_set[print_expr(e)];
+    CoreIR::Wireable* wire = hw_input_set[name];
 
     if (wire) { }
-    else { cout << "invalid wire in tb: " << print_expr(e) << endl; return self->sel("in"); }
+    else { cout << "invalid wire in tb: " << name << endl; return self->sel("in"); }
     return wire;
   }
 }
 
 void CodeGen_CoreIR_Testbench::visit(const Mul *op) {
   //  stream << "tb-saw a mult!!!!!!!!!!!!!!!!" << endl;
-  CodeGen_C::visit(op);
-  
-  string out_var = id_hw_section(op->a, op->b, op->type, '*');
+  string a_name = print_expr(op->a);
+  string b_name = print_expr(op->b);
+  //CodeGen_C::visit(op);
+
+  string out_var = id_hw_section(op->a, op->b, op->type, '*', a_name, b_name);
   if (out_var.compare("") != 0) {
 
     //    stream << "tb-performed a mult!!! which has a load... " << endl;
-    string mult_name = "mult" + print_expr(op->a) + print_expr(op->b);
+    string mult_name = "mult" + a_name + b_name;
     CoreIR::Wireable* mul = def->addInstance(mult_name,gens["mult2_16"]);
-    if (id_hw_input(op->a)) { stream << "mula: self.in" <<endl; } else { stream << "mula: " << print_expr(op->a) << endl; }
-    if (id_hw_input(op->b)) { stream << "mulb: self.in" <<endl; } else { stream << "mulb: " << print_expr(op->b) << endl; }
-    def->wire(get_wire(op->a), mul->sel("in0"));
-    def->wire(get_wire(op->b), mul->sel("in1"));
+    if (id_hw_input(op->a)) { stream << "mula: self.in "; } else { stream << "mula: " << a_name << " "; }
+    if (id_hw_input(op->b)) { stream << "mulb: self.in" <<endl; } else { stream << "mulb: " << b_name << endl; }
+    def->wire(get_wire(op->a, a_name), mul->sel("in0"));
+    def->wire(get_wire(op->b, b_name), mul->sel("in1"));
     hw_input_set[out_var] = mul->sel("out");
-    out_var = id_hw_section(op->a, op->b, op->type, '*'); // must access output var last
+    //    out_var = id_hw_section(op->a, op->b, op->type, '*'); // must access output var last
     stream << "mulo: " << out_var << endl;
     
   } else {
@@ -339,25 +342,27 @@ void CodeGen_CoreIR_Testbench::visit(const Mul *op) {
 }
 
 void CodeGen_CoreIR_Testbench::visit(const Add *op) {
-  //  stream << "tb-saw a mult!!!!!!!!!!!!!!!!" << endl;
-  CodeGen_C::visit(op);
-  
-  string out_var = id_hw_section(op->a, op->b, op->type, '+');
+  //  stream << "tb-saw an add!!!!!!!!!!!!!!!!" << endl;
+  string a_name = print_expr(op->a);
+  string b_name = print_expr(op->b);
+  //CodeGen_C::visit(op);  
+
+  string out_var = id_hw_section(op->a, op->b, op->type, '+', a_name, b_name);
   if (out_var.compare("") != 0) {
 
-    //    stream << "tb-performed a mult!!! which has a load... " << endl;
-    string adder_name = "adder" + print_expr(op->a) + print_expr(op->b);
+    //    stream << "tb-performed an add!!! which has a load... " << endl;
+    string adder_name = "adder" + a_name + b_name;
     CoreIR::Wireable* add = def->addInstance(adder_name,gens["add2_16"]);
-    if (id_hw_input(op->a)) { stream << "adda: self.in" <<endl; } else { stream << "adda: " << print_expr(op->a) << endl; }
-    if (id_hw_input(op->b)) { stream << "addb: self.in" <<endl; } else { stream << "addb: " << print_expr(op->b) << endl; }
-    def->wire(get_wire(op->a), add->sel("in0"));
-    def->wire(get_wire(op->b), add->sel("in1"));
+    if (id_hw_input(op->a)) { stream << "adda: self.in "; } else { stream << "adda: " << a_name << " "; }
+    if (id_hw_input(op->b)) { stream << "addb: self.in" <<endl; } else { stream << "addb: " << b_name << endl; }
+    def->wire(get_wire(op->a, a_name), add->sel("in0"));
+    def->wire(get_wire(op->b, b_name), add->sel("in1"));
     hw_input_set[out_var] = add->sel("out");
-    out_var = id_hw_section(op->a, op->b, op->type, '+'); // must access output var last
+    //    out_var = id_hw_section(op->a, op->b, op->type, '+'); // must access output var last
     stream << "addo: " << out_var << endl;
     
   } else {
-    //    stream << "tb-performed a add!!! " <<endl;//<< print_type(op->a.type()) << " " << print_type(op->b.type()) << endl;
+    //    stream << "tb-performed an add!!! " <<endl;//<< print_type(op->a.type()) << " " << print_type(op->b.type()) << endl;
   }
   
 }

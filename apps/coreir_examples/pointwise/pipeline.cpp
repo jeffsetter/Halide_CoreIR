@@ -18,7 +18,7 @@ public:
 	output("output"), hw_output("hw_output")
     {
         // Pointwise operations
-        modified(x, y) = in(x, y) * 2;
+      modified(x, y) = in(x, y) *2 +1;
 
         hw_output(x, y) = modified(x, y);
 
@@ -79,12 +79,6 @@ public:
         output.compile_to_hls("pipeline_hls.cpp", args, "pipeline_hls", hls_target);
         output.compile_to_header("pipeline_hls.h", args, "pipeline_hls", hls_target);
 
-        Target coreir_target = get_target_from_environment();
-        coreir_target.set_feature(Target::CPlusPlusMangling);
-        output.compile_to_lowered_stmt("pipeline_coreir.ir.html", args, HTML, coreir_target);
-        output.compile_to_coreir("pipeline_coreir.cpp", args, "pipeline_coreir", coreir_target);
-        output.compile_to_header("pipeline_coreir.h", args, "pipeline_coreir", coreir_target);
-
         std::vector<Target::Feature> features({Target::Zynq});
         Target target(Target::Linux, Target::ARM, 32, features);
         output.compile_to_zynq_c("pipeline_zynq.c", args, "pipeline_zynq", target);
@@ -96,16 +90,31 @@ public:
         output.compile_to_object("pipeline_zynq.o", args, "pipeline_zynq", target);
         output.compile_to_lowered_stmt("pipeline_zynq.ir.html", args, HTML, target);
     }
+
+  void compile_coreir() {
+        std::cout << "\ncompiling HLS code..." << std::endl;
+        //kernel.compute_root();
+	output.tile(x, y, xo, yo, xi, yi, 640, 480);
+	hw_output.accelerate({in}, xi, xo);
+
+        Target coreir_target = get_target_from_environment();
+        coreir_target.set_feature(Target::CPlusPlusMangling);
+        output.compile_to_lowered_stmt("pipeline_coreir.ir.html", args, HTML, coreir_target);
+        output.compile_to_coreir("pipeline_coreir.cpp", args, "pipeline_coreir", coreir_target);
+    }
 };
 
 int main(int argc, char **argv) {
     MyPipeline p1;
     p1.compile_cpu();
 
+    MyPipeline p4;
+    p4.compile_coreir();
+
     MyPipeline p2;
     p2.compile_hls();
-
-    MyPipeline p3;
-    p3.compile_gpu();
-    return 0;
+// 
+//     MyPipeline p3;
+//     p3.compile_gpu();
+//     return 0;
 }

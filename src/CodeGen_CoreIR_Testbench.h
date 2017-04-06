@@ -49,8 +49,8 @@ private:
     CoreIR::Wireable* self;
 
     std::map<std::string,CoreIR::Wireable*> hw_input_set;
-    std::string id_hw_section(Expr a, Expr b, Type t, char op_symbol);
-    CoreIR::Wireable* get_wire(Expr e);
+    std::string id_hw_section(Expr a, Expr b, Type t, char op_symbol, std::string a_name, std::string b_name);
+    CoreIR::Wireable* get_wire(Expr e, std::string name);
 
 };
 
