@@ -72,7 +72,7 @@ elif [ ${BUILD_SYSTEM} = 'MAKE' ]; then
   fi  
 
   md5sum lib/libHalide.a > md5_lib
-  md5sum lib/libHalie_prebuilt.a > md5_pre
+  md5sum lib/libHalide_prebuilt.a > md5_pre
   diff md5_lib md5_pre
 
   if [ $? -ne 0 ]; then
