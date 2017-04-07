@@ -75,7 +75,7 @@ elif [ ${BUILD_SYSTEM} = 'MAKE' ]; then
   md5sum lib/libHalie_prebuilt.a > md5_pre
   diff md5_lib md5_pre
 
-  if [ $? -ne 0 ]
+  if [ $? -ne 0 ]; then
       echo "md5sum differs for checked in and built libHalide.a"
       exit 1
   fi
