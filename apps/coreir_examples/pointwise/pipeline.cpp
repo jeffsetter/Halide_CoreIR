@@ -18,7 +18,7 @@ public:
 	output("output"), hw_output("hw_output")
     {
         // Pointwise operations
-      modified(x, y) = in(x, y) *2 +1;
+      modified(x, y) = in(x, y) *2;
 
         hw_output(x, y) = modified(x, y);
 
