@@ -71,6 +71,15 @@ elif [ ${BUILD_SYSTEM} = 'MAKE' ]; then
       make test_generators
   fi  
 
+  md5sum lib/libHalide.a > md5_lib
+  md5sum lib/libHalie_prebuilt.a > md5_pre
+  diff md5_lib md5_pre
+
+  if [ $? -ne 0 ]
+      echo "md5sum differs for checked in and built libHalide.a"
+      exit 1
+  fi
+
 else
   echo "Unexpected BUILD_SYSTEM: \"${BUILD_SYSTEM}\""
   exit 1

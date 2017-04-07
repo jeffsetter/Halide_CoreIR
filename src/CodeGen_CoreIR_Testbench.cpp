@@ -315,58 +315,40 @@ int id_cnst_value(const Expr e) {
   }
 }
 
-void CodeGen_CoreIR_Testbench::visit(const Mul *op) {
-  //  stream << "tb-saw a mult!!!!!!!!!!!!!!!!" << endl;
-  string a_name = print_expr(op->a);
-  string b_name = print_expr(op->b);
-  //CodeGen_C::visit(op);
+  void CodeGen_CoreIR_Testbench::visit_binop(Type t, Expr a, Expr b, char op_sym, string coreir_name, string op_name) {
+    //  stream << "tb-saw a " << op_name << "!!!!!!!!!!!!!!!!" << endl;
+  string a_name = print_expr(a);
+  string b_name = print_expr(b);
 
-  string out_var = id_hw_section(op->a, op->b, op->type, '*', a_name, b_name);
+  string out_var = id_hw_section(a, b, t, op_sym, a_name, b_name);
   if (out_var.compare("") != 0) {
+    string mult_name = op_name + a_name + b_name;
+    CoreIR::Wireable* coreir_inst = def->addInstance(mult_name,gens[coreir_name]);
+    def->wire(get_wire(a, a_name), coreir_inst->sel("in0"));
+    def->wire(get_wire(b, b_name), coreir_inst->sel("in1"));
+    hw_input_set[out_var] = coreir_inst->sel("out");
 
-    //    stream << "tb-performed a mult!!! which has a load... " << endl;
-    string mult_name = "mult" + a_name + b_name;
-    CoreIR::Wireable* mul = def->addInstance(mult_name,gens["mult2_16"]);
-    if (id_hw_input(op->a)) { stream << "mula: self.in "; } else { stream << "mula: " << a_name << " "; }
-    if (id_hw_input(op->b)) { stream << "mulb: self.in" <<endl; } else { stream << "mulb: " << b_name << endl; }
-    def->wire(get_wire(op->a, a_name), mul->sel("in0"));
-    def->wire(get_wire(op->b, b_name), mul->sel("in1"));
-    hw_input_set[out_var] = mul->sel("out");
-    //    out_var = id_hw_section(op->a, op->b, op->type, '*'); // must access output var last
-    stream << "mulo: " << out_var << endl;
+    if (id_hw_input(a)) { stream << op_name <<"a: self.in "; } else { stream << op_name << "a: " << a_name << " "; }
+    if (id_hw_input(b)) { stream << op_name <<"b: self.in" <<endl; } else { stream << op_name << "b: " << b_name << endl; }
+    stream << op_name<<"o: " << out_var << endl;
     
   } else {
-    //    stream << "tb-performed a mult!!! " <<endl;//<< print_type(op->a.type()) << " " << print_type(op->b.type()) << endl;
+    //    stream << "tb-performed a << op_name<< :!!! " <<endl;//<< print_type(a.type()) << " " << print_type(b.type()) << endl;
   }
-  
+
+  }
+
+void CodeGen_CoreIR_Testbench::visit(const Mul *op) {
+  visit_binop(op->type, op->a, op->b, '*', "mult2_16", "mul");
 }
 
 void CodeGen_CoreIR_Testbench::visit(const Add *op) {
-  //  stream << "tb-saw an add!!!!!!!!!!!!!!!!" << endl;
-  string a_name = print_expr(op->a);
-  string b_name = print_expr(op->b);
-  //CodeGen_C::visit(op);  
-
-  string out_var = id_hw_section(op->a, op->b, op->type, '+', a_name, b_name);
-  if (out_var.compare("") != 0) {
-
-    //    stream << "tb-performed an add!!! which has a load... " << endl;
-    string adder_name = "adder" + a_name + b_name;
-    CoreIR::Wireable* add = def->addInstance(adder_name,gens["add2_16"]);
-    if (id_hw_input(op->a)) { stream << "adda: self.in "; } else { stream << "adda: " << a_name << " "; }
-    if (id_hw_input(op->b)) { stream << "addb: self.in" <<endl; } else { stream << "addb: " << b_name << endl; }
-    def->wire(get_wire(op->a, a_name), add->sel("in0"));
-    def->wire(get_wire(op->b, b_name), add->sel("in1"));
-    hw_input_set[out_var] = add->sel("out");
-    //    out_var = id_hw_section(op->a, op->b, op->type, '+'); // must access output var last
-    stream << "addo: " << out_var << endl;
-    
-  } else {
-    //    stream << "tb-performed an add!!! " <<endl;//<< print_type(op->a.type()) << " " << print_type(op->b.type()) << endl;
-  }
-  
+  visit_binop(op->type, op->a, op->b, '+', "add2_16", "add");
 }
-
+  
+void CodeGen_CoreIR_Testbench::visit(const Sub *op) {
+  visit_binop(op->type, op->a, op->b, '-', "add2_16", "sub");
+}
 
 void CodeGen_CoreIR_Testbench::visit(const Store *op) {
     Type t = op->value.type();
@@ -405,7 +387,6 @@ void CodeGen_CoreIR_Testbench::visit(const Store *op) {
 }
 
   // TODO: add more operators
-  // TODO: add better set of nodes in path (print_assignment/print_expr involves many operations under the hood)
 
 }
 }

@@ -92,7 +92,7 @@ public:
     }
 
   void compile_coreir() {
-        std::cout << "\ncompiling HLS code..." << std::endl;
+        std::cout << "\ncompiling CoreIR code..." << std::endl;
         //kernel.compute_root();
 	output.tile(x, y, xo, yo, xi, yi, 640, 480);
 	hw_output.accelerate({in}, xi, xo);

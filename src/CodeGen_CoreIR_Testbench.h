@@ -34,6 +34,7 @@ protected:
     void visit(const Block *);
     void visit(const Mul *);
     void visit(const Add *);
+    void visit(const Sub *);
     void visit(const Store *);
 private:
     CodeGen_CoreIR_Target cg_target;
@@ -51,6 +52,7 @@ private:
     std::map<std::string,CoreIR::Wireable*> hw_input_set;
     std::string id_hw_section(Expr a, Expr b, Type t, char op_symbol, std::string a_name, std::string b_name);
     CoreIR::Wireable* get_wire(Expr e, std::string name);
+    void visit_binop(Type t, Expr a, Expr b, char op_sym, std::string coreir_name, std::string op_name);
 
 };
 

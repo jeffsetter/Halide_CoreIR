@@ -1212,6 +1212,7 @@ test_hls_apps: $(LIB_DIR)/libHalide.a $(BIN_DIR)/libHalide.$(SHARED_EXT) $(INCLU
 
 ALL_COREIR_APPS = pointwise
 test_coreir:  $(LIB_DIR)/libHalide.a $(BIN_DIR)/libHalide.$(SHARED_EXT) $(INCLUDE_DIR)/Halide.h $(INCLUDE_DIR)/HalideRuntime.h
+	cp $(LIB_DIR)/libHalide.a $(LIB_DIR)/libHalide_prebuilt.a
 	for app in $(ALL_COREIR_APPS); do \
 	  $(MAKE) -C apps/coreir_examples/$$app clean all HALIDE_BIN_PATH=$(CURDIR) HALIDE_SRC_PATH=$(ROOT_DIR) || exit; \
 	done
