@@ -59,8 +59,7 @@ elif [ ${BUILD_SYSTEM} = 'MAKE' ]; then
   ${LLVM_CONFIG} --cxxflags --libdir --bindir
 
   # Test that prebuilt version works
-  mv lib/libHalide_prebuilt.a lib/libHalide.a
-  make test_coreir
+  make test_coreir_prebuilt
   rm lib/libHalide.a
   rm include/Halide.h
   rm include/HalideRuntime.h

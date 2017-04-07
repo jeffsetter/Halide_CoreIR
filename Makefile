@@ -1218,6 +1218,12 @@ test_coreir:  $(LIB_DIR)/libHalide.a $(INCLUDE_DIR)/Halide.h $(INCLUDE_DIR)/Hali
 	for app in $(ALL_COREIR_APPS); do \
 	  $(MAKE) -C apps/coreir_examples/$$app clean all HALIDE_BIN_PATH=$(CURDIR) HALIDE_SRC_PATH=$(ROOT_DIR) || exit; \
 	done
+
+# Test that does not built anything first
+test_coreir_prebuilt:
+	for app in $(ALL_COREIR_APPS); do \
+	  $(MAKE) -C apps/coreir_examples/$$app clean all HALIDE_BIN_PATH=$(CURDIR) HALIDE_SRC_PATH=$(ROOT_DIR) || exit; \
+	done
 fulltest_coreir:
 	$(MAKE) test_coreir test_correctness test_generators
 
