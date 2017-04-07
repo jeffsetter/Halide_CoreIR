@@ -62,6 +62,8 @@ elif [ ${BUILD_SYSTEM} = 'MAKE' ]; then
   mv lib/libHalide_prebuilt.a lib/libHalide.a
   make test_coreir
   rm lib/libHalide.a
+  rm include/Halide.h
+  rm include/HalideRuntime.h
 
   # Build and run internal tests
   make
