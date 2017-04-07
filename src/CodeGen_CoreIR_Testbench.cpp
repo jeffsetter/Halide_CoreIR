@@ -347,7 +347,7 @@ void CodeGen_CoreIR_Testbench::visit(const Add *op) {
 }
   
 void CodeGen_CoreIR_Testbench::visit(const Sub *op) {
-  visit_binop(op->type, op->a, op->b, '-', "add2_16", "sub");
+  visit_binop(op->type, op->a, op->b, '-', "mult2_16", "sub");
 }
 
 void CodeGen_CoreIR_Testbench::visit(const Store *op) {

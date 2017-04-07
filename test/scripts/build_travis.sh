@@ -58,6 +58,11 @@ elif [ ${BUILD_SYSTEM} = 'MAKE' ]; then
   #export CLANG=/usr/local/llvm/bin/clang
   ${LLVM_CONFIG} --cxxflags --libdir --bindir
 
+  # Test that prebuilt version works
+  mv lib/libHalide_prebuilt.a lib/libHalide.a
+  make test_coreir
+  rm lib/libHalide.a
+
   # Build and run internal tests
   make
 
@@ -71,14 +76,7 @@ elif [ ${BUILD_SYSTEM} = 'MAKE' ]; then
       make test_generators
   fi  
 
-  md5sum lib/libHalide.a > md5_lib
-  md5sum lib/libHalide_prebuilt.a > md5_pre
-  DIFF=$(diff md5_lib md5_pre)
-
-  if [ $DIFF ]; then
-      echo "md5sum differs for checked in and built libHalide.a"
-      exit 1
-  fi
+  
 
 else
   echo "Unexpected BUILD_SYSTEM: \"${BUILD_SYSTEM}\""

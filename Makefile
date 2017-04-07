@@ -691,12 +691,14 @@ $(LIB_DIR)/libHalide.a: $(OBJECTS) $(INITIAL_MODULES)
 	# ar breaks on MinGW with all objects at the same time.
 	echo $(OBJECTS) $(INITIAL_MODULES) $(BUILD_DIR)/llvm_objects/llvm_*.o* | xargs -n200 ar q $(LIB_DIR)/libHalide.a
 	ranlib $(LIB_DIR)/libHalide.a
+	cp $(LIB_DIR)/libHalide.a $(LIB_DIR)/libHalide_prebuilt.a
 else
 $(LIB_DIR)/libHalide.a: $(OBJECTS) $(INITIAL_MODULES)
 	@-mkdir -p $(BIN_DIR)
 	@rm -f $(LIB_DIR)/libHalide.a
 	ar q $(LIB_DIR)/libHalide.a $(OBJECTS) $(INITIAL_MODULES)
 	ranlib $(LIB_DIR)/libHalide.a
+	cp $(LIB_DIR)/libHalide.a $(LIB_DIR)/libHalide_prebuilt.a
 endif
 
 $(BIN_DIR)/libHalide.$(SHARED_EXT): $(LIB_DIR)/libHalide.a
@@ -1212,7 +1214,6 @@ test_hls_apps: $(LIB_DIR)/libHalide.a $(BIN_DIR)/libHalide.$(SHARED_EXT) $(INCLU
 
 ALL_COREIR_APPS = pointwise
 test_coreir:  $(LIB_DIR)/libHalide.a $(BIN_DIR)/libHalide.$(SHARED_EXT) $(INCLUDE_DIR)/Halide.h $(INCLUDE_DIR)/HalideRuntime.h
-	cp $(LIB_DIR)/libHalide.a $(LIB_DIR)/libHalide_prebuilt.a
 	for app in $(ALL_COREIR_APPS); do \
 	  $(MAKE) -C apps/coreir_examples/$$app clean all HALIDE_BIN_PATH=$(CURDIR) HALIDE_SRC_PATH=$(ROOT_DIR) || exit; \
 	done
