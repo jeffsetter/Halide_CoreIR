@@ -112,11 +112,13 @@ CodeGen_CoreIR_Testbench::~CodeGen_CoreIR_Testbench() {
   CoreIR::typecheck(c,design_top,&err);
   if (err) {
     cout << "failed typecheck" << endl;
+    exit(1);
   }
 
   CoreIR::saveModule(design_top, "design_top.json", &err);
   if (err) {
     cout << "Could not save json :(" << endl;
+    exit(1);
   } else {
     cout << "We passed!!! (GREEN PASS) Yay!" << endl;
   }
@@ -124,6 +126,7 @@ CodeGen_CoreIR_Testbench::~CodeGen_CoreIR_Testbench() {
   CoreIR::Module* mod = CoreIR::loadModule(c,"design_top.json", &err);
   if (err) {
     cout << "failed to reload json" << endl;
+    exit(1);
   }
   mod->print();
 
@@ -305,7 +308,7 @@ int id_cnst_value(const Expr e) {
     int cnst_value = id_cnst_value(e);
     string cnst_name = "const" + name;
     CoreIR::Wireable* cnst = def->addInstance(cnst_name,  gens["const_16"], Args({{"value",c->int2Arg(cnst_value)}}));
-    return cnst;
+    return cnst->sel("out");
   } else  {
     CoreIR::Wireable* wire = hw_input_set[name];
 
