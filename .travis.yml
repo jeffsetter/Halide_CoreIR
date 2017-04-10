@@ -21,9 +21,9 @@ env:
   #
   # Test a mix of llvm versions, a mix of build systems, and a mix of shared vs static library
   # Don't build as a static library with cmake. It risks exceeding the travis memory limit.
-  # LLVM_VERSION=3.6.2 BUILD_SYSTEM=MAKE CXX_=g++-4.8 CC_=gcc-4.8
-  # LLVM_VERSION=3.7.1 BUILD_SYSTEM=MAKE CXX_=g++-4.8 CC_=gcc-4.8
-  # LLVM_VERSION=3.8.1 BUILD_SYSTEM=MAKE CXX_=g++-4.8 CC_=gcc-4.8
+  #- LLVM_VERSION=3.6.2 BUILD_SYSTEM=MAKE CXX_=g++-4.8 CC_=gcc-4.8
+  #- LLVM_VERSION=3.7.1 BUILD_SYSTEM=MAKE CXX_=g++-4.8 CC_=gcc-4.8
+  #- LLVM_VERSION=3.8.1 BUILD_SYSTEM=MAKE CXX_=g++-4.8 CC_=gcc-4.8
   #- LLVM_VERSION=3.7.1 BUILD_SYSTEM=MAKE CXX_=g++-4.8 CC_=gcc-4.8 HALIDE_SHARED_LIBRARY=1
   #- LLVM_VERSION=3.8.1 BUILD_SYSTEM=CMAKE CXX_=g++-4.8 CC_=gcc-4.8 HALIDE_SHARED_LIBRARY=1
   - LLVM_VERSION=3.7.1 BUILD_SYSTEM=MAKE CXX_=g++-4.9 CC_=gcc-4.9
@@ -32,20 +32,14 @@ cache: apt
 
 # Note the commands below are written assuming Ubuntu 12.04LTS
 before_install:
-  # Needed for new libstdc++ and gcc4.x
-  - export CXX=${CXX_}
-  - export CC=${CC_}
-  - export LLVM_CONFIG=${TRAVIS_BUILD_DIR}/llvm/bin/llvm-config
-  - export CLANG=${TRAVIS_BUILD_DIR}/llvm/bin/clang
-  - export CORECONFIG="g++-4.9"
-  - export COREIR_DIR=${TRAVIS_BUILD_DIR}/coreir
+  # set variables necessary for halide
+  - test/scripts/before_install_travis.sh
+  # set envirnoment variables specific to this repo
   - export TEST_HALIDE_GEN=true
 
 install:
-  # Download the right llvm release
-  - wget http://llvm.org/releases/${LLVM_VERSION}/clang+llvm-${LLVM_VERSION}-x86_64-linux-gnu-ubuntu-14.04.tar.xz
-  - tar xvf clang+llvm-${LLVM_VERSION}-x86_64-linux-gnu-ubuntu-14.04.tar.xz
-  - mv clang+llvm-${LLVM_VERSION}-x86_64-linux-gnu-ubuntu-14.04 ${TRAVIS_BUILD_DIR}/llvm
+  # install framework specific to halide
+  - test/scripts/install_travis.sh  
   # compile coreir
   - git clone https://github.com/rdaly525/coreir.git
   - make -C coreir/src
