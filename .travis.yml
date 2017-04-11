@@ -33,7 +33,7 @@ cache: apt
 # Note the commands below are written assuming Ubuntu 12.04LTS
 before_install:
   # set variables necessary for halide
-  - test/scripts/before_install_travis.sh
+  - source test/scripts/before_install_travis.sh
   # set envirnoment variables specific to this repo
   - export TEST_HALIDE_GEN=true
 
