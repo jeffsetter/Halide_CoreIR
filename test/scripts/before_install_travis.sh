@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/bash -x
 
 # Needed for new libstdc++ and gcc4.x
 export CXX=${CXX_}

@@ -108,7 +108,7 @@ public:
         //hw_output.unroll(xi, 2);
         hw_output.accelerate({clamped}, xi, xo, {kernel});  // define the inputs and the output
         conv1.linebuffer();
-        conv1.unroll(c).unroll(x).unroll(y);
+	//        conv1.unroll(c).unroll(x).unroll(y);
         hw_output.unroll(c);
 
         //output.print_loop_nest();
