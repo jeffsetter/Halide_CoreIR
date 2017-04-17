@@ -10,7 +10,6 @@
 #include "Lerp.h"
 #include "Simplify.h"
 
-#include "context.hpp"
 #include "stdlib.hpp"
 #include "passes.hpp" 
 
@@ -103,6 +102,7 @@ CodeGen_CoreIR_Testbench::CodeGen_CoreIR_Testbench(ostream &tb_stream)
 }
 
 CodeGen_CoreIR_Testbench::~CodeGen_CoreIR_Testbench() {
+  // write coreir json
   design_top->addDef(def);
   c->checkerrors();
   design_top->print();
@@ -123,12 +123,11 @@ CodeGen_CoreIR_Testbench::~CodeGen_CoreIR_Testbench() {
     cout << "We passed!!! (GREEN PASS) Yay!" << endl;
   }
 
-  CoreIR::Module* mod = CoreIR::loadModule(c,"design_top.json", &err);
+  CoreIR::loadModule(c,"design_top.json", &err);
   if (err) {
     cout << "failed to reload json" << endl;
     exit(1);
   }
-  mod->print();
 
   CoreIR::deleteContext(c);
 }
@@ -147,7 +146,7 @@ void CodeGen_CoreIR_Testbench::visit(const ProducerConsumer *op) {
 
         // emits the target function call
         do_indent();
-        stream << ip_name << "("; // avoid starting with '_'
+        stream << print_name(ip_name) << "("; // avoid starting with '_'
         for(size_t i = 0; i < args.size(); i++) {
             stream << print_name(args[i].name);
             if(i != args.size() - 1)
@@ -381,10 +380,12 @@ void CodeGen_CoreIR_Testbench::visit(const Store *op) {
            << ";\n";
 
   bool in_hw_section = hw_input_set.count(id_value)>0;
-  stream << "out: " << id_value << endl;
+
   if (in_hw_section){
     stream << "to out: " << id_value << endl;
     def->wire(hw_input_set[id_value], self->sel("out"));
+  } else {
+    stream << "out: " << id_value << endl;
   }
   //  CodeGen_C::visit(op);
 }

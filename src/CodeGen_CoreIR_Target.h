@@ -10,6 +10,8 @@
 #include "Module.h"
 #include "Scope.h"
 
+#include "context.hpp"
+
 namespace Halide {
 
 namespace Internal {
@@ -54,7 +56,6 @@ protected:
 
         using CodeGen_CoreIR_Base::visit;
 
-	void visit(const Mul *op);
         void visit(const For *op);
         void visit(const Allocate *op);
     };
@@ -73,6 +74,18 @@ protected:
     CodeGen_CoreIR_C hdrc;
     CodeGen_CoreIR_C srcc;
     // @}
+
+ private:
+    // for coreir generation
+    uint8_t n;
+    CoreIR::Context* c;
+    CoreIR::Namespace* g;
+    CoreIR::Namespace* stdlib;
+    std::map<std::string,CoreIR::Module*> gens;
+    CoreIR::ModuleDef* def;
+    CoreIR::Module* design_target;
+    CoreIR::Wireable* self;
+
 };
 
 }
