@@ -46,7 +46,8 @@ public:
 protected:
     class CodeGen_CoreIR_C : public CodeGen_CoreIR_Base {
     public:
-        CodeGen_CoreIR_C(std::ostream &s, OutputKind output_kind) : CodeGen_CoreIR_Base(s, output_kind) {}
+  CodeGen_CoreIR_C(std::ostream &s, OutputKind output_kind);
+  ~CodeGen_CoreIR_C();
 
         void add_kernel(Stmt stmt,
                         const std::string &name,
@@ -58,6 +59,29 @@ protected:
 
         void visit(const For *op);
         void visit(const Allocate *op);
+
+	void visit(const Mul *op);
+	void visit(const Add *op);
+	void visit(const Sub *op);
+	void visit(const Load *op);
+	void visit(const Store *op);
+
+	void visit_binop(Type t, Expr a, Expr b, char op_sym, std::string coreir_name, std::string op_name);
+	std::map<std::string,CoreIR::Wireable*> hw_input_set;
+	std::string id_hw_section(Expr a, Expr b, Type t, char op_symbol, std::string a_name, std::string b_name);
+	CoreIR::Wireable* get_wire(Expr e, std::string name);
+
+     private:
+        // for coreir generation
+        uint8_t n;
+        CoreIR::Context* c;
+        CoreIR::Namespace* g;
+        CoreIR::Namespace* stdlib;
+        std::map<std::string,CoreIR::Module*> gens;
+        CoreIR::ModuleDef* def;
+        CoreIR::Module* design_target;
+    CoreIR::Wireable* self;
+
     };
 
     /** A name for the CoreIR target */
@@ -73,18 +97,8 @@ protected:
     // @{
     CodeGen_CoreIR_C hdrc;
     CodeGen_CoreIR_C srcc;
-    // @}
+    // @}    
 
- private:
-    // for coreir generation
-    uint8_t n;
-    CoreIR::Context* c;
-    CoreIR::Namespace* g;
-    CoreIR::Namespace* stdlib;
-    std::map<std::string,CoreIR::Module*> gens;
-    CoreIR::ModuleDef* def;
-    CoreIR::Module* design_target;
-    CoreIR::Wireable* self;
 
 };
 

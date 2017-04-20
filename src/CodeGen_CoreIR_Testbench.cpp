@@ -285,7 +285,7 @@ int id_cnst_value(const Expr e) {
   }
 }
 
-  string CodeGen_CoreIR_Testbench::id_hw_section(Expr a, Expr b, Type t, char op_symbol, string a_name, string b_name) {
+string CodeGen_CoreIR_Testbench::id_hw_section(Expr a, Expr b, Type t, char op_symbol, string a_name, string b_name) {
   bool is_input = id_hw_input(a) || id_hw_input(b);
   bool in_hw_section = hw_input_set.count(a_name)>0 || hw_input_set.count(b_name)>0;
   string out_var = print_assignment(t, a_name + " " + op_symbol + " " + b_name);

@@ -52,8 +52,9 @@ bool contain_for_loop(Stmt s) {
 CodeGen_CoreIR_Target::CodeGen_CoreIR_Target(const string &name)
     : target_name(name),
       hdrc(hdr_stream, CodeGen_CoreIR_C::CPlusPlusHeader),
-      srcc(src_stream, CodeGen_CoreIR_C::CPlusPlusImplementation) {
+      srcc(src_stream, CodeGen_CoreIR_C::CPlusPlusImplementation) { }
 
+  CodeGen_CoreIR_Target::CodeGen_CoreIR_C::CodeGen_CoreIR_C(std::ostream &s, OutputKind output_kind) : CodeGen_CoreIR_Base(s, output_kind) {
     // set up coreir generation
     n = 16;
     c = CoreIR::newContext();
@@ -75,7 +76,6 @@ CodeGen_CoreIR_Target::CodeGen_CoreIR_Target(const string &name)
     design_target = g->newModuleDecl("DesignTarget", design_type);
     def = design_target->newModuleDef();
     self = def->sel("self");
-
 }
 
 
@@ -91,7 +91,9 @@ CodeGen_CoreIR_Target::~CodeGen_CoreIR_Target() {
     hdr_file << hdr_stream.str() << endl;
     src_file.close();
     hdr_file.close();
+}
 
+CodeGen_CoreIR_Target::CodeGen_CoreIR_C::~CodeGen_CoreIR_C() {
     // print coreir to stdout
     design_target->addDef(def);
     c->checkerrors();
@@ -396,5 +398,142 @@ void CodeGen_CoreIR_Target::CodeGen_CoreIR_C::visit(const Allocate *op) {
     //close_scope("alloc " + print_name(op->name));
 
 }
+
+bool id_hw_input(const Expr e) {
+  if (e.as<Load>()) {
+    return true;
+  } else {
+    return false;
+  }
+}
+
+bool id_cnst(const Expr e) {
+  if (e.as<IntImm>() || e.as<UIntImm>()) {
+    return true;
+  } else {
+    return false;
+  }
+}
+
+int id_cnst_value(const Expr e) {
+  const IntImm* e_int = e.as<IntImm>();
+  const UIntImm* e_uint = e.as<UIntImm>();
+  if (e_int) {
+    return e_int->value;
+  } else if (e_uint) {
+    return e_uint->value;
+  } else {
+    cout << "invalid constant expr" <<endl;
+    return -1;
+  }
+}
+
+string CodeGen_CoreIR_Target::CodeGen_CoreIR_C::id_hw_section(Expr a, Expr b, Type t, char op_symbol, string a_name, string b_name) {
+  bool is_input = id_hw_input(a) || id_hw_input(b);
+  bool in_hw_section = hw_input_set.count(a_name)>0 || hw_input_set.count(b_name)>0;
+  string out_var = print_assignment(t, a_name + " " + op_symbol + " " + b_name);
+
+  //  if (hw_input_set.size()>0) { stream << "a:" << print_expr(a) << " b:" << print_expr(b) << endl; }
+  if (is_input || in_hw_section) {
+    return out_var;
+    //    if (is_input) {stream << "input mult with output: " << out_var << endl; }
+    //    if (in_hw_section) {stream << "hw_section mult with output: " << out_var <<endl; }
+  } else {
+    return "";
+  }
+}
+
+CoreIR::Wireable* CodeGen_CoreIR_Target::CodeGen_CoreIR_C::get_wire(Expr e, string name) {
+  if (id_hw_input(e)) {
+    return self->sel("in");
+  } else if (id_cnst(e)) {
+    int cnst_value = id_cnst_value(e);
+    string cnst_name = "const" + name;
+    CoreIR::Wireable* cnst = def->addInstance(cnst_name,  gens["const_16"], Args({{"value",c->int2Arg(cnst_value)}}));
+    return cnst->sel("out");
+  } else  {
+    CoreIR::Wireable* wire = hw_input_set[name];
+
+    if (wire) { }
+    else { cout << "invalid wire in tb: " << name << endl; return self->sel("in"); }
+    return wire;
+  }
+}
+
+  void CodeGen_CoreIR_Target::CodeGen_CoreIR_C::visit_binop(Type t, Expr a, Expr b, char op_sym, string coreir_name, string op_name) {
+    //  stream << "tb-saw a " << op_name << "!!!!!!!!!!!!!!!!" << endl;
+  string a_name = print_expr(a);
+  string b_name = print_expr(b);
+
+  string out_var = id_hw_section(a, b, t, op_sym, a_name, b_name);
+  if (out_var.compare("") != 0) {
+    string mult_name = op_name + a_name + b_name;
+    CoreIR::Wireable* coreir_inst = def->addInstance(mult_name,gens[coreir_name]);
+    def->wire(get_wire(a, a_name), coreir_inst->sel("in0"));
+    def->wire(get_wire(b, b_name), coreir_inst->sel("in1"));
+    hw_input_set[out_var] = coreir_inst->sel("out");
+
+    if (id_hw_input(a)) { stream << op_name <<"a: self.in "; } else { stream << op_name << "a: " << a_name << " "; }
+    if (id_hw_input(b)) { stream << op_name <<"b: self.in" <<endl; } else { stream << op_name << "b: " << b_name << endl; }
+    stream << op_name<<"o: " << out_var << endl;
+    
+  } else {
+    //    stream << "tb-performed a << op_name<< :!!! " <<endl;//<< print_type(a.type()) << " " << print_type(b.type()) << endl;
+  }
+
+  }
+
+void CodeGen_CoreIR_Target::CodeGen_CoreIR_C::visit(const Mul *op) {
+  visit_binop(op->type, op->a, op->b, '*', "mult2_16", "mul");
+}
+
+void CodeGen_CoreIR_Target::CodeGen_CoreIR_C::visit(const Add *op) {
+  visit_binop(op->type, op->a, op->b, '+', "add2_16", "add");
+}
+  
+void CodeGen_CoreIR_Target::CodeGen_CoreIR_C::visit(const Sub *op) {
+  visit_binop(op->type, op->a, op->b, '-', "mult2_16", "sub");
+}
+
+void CodeGen_CoreIR_Target::CodeGen_CoreIR_C::visit(const Store *op) {
+    Type t = op->value.type();
+
+    bool type_cast_needed =
+        t.is_handle() ||
+        !allocations.contains(op->name) ||
+        allocations.get(op->name).type != t;
+
+    string id_index = print_expr(op->index);
+    string id_value = print_expr(op->value);
+    do_indent();
+
+    if (type_cast_needed) {
+        stream << "((const "
+               << print_type(t)
+               << " *)"
+               << print_name(op->name)
+               << ")";
+    } else {
+        stream << print_name(op->name);
+    }
+    stream << "["
+           << id_index
+           << "] = "
+           << id_value
+           << ";\n";
+
+  bool in_hw_section = hw_input_set.count(id_value)>0;
+
+  if (in_hw_section){
+    stream << "to out: " << id_value << endl;
+    def->wire(hw_input_set[id_value], self->sel("out"));
+  } else {
+    stream << "out: " << id_value << endl;
+  }
+  //  CodeGen_C::visit(op);
+}
+
+  // TODO: add more operators
 }
 }
+
