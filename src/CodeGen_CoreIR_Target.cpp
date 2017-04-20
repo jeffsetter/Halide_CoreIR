@@ -73,8 +73,8 @@ CodeGen_CoreIR_Target::CodeGen_CoreIR_Target(const string &name)
 	{"in",c->Array(n,c->BitIn())},
 	{"out",c->Array(n,c->BitOut())}
     });
-    design_target = g->newModuleDecl("DesignTarget", design_type);
-    def = design_target->newModuleDef();
+    design = g->newModuleDecl("DesignTarget", design_type);
+    def = design->newModuleDef();
     self = def->sel("self");
 }
 
@@ -95,21 +95,21 @@ CodeGen_CoreIR_Target::~CodeGen_CoreIR_Target() {
 
 CodeGen_CoreIR_Target::CodeGen_CoreIR_C::~CodeGen_CoreIR_C() {
     // print coreir to stdout
-    design_target->addDef(def);
+    design->addDef(def);
     c->checkerrors();
-    design_target->print();
+    design->print();
     
     bool err = false;
 
     // check that the coreir was created correctly
-    CoreIR::typecheck(c,design_target,&err);
+    CoreIR::typecheck(c,design,&err);
     if (err) {
       cout << "failed typecheck" << endl;
       exit(1);
     }
   
     // write out the json
-    CoreIR::saveModule(design_target, "design_target.json", &err);
+    CoreIR::saveModule(design, "design_target.json", &err);
     if (err) {
       cout << "Could not save json :(" << endl;
       exit(1);
@@ -399,7 +399,7 @@ void CodeGen_CoreIR_Target::CodeGen_CoreIR_C::visit(const Allocate *op) {
 
 }
 
-bool id_hw_input(const Expr e) {
+bool CodeGen_CoreIR_Target::CodeGen_CoreIR_C::id_hw_input(const Expr e) {
   if (e.as<Load>()) {
     return true;
   } else {
@@ -407,7 +407,7 @@ bool id_hw_input(const Expr e) {
   }
 }
 
-bool id_cnst(const Expr e) {
+bool CodeGen_CoreIR_Target::CodeGen_CoreIR_C::id_cnst(const Expr e) {
   if (e.as<IntImm>() || e.as<UIntImm>()) {
     return true;
   } else {
@@ -415,7 +415,7 @@ bool id_cnst(const Expr e) {
   }
 }
 
-int id_cnst_value(const Expr e) {
+int CodeGen_CoreIR_Target::CodeGen_CoreIR_C::id_cnst_value(const Expr e) {
   const IntImm* e_int = e.as<IntImm>();
   const UIntImm* e_uint = e.as<UIntImm>();
   if (e_int) {

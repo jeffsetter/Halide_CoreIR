@@ -96,26 +96,26 @@ CodeGen_CoreIR_Testbench::CodeGen_CoreIR_Testbench(ostream &tb_stream)
 	{"in",c->Array(n,c->BitIn())},
 	{"out",c->Array(n,c->BitOut())}
     });
-    design_top = g->newModuleDecl("DesignTop", design_type);
-    def = design_top->newModuleDef();
+    design = g->newModuleDecl("DesignTop", design_type);
+    def = design->newModuleDef();
     self = def->sel("self");
 }
 
 CodeGen_CoreIR_Testbench::~CodeGen_CoreIR_Testbench() {
   // write coreir json
-  design_top->addDef(def);
+  design->addDef(def);
   c->checkerrors();
-  design_top->print();
+  design->print();
 
   bool err = false;
 
-  CoreIR::typecheck(c,design_top,&err);
+  CoreIR::typecheck(c,design,&err);
   if (err) {
     cout << "failed typecheck" << endl;
     exit(1);
   }
 
-  CoreIR::saveModule(design_top, "design_top.json", &err);
+  CoreIR::saveModule(design, "design_top.json", &err);
   if (err) {
     cout << "Could not save json :(" << endl;
     exit(1);
@@ -256,7 +256,7 @@ void CodeGen_CoreIR_Testbench::visit(const Block *op) {
 }
 
 
-bool id_hw_input(const Expr e) {
+bool CodeGen_CoreIR_Testbench::id_hw_input(const Expr e) {
   if (e.as<Load>()) {
     return true;
   } else {
@@ -264,7 +264,7 @@ bool id_hw_input(const Expr e) {
   }
 }
 
-bool id_cnst(const Expr e) {
+bool CodeGen_CoreIR_Testbench::id_cnst(const Expr e) {
   if (e.as<IntImm>() || e.as<UIntImm>()) {
     return true;
   } else {
@@ -272,7 +272,7 @@ bool id_cnst(const Expr e) {
   }
 }
 
-int id_cnst_value(const Expr e) {
+int CodeGen_CoreIR_Testbench::id_cnst_value(const Expr e) {
   const IntImm* e_int = e.as<IntImm>();
   const UIntImm* e_uint = e.as<UIntImm>();
   if (e_int) {
@@ -284,7 +284,7 @@ int id_cnst_value(const Expr e) {
     return -1;
   }
 }
-
+  
 string CodeGen_CoreIR_Testbench::id_hw_section(Expr a, Expr b, Type t, char op_symbol, string a_name, string b_name) {
   bool is_input = id_hw_input(a) || id_hw_input(b);
   bool in_hw_section = hw_input_set.count(a_name)>0 || hw_input_set.count(b_name)>0;
