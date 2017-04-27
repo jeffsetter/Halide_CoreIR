@@ -255,8 +255,9 @@ LIBPNG_LIBS ?= $(LIBPNG_LIBS_DEFAULT)
 
 # Compiling for CoreIR requires some extra links
 COREIR_DIR ?= ../coreir
-COREIR_INCLUDES = -I$(COREIR_DIR)/src -I$(COREIR_DIR)/libs -fexceptions
-COREIR_LIBPATH = $(COREIR_DIR)/build/coreir.a
+COREIR_INCLUDES = -I$(COREIR_DIR)/include -fexceptions
+COREIR_LIBS = -L$(COREIR_DIR)/bin -Wl,-rpath,$(COREIR_DIR)/bin -lcoreir-stdlib -lcoreir-passes -lcoreir
+TEST_LD_FLAGS += $(COREIR_LIBS)
 
 # We're building into the current directory $(CURDIR). Find the Halide
 # repo root directory (the location of the makefile)
@@ -701,7 +702,7 @@ endif
 
 $(BIN_DIR)/libHalide.$(SHARED_EXT): $(LIB_DIR)/libHalide.a
 	@-mkdir -p $(BIN_DIR)
-	$(CXX) $(BUILD_BIT_SIZE) -shared $(OBJECTS) $(INITIAL_MODULES) $(LLVM_STATIC_LIBS) $(LLVM_LD_FLAGS) $(LLVM_SHARED_LIBS) $(LIBDL) -lz -lpthread -o $(BIN_DIR)/libHalide.$(SHARED_EXT) $(COREIR_LIBPATH)
+	$(CXX) $(BUILD_BIT_SIZE) -shared $(OBJECTS) $(INITIAL_MODULES) $(LLVM_STATIC_LIBS) $(LLVM_LD_FLAGS) $(LLVM_SHARED_LIBS) $(LIBDL) -lz -lpthread -o $(BIN_DIR)/libHalide.$(SHARED_EXT) $(COREIR_LIBS)
 ifeq ($(UNAME), Darwin)
 	install_name_tool -id $(CURDIR)/$(BIN_DIR)/libHalide.$(SHARED_EXT) $(BIN_DIR)/libHalide.$(SHARED_EXT)
 endif
