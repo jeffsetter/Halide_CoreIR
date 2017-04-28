@@ -41,12 +41,9 @@ install:
   # install framework specific to halide
   - test/scripts/install_travis.sh  
   # compile coreir
-  - pushd . && cd $(TRAVIS_BUILD_DIR)
   - git clone -b libreorg https://github.com/rdaly525/coreir.git
-  - cd coreir
-  - make install
-  - make test
-  - popd
+  - make -C coreir install
+  - make -C coreir test
 
 script:
   - test/scripts/build_travis.sh
