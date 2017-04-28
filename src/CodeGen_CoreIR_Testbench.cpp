@@ -10,8 +10,9 @@
 #include "Lerp.h"
 #include "Simplify.h"
 
-#include "stdlib.hpp"
-#include "passes.hpp" 
+#include "coreir.h"
+#include "coreir-lib/stdlib.h"
+#include "coreir-pass/passes.hpp"
 
 namespace Halide {
 
@@ -82,7 +83,7 @@ CodeGen_CoreIR_Testbench::CodeGen_CoreIR_Testbench(ostream &tb_stream)
     n = 16;
     c = CoreIR::newContext();
     g = c->getGlobal();
-    stdlib = getStdlib(c);
+    stdlib = CoreIRLoadLibrary_stdlib(c);
 
     // add all generators from stdlib
     std::vector<string> gen_names = {"add2_16", "mult2_16", "const_16"};
@@ -103,7 +104,7 @@ CodeGen_CoreIR_Testbench::CodeGen_CoreIR_Testbench(ostream &tb_stream)
 
 CodeGen_CoreIR_Testbench::~CodeGen_CoreIR_Testbench() {
   // write coreir json
-  design->addDef(def);
+  design->setDef(def);
   c->checkerrors();
   design->print();
 
@@ -306,7 +307,7 @@ string CodeGen_CoreIR_Testbench::id_hw_section(Expr a, Expr b, Type t, char op_s
   } else if (id_cnst(e)) {
     int cnst_value = id_cnst_value(e);
     string cnst_name = "const" + name;
-    CoreIR::Wireable* cnst = def->addInstance(cnst_name,  gens["const_16"], Args({{"value",c->int2Arg(cnst_value)}}));
+    CoreIR::Wireable* cnst = def->addInstance(cnst_name,  gens["const_16"], CoreIR::Args({{"value",c->int2Arg(cnst_value)}}));
     return cnst->sel("out");
   } else  {
     CoreIR::Wireable* wire = hw_input_set[name];
