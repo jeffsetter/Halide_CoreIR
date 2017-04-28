@@ -533,6 +533,14 @@ void CodeGen_CoreIR_Target::CodeGen_CoreIR_C::visit(const Store *op) {
   //  CodeGen_C::visit(op);
 }
 
+  void CodeGen_CoreIR_Target::CodeGen_CoreIR_C::visit(const Call *op) {
+    if (op->is_intrinsic(Call::rewrite_buffer)) {
+      stream << "[rewrite_buffer]";
+    }
+    CodeGen_CoreIR_Base::visit(op);
+
+  }
+
   // TODO: add more operators
 }
 }

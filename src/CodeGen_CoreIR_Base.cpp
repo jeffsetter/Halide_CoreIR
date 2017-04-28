@@ -211,6 +211,7 @@ void CodeGen_CoreIR_Base::visit(const Call *op) {
                 rhs << ", ";
         }
         rhs << ")";
+	rhs << "[stencil]";
 
         print_assignment(op->type, rhs.str());
     } else if (op->name == "dispatch_stream") {
@@ -420,6 +421,7 @@ void CodeGen_CoreIR_Base::visit(const Provide *op) {
         string id_value = print_expr(op->values[0]);
 
         do_indent();
+	stream << "[provide]";
         stream << print_name(op->name) << "(";
 
         for(size_t i = 0; i < op->args.size(); i++) {

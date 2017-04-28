@@ -65,6 +65,7 @@ protected:
 	void visit(const Sub *op);
 	//	void visit(const Load *op);
 	void visit(const Store *op);
+	void visit(const Call *op);
 
 	bool id_hw_input(const Expr e);
 	bool id_cnst(const Expr e);
@@ -74,18 +75,6 @@ protected:
 	std::string id_hw_section(Expr a, Expr b, Type t, char op_symbol, std::string a_name, std::string b_name);
 	CoreIR::Wireable* get_wire(Expr e, std::string name);
 
-	/*
-     private:
-        // for coreir generation
-        uint8_t n;
-        CoreIR::Context* c;
-        CoreIR::Namespace* g;
-        CoreIR::Namespace* stdlib;
-        std::map<std::string,CoreIR::Module*> gens;
-        CoreIR::ModuleDef* def;
-        CoreIR::Module* design_target;
-	CoreIR::Wireable* self;
-	*/
     };
 
     /** A name for the CoreIR target */
