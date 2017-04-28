@@ -11,7 +11,7 @@
 #include "Simplify.h"
 
 #include "coreir.h"
-#include "coreir-lib/stdlib.hpp"
+#include "coreir-lib/stdlib.h"
 #include "coreir-pass/passes.hpp"
 
 namespace Halide {
@@ -83,7 +83,7 @@ CodeGen_CoreIR_Testbench::CodeGen_CoreIR_Testbench(ostream &tb_stream)
     n = 16;
     c = CoreIR::newContext();
     g = c->getGlobal();
-    stdlib = CoreIRLoadLibrary_stdlib(c);//getStdlib(c);
+    stdlib = CoreIRLoadLibrary_stdlib(c);
 
     // add all generators from stdlib
     std::vector<string> gen_names = {"add2_16", "mult2_16", "const_16"};
@@ -97,25 +97,26 @@ CodeGen_CoreIR_Testbench::CodeGen_CoreIR_Testbench(ostream &tb_stream)
 	{"in",c->Array(n,c->BitIn())},
 	{"out",c->Array(n,c->BitOut())}
     });
-    design_top = g->newModuleDecl("DesignTop", design_type);
-    def = design_top->newModuleDef();
+    design = g->newModuleDecl("DesignTop", design_type);
+    def = design->newModuleDef();
     self = def->sel("self");
 }
 
 CodeGen_CoreIR_Testbench::~CodeGen_CoreIR_Testbench() {
-  design_top->addDef(def);
+  // write coreir json
+  design->setDef(def);
   c->checkerrors();
-  design_top->print();
+  design->print();
 
   bool err = false;
 
-  CoreIR::typecheck(c,design_top,&err);
+  CoreIR::typecheck(c,design,&err);
   if (err) {
     cout << "failed typecheck" << endl;
     exit(1);
   }
 
-  CoreIR::saveModule(design_top, "design_top.json", &err);
+  CoreIR::saveModule(design, "design_top.json", &err);
   if (err) {
     cout << "Could not save json :(" << endl;
     exit(1);
@@ -123,12 +124,11 @@ CodeGen_CoreIR_Testbench::~CodeGen_CoreIR_Testbench() {
     cout << "We passed!!! (GREEN PASS) Yay!" << endl;
   }
 
-  CoreIR::Module* mod = CoreIR::loadModule(c,"design_top.json", &err);
+  CoreIR::loadModule(c,"design_top.json", &err);
   if (err) {
     cout << "failed to reload json" << endl;
     exit(1);
   }
-  mod->print();
 
   CoreIR::deleteContext(c);
 }
@@ -147,7 +147,7 @@ void CodeGen_CoreIR_Testbench::visit(const ProducerConsumer *op) {
 
         // emits the target function call
         do_indent();
-        stream << ip_name << "("; // avoid starting with '_'
+        stream << print_name(ip_name) << "("; // avoid starting with '_'
         for(size_t i = 0; i < args.size(); i++) {
             stream << print_name(args[i].name);
             if(i != args.size() - 1)
@@ -257,7 +257,7 @@ void CodeGen_CoreIR_Testbench::visit(const Block *op) {
 }
 
 
-bool id_hw_input(const Expr e) {
+bool CodeGen_CoreIR_Testbench::id_hw_input(const Expr e) {
   if (e.as<Load>()) {
     return true;
   } else {
@@ -265,7 +265,7 @@ bool id_hw_input(const Expr e) {
   }
 }
 
-bool id_cnst(const Expr e) {
+bool CodeGen_CoreIR_Testbench::id_cnst(const Expr e) {
   if (e.as<IntImm>() || e.as<UIntImm>()) {
     return true;
   } else {
@@ -273,7 +273,7 @@ bool id_cnst(const Expr e) {
   }
 }
 
-int id_cnst_value(const Expr e) {
+int CodeGen_CoreIR_Testbench::id_cnst_value(const Expr e) {
   const IntImm* e_int = e.as<IntImm>();
   const UIntImm* e_uint = e.as<UIntImm>();
   if (e_int) {
@@ -285,8 +285,8 @@ int id_cnst_value(const Expr e) {
     return -1;
   }
 }
-
-  string CodeGen_CoreIR_Testbench::id_hw_section(Expr a, Expr b, Type t, char op_symbol, string a_name, string b_name) {
+  
+string CodeGen_CoreIR_Testbench::id_hw_section(Expr a, Expr b, Type t, char op_symbol, string a_name, string b_name) {
   bool is_input = id_hw_input(a) || id_hw_input(b);
   bool in_hw_section = hw_input_set.count(a_name)>0 || hw_input_set.count(b_name)>0;
   string out_var = print_assignment(t, a_name + " " + op_symbol + " " + b_name);
@@ -381,10 +381,12 @@ void CodeGen_CoreIR_Testbench::visit(const Store *op) {
            << ";\n";
 
   bool in_hw_section = hw_input_set.count(id_value)>0;
-  stream << "out: " << id_value << endl;
+
   if (in_hw_section){
     stream << "to out: " << id_value << endl;
     def->wire(hw_input_set[id_value], self->sel("out"));
+  } else {
+    stream << "out: " << id_value << endl;
   }
   //  CodeGen_C::visit(op);
 }
