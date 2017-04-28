@@ -383,6 +383,14 @@ void CodeGen_HLS_Base::visit(const Realize *op) {
         stream << print_stencil_type(stype) << ' ' << print_name(op->name) << ";\n";
         stream << print_stencil_pragma(op->name);
 
+	// INIT
+	stream << print_name(op->name) << "(0";
+	for (const auto &range : op->bounds) {
+	  stream << ", " << range.min;
+	}
+	stream << ") = 0;\n";
+
+
         op->body.accept(this);
 
         // We didn't generate free stmt inside for stream type
