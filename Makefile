@@ -254,7 +254,7 @@ endif
 LIBPNG_LIBS ?= $(LIBPNG_LIBS_DEFAULT)
 
 # Compiling for CoreIR requires some extra links
-COREIR_DIR ?= ../coreir
+COREIR_DIR ?= $(ROOT_DIR)/../coreir
 COREIR_INCLUDES = -I$(COREIR_DIR)/include -fexceptions
 COREIR_LIBS = -L$(COREIR_DIR)/bin -Wl,-rpath,$(COREIR_DIR)/bin -lcoreir-stdlib -lcoreir-passes -lcoreir
 TEST_LD_FLAGS += $(COREIR_LIBS)
