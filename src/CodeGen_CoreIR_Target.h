@@ -10,6 +10,8 @@
 #include "Module.h"
 #include "Scope.h"
 
+#include "coreir.h"
+
 namespace Halide {
 
 namespace Internal {
@@ -44,7 +46,8 @@ public:
 protected:
     class CodeGen_CoreIR_C : public CodeGen_CoreIR_Base {
     public:
-        CodeGen_CoreIR_C(std::ostream &s, OutputKind output_kind) : CodeGen_CoreIR_Base(s, output_kind) {}
+  CodeGen_CoreIR_C(std::ostream &s, OutputKind output_kind);
+  ~CodeGen_CoreIR_C();
 
         void add_kernel(Stmt stmt,
                         const std::string &name,
@@ -54,9 +57,24 @@ protected:
 
         using CodeGen_CoreIR_Base::visit;
 
-	void visit(const Mul *op);
         void visit(const For *op);
         void visit(const Allocate *op);
+
+	void visit(const Mul *op);
+	void visit(const Add *op);
+	void visit(const Sub *op);
+	//	void visit(const Load *op);
+	void visit(const Store *op);
+	void visit(const Call *op);
+
+	bool id_hw_input(const Expr e);
+	bool id_cnst(const Expr e);
+	int id_cnst_value(const Expr e);
+	void visit_binop(Type t, Expr a, Expr b, char op_sym, std::string coreir_name, std::string op_name);
+	std::map<std::string,CoreIR::Wireable*> hw_input_set;
+	std::string id_hw_section(Expr a, Expr b, Type t, char op_symbol, std::string a_name, std::string b_name);
+	CoreIR::Wireable* get_wire(Expr e, std::string name);
+
     };
 
     /** A name for the CoreIR target */
@@ -72,7 +90,9 @@ protected:
     // @{
     CodeGen_CoreIR_C hdrc;
     CodeGen_CoreIR_C srcc;
-    // @}
+    // @}    
+
+
 };
 
 }

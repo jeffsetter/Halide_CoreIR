@@ -9,6 +9,8 @@
 #include "Module.h"
 #include "Scope.h"
 
+#include "coreir.h"
+
 namespace Halide {
 
 namespace Internal {
@@ -48,6 +50,17 @@ protected:
     void visit(const Provide *);
     void visit(const Realize *);
     void visit(const Mul *);
+
+    // for coreir generation
+    uint8_t n;
+    CoreIR::Context* c;
+    CoreIR::Namespace* g;
+    CoreIR::Namespace* stdlib;
+    std::map<std::string,CoreIR::Module*> gens;
+    CoreIR::ModuleDef* def;
+    CoreIR::Module* design;
+    CoreIR::Wireable* self;
+
 };
 
 }

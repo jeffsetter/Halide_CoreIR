@@ -102,21 +102,14 @@ void CodeGen_CoreIR_Base::visit(const Call *op) {
 	const Variable *stencil_var = op->args[1].as<Variable>();
 	Stencil_Type stencil_type = stencils.get(stencil_var->name);
 
-	stream << " -- use linebuffer\n";
-	stream << a0 << " = R.connect{ input="
-	       << a1 << ", toModule = \n"
-	       << "  R.HS(R.modules.linebuffer{ type=R."
-	       << print_type(stencil_type.elemType)
-	       << ", P=P, ";
-
-	stream << "size={";
+        do_indent();
+        stream << "linebuffer<";
         for(size_t i = 2; i < op->args.size(); i++) {
             stream << print_expr(op->args[i]);
             if (i != op->args.size() -1)
-                stream << ",";
+                stream << ", ";
         }
-	stream << "}, stencil={...} })}\n\n";
-
+        stream << ">(" << a0 << ", " << a1 << ");\n";
         id = "0"; // skip evaluation
     } else if (op->name == "write_stream") {
         if (op->args.size() == 2) {
@@ -216,6 +209,7 @@ void CodeGen_CoreIR_Base::visit(const Call *op) {
                 rhs << ", ";
         }
         rhs << ")";
+	rhs << "[stencil]";
 
         print_assignment(op->type, rhs.str());
     } else if (op->name == "dispatch_stream") {
@@ -425,6 +419,7 @@ void CodeGen_CoreIR_Base::visit(const Provide *op) {
         string id_value = print_expr(op->values[0]);
 
         do_indent();
+	stream << "[provide]";
         stream << print_name(op->name) << "(";
 
         for(size_t i = 0; i < op->args.size(); i++) {

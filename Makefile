@@ -174,7 +174,7 @@ TEST_CXX_FLAGS ?= $(TUTORIAL_CXX_FLAGS) $(CXX_WARNING_FLAGS)
 TEST_LD_FLAGS = -L$(BIN_DIR) -lHalide -lpthread $(LIBDL) -lz
 
 ifeq ($(UNAME), Linux)
-TEST_LD_FLAGS += -rdynamic -Wl,--rpath=$(CURDIR)/$(BIN_DIR)
+TEST_LD_FLAGS += -rdynamic -Wl,-rpath,$(CURDIR)/$(BIN_DIR)
 endif
 
 ifneq ($(WITH_PTX), )
@@ -253,12 +253,6 @@ endif
 endif
 LIBPNG_LIBS ?= $(LIBPNG_LIBS_DEFAULT)
 
-# Compiling for CoreIR requires some extra links
-COREIR_DIR ?= $(ROOT_DIR)/../coreir
-COREIR_INCLUDES = -I$(COREIR_DIR)/include -fexceptions
-COREIR_LIBS = -L$(COREIR_DIR)/bin -Wl,-rpath,$(COREIR_DIR)/bin -lcoreir-stdlib -lcoreir-passes -lcoreir
-TEST_LD_FLAGS += $(COREIR_LIBS)
-
 # We're building into the current directory $(CURDIR). Find the Halide
 # repo root directory (the location of the makefile)
 THIS_MAKEFILE = $(realpath $(filter %Makefile, $(MAKEFILE_LIST)))
@@ -275,6 +269,12 @@ BUILD_DIR   = $(BIN_DIR)/build
 FILTERS_DIR = $(BUILD_DIR)/filters
 RUNTIMES_DIR = $(BUILD_DIR)/runtimes
 TMP_DIR     = $(BUILD_DIR)/tmp
+
+# Compiling for CoreIR requires some extra links
+COREIR_DIR ?= $(ROOT_DIR)/../coreir
+COREIR_INCLUDES = -I$(COREIR_DIR)/include -fexceptions
+COREIR_LIBS = -L$(COREIR_DIR)/bin -Wl,-rpath,$(COREIR_DIR)/bin -lcoreir-stdlib -lcoreir-passes -lcoreir
+TEST_LD_FLAGS += $(COREIR_LIBS)
 
 SOURCE_FILES = \
   AddImageChecks.cpp \

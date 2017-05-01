@@ -14,6 +14,9 @@
 #include "Simplify.h"
 
 #include "coreir.h"
+#include "coreir-lib/stdlib.h"
+#include "coreir-pass/passes.hpp"
+
 
 namespace Halide {
 namespace Internal {
@@ -53,21 +56,77 @@ CodeGen_CoreIR_Target::CodeGen_CoreIR_Target(const string &name)
       hdrc(hdr_stream, CodeGen_CoreIR_C::CPlusPlusHeader),
       srcc(src_stream, CodeGen_CoreIR_C::CPlusPlusImplementation) { }
 
+  CodeGen_CoreIR_Target::CodeGen_CoreIR_C::CodeGen_CoreIR_C(std::ostream &s, OutputKind output_kind) : CodeGen_CoreIR_Base(s, output_kind) {
+    // set up coreir generation
+    n = 16;
+    c = CoreIR::newContext();
+    g = c->getGlobal();
+    stdlib = CoreIRLoadLibrary_stdlib(c);
+
+    // add all generators from stdlib
+    std::vector<string> gen_names = {"add2_16", "mult2_16", "const_16"};
+    for (auto gen_name : gen_names) {
+      gens[gen_name] = stdlib->getModule(gen_name);
+      assert(gens[gen_name]);
+    }
+
+    // TODO: fix static module definition
+    CoreIR::Type* design_type = c->Record({
+	{"in",c->Array(n,c->BitIn())},
+	{"out",c->Array(n,c->BitOut())}
+    });
+    design = g->newModuleDecl("DesignTarget", design_type);
+    def = design->newModuleDef();
+    self = def->sel("self");
+}
+
 
 CodeGen_CoreIR_Target::~CodeGen_CoreIR_Target() {
     hdr_stream << "#endif\n";
 
     // write the header and the source streams into files
-    string src_name = target_name + ".t";
+    string src_name = target_name + ".cpp";
     string hdr_name = target_name + ".h";
     ofstream src_file(src_name.c_str());
     ofstream hdr_file(hdr_name.c_str());
-    src_file << srcc.require_global_ostream.str() << endl;
-    src_file << srcc.submethod_ostream.str() << endl;
     src_file << src_stream.str() << endl;
     hdr_file << hdr_stream.str() << endl;
     src_file.close();
     hdr_file.close();
+}
+
+CodeGen_CoreIR_Target::CodeGen_CoreIR_C::~CodeGen_CoreIR_C() {
+    // print coreir to stdout
+    design->setDef(def);
+    c->checkerrors();
+    design->print();
+    
+    bool err = false;
+
+    // check that the coreir was created correctly
+    CoreIR::typecheck(c,design,&err);
+    if (err) {
+      cout << "failed typecheck" << endl;
+      exit(1);
+    }
+  
+    // write out the json
+    CoreIR::saveModule(design, "design_target.json", &err);
+    if (err) {
+      cout << "Could not save json :(" << endl;
+      exit(1);
+    } else {
+      cout << "We created the .json!!! (GREEN PASS) Yay!" << endl;
+    }
+  
+    // check that we can reload the created json
+    CoreIR::loadModule(c,"design_target.json", &err);
+    if (err) {
+      cout << "failed to reload json" << endl;
+      exit(1);
+    }
+    
+    CoreIR::deleteContext(c);
 }
 
 namespace {
@@ -87,27 +146,18 @@ void CodeGen_CoreIR_Target::init_module() {
     hdr_stream.clear();
     src_stream.str("");
     src_stream.clear();
-    srcc.require_global_ostream.str("");
-    srcc.require_global_ostream.clear();
-    srcc.submethod_ostream.str("");
-    srcc.submethod_ostream.clear();
 
     // initialize the header file
-    string module_name = "HALIDE_CODEGEN_RIGEL_TARGET_" + target_name + "_H";
+    string module_name = "HALIDE_CODEGEN_COREIR_TARGET_" + target_name + "_H";
     std::transform(module_name.begin(), module_name.end(), module_name.begin(), ::toupper);
     hdr_stream << "#ifndef " << module_name << '\n';
     hdr_stream << "#define " << module_name << "\n\n";
     hdr_stream << hls_header_includes << '\n';
 
-    // write require statements
-    srcc.require_global_ostream << "--- RIGELRIGELRIGEL!!!\n\n";
-    srcc.require_global_ostream << "R = require \"rigelSimple\"\n"
-				<< "C = require \"examplescommon\"\n\n";
-    srcc.require_global_ostream << "P = 1\n" // TODO: handle parallelism here
-				<< "inSize = { 1920, 1080 }\n"; // TODO: insert actual img sizes here
-
-    // initialize main rigel function
-    src_stream << "----------------\n";
+    // initialize the source file
+    src_stream << "#include \"" << target_name << ".h\"\n\n";
+    src_stream << "#include \"Linebuffer.h\"\n"
+               << "#include \"halide_math.h\"\n";
 
 }
 
@@ -131,13 +181,13 @@ string CodeGen_CoreIR_Target::CodeGen_CoreIR_C::print_stencil_pragma(const strin
     Stencil_Type stype = stencils.get(name);
     if (stype.type == Stencil_Type::StencilContainerType::Stream ||
         stype.type == Stencil_Type::StencilContainerType::AxiStream) {
-        oss << "#pragma HLS STREAM variable=" << print_name(name) << " depth=" << stype.depth << "\n";
+        oss << "#pragma CoreIR STREAM variable=" << print_name(name) << " depth=" << stype.depth << "\n";
         if (stype.depth <= 100) {
             // use shift register implementation when the FIFO is shallow
-            oss << "#pragma HLS RESOURCE variable=" << print_name(name) << " core=FIFO_SRL\n\n";
+            oss << "#pragma CoreIR RESOURCE variable=" << print_name(name) << " core=FIFO_SRL\n\n";
         }
     } else if (stype.type == Stencil_Type::StencilContainerType::Stencil) {
-        oss << "#pragma HLS ARRAY_PARTITION variable=" << print_name(name) << ".value complete dim=0\n\n";
+        oss << "#pragma CoreIR ARRAY_PARTITION variable=" << print_name(name) << ".value complete dim=0\n\n";
     } else {
         internal_error;
     }
@@ -149,33 +199,63 @@ void CodeGen_CoreIR_Target::CodeGen_CoreIR_C::add_kernel(Stmt stmt,
                                                    const string &name,
                                                    const vector<CoreIR_Argument> &args) {
     // Emit the function prototype
-
+    stream << "void " << print_name(name) << "(\n";
     for (size_t i = 0; i < args.size(); i++) {
-
         string arg_name = "arg_" + std::to_string(i);
         if (args[i].is_stencil) {
             CodeGen_CoreIR_Base::Stencil_Type stype = args[i].stencil_type;
             internal_assert(args[i].stencil_type.type == Stencil_Type::StencilContainerType::AxiStream ||
                             args[i].stencil_type.type == Stencil_Type::StencilContainerType::Stencil);
-	    stream << arg_name
-		   << " = R.input( R.HS( R.array( R."
-		   << print_type(args[i].stencil_type.elemType) << ", "
-		   << "P) ) )\n";
+            stream << print_stencil_type(args[i].stencil_type) << " ";
+            if (args[i].stencil_type.type == Stencil_Type::StencilContainerType::AxiStream) {
+                stream << "&";  // hls_stream needs to be passed by reference
+            }
+            stream << arg_name;
             allocations.push(args[i].name, {args[i].stencil_type.elemType, "null"});
             stencils.push(args[i].name, args[i].stencil_type);
         } else {
-	    require_global_ostream << print_type(args[i].scalar_type) << " " << arg_name << " = 0 ---cnst?";
+            stream << print_type(args[i].scalar_type) << " " << arg_name;
         }
 
+        if (i < args.size()-1) stream << ",\n";
     }
 
     if (is_header()) {
         stream << ");\n";
     } else {
+        stream << ")\n";
+        open_scope();
+
+        // add CoreIR pragma at function scope
+        stream << "#pragma CoreIR DATAFLOW\n"
+               << "#pragma CoreIR INLINE region\n"
+               << "#pragma CoreIR INTERFACE s_axilite port=return"
+               << " bundle=config\n";
+        for (size_t i = 0; i < args.size(); i++) {
+            string arg_name = "arg_" + std::to_string(i);
+            if (args[i].is_stencil) {
+                if (ends_with(args[i].name, ".stream")) {
+                    // stream arguments use AXI-stream interface
+                    stream << "#pragma CoreIR INTERFACE axis register "
+                           << "port=" << arg_name << "\n";
+                } else {
+                    // stencil arguments use AXI-lite interface
+                    stream << "#pragma CoreIR INTERFACE s_axilite "
+                           << "port=" << arg_name
+                           << " bundle=config\n";
+                    stream << "#pragma CoreIR ARRAY_PARTITION "
+                           << "variable=" << arg_name << ".value complete dim=0\n";
+                }
+            } else {
+                // scalar arguments use AXI-lite interface
+                stream << "#pragma CoreIR INTERFACE s_axilite "
+                       << "port=" << arg_name << " bundle=config\n";
+            }
+        }
+        stream << "\n";
 
         // create alias (references) of the arguments using the names in the IR
         do_indent();
-	/*
         stream << "// alias the arguments\n";
         for (size_t i = 0; i < args.size(); i++) {
             string arg_name = "arg_" + std::to_string(i);
@@ -190,11 +270,11 @@ void CodeGen_CoreIR_Target::CodeGen_CoreIR_C::add_kernel(Stmt stmt,
             }
         }
         stream << "\n";
-	*/
 
         // print body
         print(stmt);
 
+        close_scope("kernel hls_target" + print_name(name));
     }
     stream << "\n";
 
@@ -207,17 +287,11 @@ void CodeGen_CoreIR_Target::CodeGen_CoreIR_C::add_kernel(Stmt stmt,
     }
 }
 
-  // let's print something out when we see a mult
-  void CodeGen_CoreIR_Target::CodeGen_CoreIR_C::visit(const Mul *op) {
-    stream << "tg-saw a mult!!!!!!!!!!!!!!!!" << endl;
-    CodeGen_C::visit(op);
-  }
-
 // almost that same as CodeGen_C::visit(const For *)
-// we just add a 'HLS PIPELINE' pragma after the 'for' statement
+// we just add a 'CoreIR PIPELINE' pragma after the 'for' statement
 void CodeGen_CoreIR_Target::CodeGen_CoreIR_C::visit(const For *op) {
     internal_assert(op->for_type == ForType::Serial)
-        << "Can only emit serial for loops to HLS C\n";
+        << "Can only emit serial for loops to CoreIR C\n";
 
     string id_min = print_expr(op->min);
     string id_extent = print_expr(op->extent);
@@ -237,9 +311,9 @@ void CodeGen_CoreIR_Target::CodeGen_CoreIR_C::visit(const For *op) {
     open_scope();
     // add a 'PIPELINE' pragma if it is an innermost loop
     if (!contain_for_loop(op->body)) {
-        //stream << "#pragma HLS DEPENDENCE array inter false\n"
-        //       << "#pragma HLS LOOP_FLATTEN off\n";
-        stream << "#pragma HLS PIPELINE II=1\n";
+        //stream << "#pragma CoreIR DEPENDENCE array inter false\n"
+        //       << "#pragma CoreIR LOOP_FLATTEN off\n";
+        stream << "#pragma CoreIR PIPELINE II=1\n";
     }
     op->body.accept(this);
     close_scope("for " + print_name(op->name));
@@ -285,9 +359,9 @@ public:
 
 // most code is copied from CodeGen_C::visit(const Allocate *)
 // we want to check that the allocation size is constant, and
-// add a 'HLS ARRAY_PARTITION' pragma to the allocation
+// add a 'CoreIR ARRAY_PARTITION' pragma to the allocation
 void CodeGen_CoreIR_Target::CodeGen_CoreIR_C::visit(const Allocate *op) {
-    // We don't add scopes, as it messes up the dataflow directives in HLS compiler.
+    // We don't add scopes, as it messes up the dataflow directives in CoreIR compiler.
     // Instead, we rename the allocation to a unique name
     //open_scope();
 
@@ -315,7 +389,7 @@ void CodeGen_CoreIR_Target::CodeGen_CoreIR_C::visit(const Allocate *op) {
            << print_name(alloc_name)
            << "[" << constant_size << "];\n";
     // add a 'ARRAY_PARTITION" pragma
-    //stream << "#pragma HLS ARRAY_PARTITION variable=" << print_name(op->name) << " complete dim=0\n\n";
+    //stream << "#pragma CoreIR ARRAY_PARTITION variable=" << print_name(op->name) << " complete dim=0\n\n";
 
     new_body.accept(this);
 
@@ -327,5 +401,149 @@ void CodeGen_CoreIR_Target::CodeGen_CoreIR_C::visit(const Allocate *op) {
 
 }
 
+bool CodeGen_CoreIR_Target::CodeGen_CoreIR_C::id_hw_input(const Expr e) {
+  if (e.as<Load>()) {
+    return true;
+  } else {
+    return false;
+  }
+}
+
+bool CodeGen_CoreIR_Target::CodeGen_CoreIR_C::id_cnst(const Expr e) {
+  if (e.as<IntImm>() || e.as<UIntImm>()) {
+    return true;
+  } else {
+    return false;
+  }
+}
+
+int CodeGen_CoreIR_Target::CodeGen_CoreIR_C::id_cnst_value(const Expr e) {
+  const IntImm* e_int = e.as<IntImm>();
+  const UIntImm* e_uint = e.as<UIntImm>();
+  if (e_int) {
+    return e_int->value;
+  } else if (e_uint) {
+    return e_uint->value;
+  } else {
+    cout << "invalid constant expr" <<endl;
+    return -1;
+  }
+}
+
+string CodeGen_CoreIR_Target::CodeGen_CoreIR_C::id_hw_section(Expr a, Expr b, Type t, char op_symbol, string a_name, string b_name) {
+  bool is_input = id_hw_input(a) || id_hw_input(b);
+  bool in_hw_section = hw_input_set.count(a_name)>0 || hw_input_set.count(b_name)>0;
+  string out_var = print_assignment(t, a_name + " " + op_symbol + " " + b_name);
+
+  //  if (hw_input_set.size()>0) { stream << "a:" << print_expr(a) << " b:" << print_expr(b) << endl; }
+  if (is_input || in_hw_section) {
+    return out_var;
+    //    if (is_input) {stream << "input mult with output: " << out_var << endl; }
+    //    if (in_hw_section) {stream << "hw_section mult with output: " << out_var <<endl; }
+  } else {
+    return "";
+  }
+}
+
+CoreIR::Wireable* CodeGen_CoreIR_Target::CodeGen_CoreIR_C::get_wire(Expr e, string name) {
+  if (id_hw_input(e)) {
+    return self->sel("in");
+  } else if (id_cnst(e)) {
+    int cnst_value = id_cnst_value(e);
+    string cnst_name = "const" + name;
+    CoreIR::Wireable* cnst = def->addInstance(cnst_name,  gens["const_16"], CoreIR::Args({{"value",c->int2Arg(cnst_value)}}));
+    return cnst->sel("out");
+  } else  {
+    CoreIR::Wireable* wire = hw_input_set[name];
+
+    if (wire) { }
+    else { cout << "invalid wire in tb: " << name << endl; return self->sel("in"); }
+    return wire;
+  }
+}
+
+  void CodeGen_CoreIR_Target::CodeGen_CoreIR_C::visit_binop(Type t, Expr a, Expr b, char op_sym, string coreir_name, string op_name) {
+    //  stream << "tb-saw a " << op_name << "!!!!!!!!!!!!!!!!" << endl;
+  string a_name = print_expr(a);
+  string b_name = print_expr(b);
+
+  string out_var = id_hw_section(a, b, t, op_sym, a_name, b_name);
+  if (out_var.compare("") != 0) {
+    string mult_name = op_name + a_name + b_name;
+    CoreIR::Wireable* coreir_inst = def->addInstance(mult_name,gens[coreir_name]);
+    def->wire(get_wire(a, a_name), coreir_inst->sel("in0"));
+    def->wire(get_wire(b, b_name), coreir_inst->sel("in1"));
+    hw_input_set[out_var] = coreir_inst->sel("out");
+
+    if (id_hw_input(a)) { stream << op_name <<"a: self.in "; } else { stream << op_name << "a: " << a_name << " "; }
+    if (id_hw_input(b)) { stream << op_name <<"b: self.in" <<endl; } else { stream << op_name << "b: " << b_name << endl; }
+    stream << op_name<<"o: " << out_var << endl;
+    
+  } else {
+    //    stream << "tb-performed a << op_name<< :!!! " <<endl;//<< print_type(a.type()) << " " << print_type(b.type()) << endl;
+  }
+
+  }
+
+void CodeGen_CoreIR_Target::CodeGen_CoreIR_C::visit(const Mul *op) {
+  visit_binop(op->type, op->a, op->b, '*', "mult2_16", "mul");
+}
+
+void CodeGen_CoreIR_Target::CodeGen_CoreIR_C::visit(const Add *op) {
+  visit_binop(op->type, op->a, op->b, '+', "add2_16", "add");
+}
+  
+void CodeGen_CoreIR_Target::CodeGen_CoreIR_C::visit(const Sub *op) {
+  visit_binop(op->type, op->a, op->b, '-', "mult2_16", "sub");
+}
+
+void CodeGen_CoreIR_Target::CodeGen_CoreIR_C::visit(const Store *op) {
+    Type t = op->value.type();
+
+    bool type_cast_needed =
+        t.is_handle() ||
+        !allocations.contains(op->name) ||
+        allocations.get(op->name).type != t;
+
+    string id_index = print_expr(op->index);
+    string id_value = print_expr(op->value);
+    do_indent();
+
+    if (type_cast_needed) {
+        stream << "((const "
+               << print_type(t)
+               << " *)"
+               << print_name(op->name)
+               << ")";
+    } else {
+        stream << print_name(op->name);
+    }
+    stream << "["
+           << id_index
+           << "] = "
+           << id_value
+           << ";\n";
+
+  bool in_hw_section = hw_input_set.count(id_value)>0;
+
+  if (in_hw_section){
+    stream << "to out: " << id_value << endl;
+    def->wire(hw_input_set[id_value], self->sel("out"));
+  } else {
+    stream << "out: " << id_value << endl;
+  }
+  //  CodeGen_C::visit(op);
+}
+
+  void CodeGen_CoreIR_Target::CodeGen_CoreIR_C::visit(const Call *op) {
+    if (op->is_intrinsic(Call::rewrite_buffer)) {
+      stream << "[rewrite_buffer]";
+    }
+    CodeGen_CoreIR_Base::visit(op);
+
+  }
+
+  // TODO: add more operators
 }
 }
+

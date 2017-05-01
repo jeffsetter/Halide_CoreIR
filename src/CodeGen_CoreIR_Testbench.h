@@ -36,23 +36,18 @@ protected:
     void visit(const Add *);
     void visit(const Sub *);
     void visit(const Store *);
-private:
-    CodeGen_CoreIR_Target cg_target;
 
-    // for coreir generation
-    uint8_t n;
-    CoreIR::Context* c;
-    CoreIR::Namespace* g;
-    CoreIR::Namespace* stdlib;
-    std::map<std::string,CoreIR::Module*> gens;
-    CoreIR::ModuleDef* def;
-    CoreIR::Module* design_top;
-    CoreIR::Wireable* self;
-
+    bool id_hw_input(const Expr e);
+    bool id_cnst(const Expr e);
+    int id_cnst_value(const Expr e);
     std::map<std::string,CoreIR::Wireable*> hw_input_set;
     std::string id_hw_section(Expr a, Expr b, Type t, char op_symbol, std::string a_name, std::string b_name);
     CoreIR::Wireable* get_wire(Expr e, std::string name);
     void visit_binop(Type t, Expr a, Expr b, char op_sym, std::string coreir_name, std::string op_name);
+
+private:
+    CodeGen_CoreIR_Target cg_target;
+
 
 };
 
