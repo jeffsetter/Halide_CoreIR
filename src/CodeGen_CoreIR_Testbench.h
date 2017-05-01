@@ -12,7 +12,7 @@
 #include "Module.h"
 #include "Scope.h"
 
-#include "context.hpp"
+#include "coreir.h"
 
 namespace Halide {
 
