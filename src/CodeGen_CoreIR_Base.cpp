@@ -111,7 +111,29 @@ void CodeGen_CoreIR_Base::visit(const Call *op) {
         }
         stream << ">(" << a0 << ", " << a1 << ");\n";
         id = "0"; // skip evaluation
+	
+	// add potentially to coreir as input
+	if (hw_inout_set.count(print_name(a0)) > 0) {
+	  stream << "// " << print_name(a0) << " added as an input" << input_idx  << "\n";
+	  hw_wire_set[print_name(a0)] = self->sel("in")->sel(input_idx);
+	  input_idx++;
+	} else {
+	  stream << "// " << print_name(a0) << " not found as an input" << "\n";
+	}
+
+	// add linebuffer to coreir
+	const UIntImm* lb_dim0 = stencil_type.bounds[0].extent.as<UIntImm>();
+	const UIntImm* lb_dim1 = stencil_type.bounds[1].extent.as<UIntImm>();
+	stream << "// linebuffer size: " << lb_dim0 << " " << lb_dim1 << "\n";
+	/*
+	if ( id_cnst_value(lb_dim0) == 3 && id_cnst_value(lb_dim1->value) == 3 ) {
+	  stream << "// insert linebuffer33\n";
+	}
+	*/
+	
+
     } else if (op->name == "write_stream") {
+      string printed_stream_name;
         if (op->args.size() == 2) {
             // normal case
             // IR: write_stream(buffered.stencil_update.stream, buffered.stencil_update)
@@ -121,6 +143,7 @@ void CodeGen_CoreIR_Base::visit(const Call *op) {
             do_indent();
             stream << a0 << ".write(" << a1 << ");\n";
             id = "0"; // skip evaluation
+	    printed_stream_name = a0;
         } else {
             // write stream call for the dag output kernel
             // IR: write_stream(output.stencil.stream, output.stencil, loop_var_1, loop_max_1, ...)
@@ -176,7 +199,17 @@ void CodeGen_CoreIR_Base::visit(const Call *op) {
             stream << print_name(stream_name) << ".write("
                    << print_name(packed_stencil_name) << ");\n";
             id = "0"; // skip evaluation
+	    printed_stream_name = print_name(stream_name);
         }
+
+	// add as output for coreir
+	if (hw_inout_set.count(printed_stream_name) > 0) {
+	  stream << "// " << printed_stream_name << " added as an output" << "\n";
+	  hw_wire_set[printed_stream_name] = self->sel("out");
+	} else {
+	  stream << "// " << printed_stream_name << " not found as an output" << "\n";
+	}
+
     } else if (op->name == "read_stream") {
         internal_assert(op->args.size() == 2 || op->args.size() == 3);
         string a1 = print_expr(op->args[1]);
@@ -193,6 +226,16 @@ void CodeGen_CoreIR_Base::visit(const Call *op) {
         do_indent();
         stream << a1 << " = " << print_name(stream_name) << ".read();\n";
         id = "0"; // skip evaluation
+
+	// add as coreir input
+	if (hw_inout_set.count(print_name(stream_name)) > 0) {
+	  stream << "// " << print_name(stream_name) << " added as an input" << input_idx  << "\n";
+	  hw_wire_set[print_name(stream_name)] = self->sel("in")->sel(input_idx);
+	  input_idx++;
+
+	} else {
+	  stream << "// " << print_name(stream_name) << " not found as an input" << input_idx  << "\n";
+	}
     } else if (ends_with(op->name, ".stencil") ||
                ends_with(op->name, ".stencil_update")) {
         ostringstream rhs;
@@ -435,5 +478,69 @@ void CodeGen_CoreIR_Base::visit(const Provide *op) {
     }
 }
 
+bool CodeGen_CoreIR_Base::id_hw_input(const Expr e) {
+  if (e.as<Load>()) {
+    return true;
+  } else {
+    return false;
+  }
+}
+
+bool CodeGen_CoreIR_Base::id_cnst(const Expr e) {
+  if (e.as<IntImm>() || e.as<UIntImm>()) {
+    return true;
+  } else {
+    return false;
+  }
+}
+
+int CodeGen_CoreIR_Base::id_cnst_value(const Expr e) {
+  const IntImm* e_int = e.as<IntImm>();
+  const UIntImm* e_uint = e.as<UIntImm>();
+  if (e_int) {
+    return e_int->value;
+  } else if (e_uint) {
+    return e_uint->value;
+  } else {
+    cout << "invalid constant expr" <<endl;
+    return -1;
+  }
+}
+
+string CodeGen_CoreIR_Base::id_hw_section(Expr a, Expr b, Type t, char op_symbol, string a_name, string b_name) {
+  bool is_input = id_hw_input(a) || id_hw_input(b);
+  bool in_hw_section = hw_wire_set.count(a_name)>0 || hw_wire_set.count(b_name)>0;
+  string out_var = print_assignment(t, a_name + " " + op_symbol + " " + b_name);
+
+  //  if (hw_wire_set.size()>0) { stream << "a:" << print_expr(a) << " b:" << print_expr(b) << endl; }
+  if (is_input || in_hw_section) {
+    return out_var;
+    //    if (is_input) {stream << "input mult with output: " << out_var << endl; }
+    //    if (in_hw_section) {stream << "hw_section mult with output: " << out_var <<endl; }
+  } else {
+    return "";
+  }
+}
+
+CoreIR::Wireable* CodeGen_CoreIR_Base::get_wire(Expr e, string name) {
+  if (id_hw_input(e)) {
+    return self->sel("in");
+  } else if (id_cnst(e)) {
+    int cnst_value = id_cnst_value(e);
+    string cnst_name = "const" + name;
+    CoreIR::Wireable* cnst = def->addInstance(cnst_name,  gens["const_16"], 
+					      CoreIR::Args({{"value",context->int2Arg(cnst_value)}}));
+    return cnst->sel("out");
+  } else  {
+    CoreIR::Wireable* wire = hw_wire_set[name];
+
+    if (wire) { }
+    else { cout << "invalid wire in tb: " << name << endl; return self->sel("in"); }
+    return wire;
+  }
+}
+
 }
 }
+
+

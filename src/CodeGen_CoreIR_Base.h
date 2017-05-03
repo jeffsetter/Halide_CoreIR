@@ -52,14 +52,27 @@ protected:
     void visit(const Mul *);
 
     // for coreir generation
-    uint8_t n;
-    CoreIR::Context* c;
-    CoreIR::Namespace* g;
+    bool create_json = false;
+    uint8_t bitwidth;
+    CoreIR::Context* context;
+    CoreIR::Namespace* global_ns;
     CoreIR::Namespace* stdlib;
     std::map<std::string,CoreIR::Module*> gens;
     CoreIR::ModuleDef* def;
     CoreIR::Module* design;
     CoreIR::Wireable* self;
+
+    // keep track of coreir dag
+    int input_idx = 0; // tracks how many inputs have been defined so far
+    std::map<std::string,CoreIR::Wireable*> hw_wire_set;
+    std::unordered_set<std::string> hw_inout_set;
+
+    // coreir methods to wire things together
+    bool id_hw_input(const Expr e);
+    bool id_cnst(const Expr e);
+    int id_cnst_value(const Expr e);
+    string id_hw_section(Expr a, Expr b, Type t, char op_symbol, string a_name, string b_name);
+    CoreIR::Wireable* get_wire(Expr e, std::string name);
 
 };
 
