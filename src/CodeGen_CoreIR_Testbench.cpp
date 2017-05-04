@@ -255,7 +255,7 @@ void CodeGen_CoreIR_Testbench::visit(const Block *op) {
     CodeGen_CoreIR_Base::visit(op);
     return;
 }
-
+  /*
 void CodeGen_CoreIR_Testbench::visit_binop(Type t, Expr a, Expr b, char op_sym, string coreir_name, string op_name) {
     //  stream << "tb-saw a " << op_name << "!!!!!!!!!!!!!!!!" << endl;
   string a_name = print_expr(a);
@@ -278,6 +278,7 @@ void CodeGen_CoreIR_Testbench::visit_binop(Type t, Expr a, Expr b, char op_sym, 
   }
 
   }
+  
 
 void CodeGen_CoreIR_Testbench::visit(const Mul *op) {
   visit_binop(op->type, op->a, op->b, '*', "mult2_16", "mul");
@@ -290,7 +291,7 @@ void CodeGen_CoreIR_Testbench::visit(const Add *op) {
 void CodeGen_CoreIR_Testbench::visit(const Sub *op) {
   visit_binop(op->type, op->a, op->b, '-', "mult2_16", "sub");
 }
-
+  */
 void CodeGen_CoreIR_Testbench::visit(const Store *op) {
     Type t = op->value.type();
 
@@ -327,6 +328,15 @@ void CodeGen_CoreIR_Testbench::visit(const Store *op) {
     stream << "out: " << id_value << endl;
   }
   //  CodeGen_C::visit(op);
+}
+
+
+bool CodeGen_CoreIR_Testbench::id_hw_input(const Expr e) {
+  if (e.as<Load>()) {
+    return true;
+  } else {
+    return false;
+  }
 }
 
   // TODO: add more operators

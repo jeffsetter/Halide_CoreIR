@@ -49,7 +49,13 @@ protected:
     void visit(const Call *);
     void visit(const Provide *);
     void visit(const Realize *);
-    void visit(const Mul *);
+
+	void visit_binop(Type t, Expr a, Expr b, char op_sym, std::string coreir_name, std::string op_name);
+	void visit(const Mul *op);
+	void visit(const Add *op);
+	void visit(const Sub *op);
+	void visit(const Cast *op);
+
 
     // for coreir generation
     bool create_json = false;
@@ -68,7 +74,7 @@ protected:
     std::unordered_set<std::string> hw_inout_set;
 
     // coreir methods to wire things together
-    bool id_hw_input(const Expr e);
+    virtual bool id_hw_input(const Expr e);
     bool id_cnst(const Expr e);
     int id_cnst_value(const Expr e);
     string id_hw_section(Expr a, Expr b, Type t, char op_symbol, string a_name, string b_name);

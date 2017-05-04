@@ -60,14 +60,15 @@ protected:
         void visit(const For *op);
         void visit(const Allocate *op);
 
-	void visit(const Mul *op);
-	void visit(const Add *op);
-	void visit(const Sub *op);
+// 	void visit_binop(Type t, Expr a, Expr b, char op_sym, std::string coreir_name, std::string op_name);
+// 	void visit(const Mul *op);
+// 	void visit(const Add *op);
+// 	void visit(const Sub *op);
 	//	void visit(const Load *op);
 	void visit(const Store *op);
 	void visit(const Call *op);
 
-	void visit_binop(Type t, Expr a, Expr b, char op_sym, std::string coreir_name, std::string op_name);
+
 
     };
 

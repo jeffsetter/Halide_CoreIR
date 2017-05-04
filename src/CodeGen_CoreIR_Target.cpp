@@ -440,7 +440,7 @@ void CodeGen_CoreIR_Target::CodeGen_CoreIR_C::visit(const Allocate *op) {
 }
 
 
-
+  /*
 void CodeGen_CoreIR_Target::CodeGen_CoreIR_C::visit_binop(Type t, Expr a, Expr b, char op_sym, string coreir_name, string op_name) {
     //  stream << "tb-saw a " << op_name << "!!!!!!!!!!!!!!!!" << endl;
   string a_name = print_expr(a);
@@ -448,8 +448,8 @@ void CodeGen_CoreIR_Target::CodeGen_CoreIR_C::visit_binop(Type t, Expr a, Expr b
 
   string out_var = id_hw_section(a, b, t, op_sym, a_name, b_name);
   if (out_var.compare("") != 0) {
-    string mult_name = op_name + a_name + b_name;
-    CoreIR::Wireable* coreir_inst = def->addInstance(mult_name,gens[coreir_name]);
+    string binop_name = op_name + a_name + b_name;
+    CoreIR::Wireable* coreir_inst = def->addInstance(binop_name,gens[coreir_name]);
     def->wire(get_wire(a, a_name), coreir_inst->sel("in0"));
     def->wire(get_wire(b, b_name), coreir_inst->sel("in1"));
     hw_wire_set[out_var] = coreir_inst->sel("out");
@@ -475,7 +475,7 @@ void CodeGen_CoreIR_Target::CodeGen_CoreIR_C::visit(const Add *op) {
 void CodeGen_CoreIR_Target::CodeGen_CoreIR_C::visit(const Sub *op) {
   visit_binop(op->type, op->a, op->b, '-', "mult2_16", "sub");
 }
-
+*/
 void CodeGen_CoreIR_Target::CodeGen_CoreIR_C::visit(const Store *op) {
     Type t = op->value.type();
 
@@ -524,5 +524,7 @@ void CodeGen_CoreIR_Target::CodeGen_CoreIR_C::visit(const Store *op) {
 
   // TODO: add more operators
 }
+
+
 }
 
