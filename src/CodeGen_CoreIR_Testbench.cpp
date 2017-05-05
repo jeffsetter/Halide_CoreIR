@@ -1,8 +1,8 @@
 #include <iostream>
 #include <limits>
 
-#include "CodeGen_CoreIR_Testbench.h"
 #include "CodeGen_Internal.h"
+#include "CodeGen_CoreIR_Testbench.h"
 #include "Substitute.h"
 #include "IROperator.h"
 #include "Param.h"

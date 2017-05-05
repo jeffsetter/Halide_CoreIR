@@ -3,8 +3,8 @@
 #include <limits>
 #include <algorithm>
 
-#include "CodeGen_CoreIR_Target.h"
 #include "CodeGen_Internal.h"
+#include "CodeGen_CoreIR_Target.h"
 #include "Substitute.h"
 #include "IRMutator.h"
 #include "IROperator.h"
