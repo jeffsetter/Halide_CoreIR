@@ -73,7 +73,7 @@ CodeGen_CoreIR_Target::CodeGen_CoreIR_Target(const string &name)
     // TODO: fix static module definition
     CoreIR::Type* design_type = c->Record({
 	{"in",c->Array(n,c->BitIn())},
-	{"out",c->Array(n,c->BitOut())}
+	{"out",c->Array(n,c->Bit())}
     });
     design = g->newModuleDecl("DesignTarget", design_type);
     def = design->newModuleDef();
@@ -451,7 +451,7 @@ CoreIR::Wireable* CodeGen_CoreIR_Target::CodeGen_CoreIR_C::get_wire(Expr e, stri
   } else if (id_cnst(e)) {
     int cnst_value = id_cnst_value(e);
     string cnst_name = "const" + name;
-    CoreIR::Wireable* cnst = def->addInstance(cnst_name,  gens["const_16"], CoreIR::Args({{"value",c->int2Arg(cnst_value)}}));
+    CoreIR::Wireable* cnst = def->addInstance(cnst_name,  gens["const_16"], CoreIR::Args({{"value",c->argInt(cnst_value)}}));
     return cnst->sel("out");
   } else  {
     CoreIR::Wireable* wire = hw_input_set[name];
