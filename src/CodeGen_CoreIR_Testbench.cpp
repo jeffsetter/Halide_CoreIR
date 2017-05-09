@@ -103,34 +103,39 @@ CodeGen_CoreIR_Testbench::CodeGen_CoreIR_Testbench(ostream &tb_stream)
 }
 
 CodeGen_CoreIR_Testbench::~CodeGen_CoreIR_Testbench() {
-  // write coreir json
-  design->setDef(def);
-  context->checkerrors();
-  design->print();
+  if (def->hasInstances()) {
+    // write coreir json
+    design->setDef(def);
+    context->checkerrors();
+    design->print();
 
-  bool err = false;
+    bool err = false;
+    std::string GREEN = "\033[0;32m";
+    std::string RED = "\033[0;31m";
+    std::string RESET = "\033[0m";
 
-  CoreIR::typecheck(context,design,&err);
-  if (err) {
-    cout << "failed typecheck" << endl;
-    exit(1);
+    CoreIR::typecheck(context,design,&err);
+    if (err) {
+      cout << RED << "failed typecheck" << RESET << endl;
+      exit(1);
+    }
+
+    CoreIR::saveModule(design, "design_top.json", &err);
+    if (err) {
+      cout << RED << "Could not save json :(" << RESET << endl;
+      exit(1);
+    }
+
+    CoreIR::loadModule(context,"design_top.json", &err);
+    if (err) {
+      cout << RED << "failed to reload json" << RESET << endl;
+      exit(1);
+    } else {
+      cout << GREEN << "We passed!!! (GREEN PASS) Yay!" << RESET << endl;
+    }
+
+    CoreIR::deleteContext(context);
   }
-
-  CoreIR::saveModule(design, "design_top.json", &err);
-  if (err) {
-    cout << "Could not save json :(" << endl;
-    exit(1);
-  } else {
-    cout << "We passed!!! (GREEN PASS) Yay!" << endl;
-  }
-
-  CoreIR::loadModule(context,"design_top.json", &err);
-  if (err) {
-    cout << "failed to reload json" << endl;
-    exit(1);
-  }
-
-  CoreIR::deleteContext(context);
 }
 
 void CodeGen_CoreIR_Testbench::visit(const ProducerConsumer *op) {

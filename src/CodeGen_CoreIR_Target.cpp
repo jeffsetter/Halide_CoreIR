@@ -103,35 +103,38 @@ CodeGen_CoreIR_Target::~CodeGen_CoreIR_Target() {
 }
 
 CodeGen_CoreIR_Target::CodeGen_CoreIR_C::~CodeGen_CoreIR_C() {
-  if (create_json) {
+  if (def->hasInstances()) {
     // print coreir to stdout
     design->setDef(def);
     context->checkerrors();
     design->print();
     
     bool err = false;
+    std::string GREEN = "\033[0;32m";
+    std::string RED = "\033[0;31m";
+    std::string RESET = "\033[0m";
 
     // check that the coreir was created correctly
     CoreIR::typecheck(context,design,&err);
     if (err) {
-      cout << "failed typecheck" << endl;
-      exit(1);
+      cout << RED << "failed typecheck" << RESET << endl;
+      context->die();
     }
   
     // write out the json
     CoreIR::saveModule(design, "design_target.json", &err);
     if (err) {
-      cout << "Could not save json :(" << endl;
-      exit(1);
-    } else {
-      cout << "We created the .json!!! (GREEN PASS) Yay!" << endl;
+      cout << RED << "Could not save json :(" << RESET << endl;
+      context->die();
     }
   
     // check that we can reload the created json
     CoreIR::loadModule(context,"design_target.json", &err);
     if (err) {
-      cout << "failed to reload json" << endl;
-      exit(1);
+      cout << RED << "failed to reload json" << RESET << endl;
+      context->die();
+    } else {
+      cout << GREEN << "We created the .json!!! (GREEN PASS) Yay!" << RESET << endl;
     }
     
     CoreIR::deleteContext(context);
@@ -439,43 +442,6 @@ void CodeGen_CoreIR_Target::CodeGen_CoreIR_C::visit(const Allocate *op) {
 
 }
 
-
-  /*
-void CodeGen_CoreIR_Target::CodeGen_CoreIR_C::visit_binop(Type t, Expr a, Expr b, char op_sym, string coreir_name, string op_name) {
-    //  stream << "tb-saw a " << op_name << "!!!!!!!!!!!!!!!!" << endl;
-  string a_name = print_expr(a);
-  string b_name = print_expr(b);
-
-  string out_var = id_hw_section(a, b, t, op_sym, a_name, b_name);
-  if (out_var.compare("") != 0) {
-    string binop_name = op_name + a_name + b_name;
-    CoreIR::Wireable* coreir_inst = def->addInstance(binop_name,gens[coreir_name]);
-    def->wire(get_wire(a, a_name), coreir_inst->sel("in0"));
-    def->wire(get_wire(b, b_name), coreir_inst->sel("in1"));
-    hw_wire_set[out_var] = coreir_inst->sel("out");
-
-    if (id_hw_input(a)) { stream << op_name <<"a: self.in "; } else { stream << op_name << "a: " << a_name << " "; }
-    if (id_hw_input(b)) { stream << op_name <<"b: self.in" <<endl; } else { stream << op_name << "b: " << b_name << endl; }
-    stream << op_name<<"o: " << out_var << endl;
-    
-  } else {
-    //    stream << "tb-performed a << op_name<< :!!! " <<endl;//<< print_type(a.type()) << " " << print_type(b.type()) << endl;
-  }
-
-}
-
-void CodeGen_CoreIR_Target::CodeGen_CoreIR_C::visit(const Mul *op) {
-  visit_binop(op->type, op->a, op->b, '*', "mult2_16", "mul");
-}
-
-void CodeGen_CoreIR_Target::CodeGen_CoreIR_C::visit(const Add *op) {
-  visit_binop(op->type, op->a, op->b, '+', "add2_16", "add");
-}
-  
-void CodeGen_CoreIR_Target::CodeGen_CoreIR_C::visit(const Sub *op) {
-  visit_binop(op->type, op->a, op->b, '-', "mult2_16", "sub");
-}
-*/
 void CodeGen_CoreIR_Target::CodeGen_CoreIR_C::visit(const Store *op) {
     Type t = op->value.type();
 
