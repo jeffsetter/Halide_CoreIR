@@ -56,7 +56,7 @@ protected:
     CoreIR::Context* c;
     CoreIR::Namespace* g;
     CoreIR::Namespace* stdlib;
-    std::map<std::string,CoreIR::Module*> gens;
+    std::map<std::string,CoreIR::Generator*> gens;
     CoreIR::ModuleDef* def;
     CoreIR::Module* design;
     CoreIR::Wireable* self;

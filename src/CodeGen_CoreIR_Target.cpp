@@ -64,9 +64,9 @@ CodeGen_CoreIR_Target::CodeGen_CoreIR_Target(const string &name)
     stdlib = CoreIRLoadLibrary_stdlib(c);
 
     // add all generators from stdlib
-    std::vector<string> gen_names = {"add2_16", "mult2_16", "const_16"};
+    std::vector<string> gen_names = {"add", "mul", "const"};
     for (auto gen_name : gen_names) {
-      gens[gen_name] = stdlib->getModule(gen_name);
+      gens[gen_name] = stdlib->getGenerator(gen_name);
       assert(gens[gen_name]);
     }
 
@@ -96,19 +96,12 @@ CodeGen_CoreIR_Target::~CodeGen_CoreIR_Target() {
 }
 
 CodeGen_CoreIR_Target::CodeGen_CoreIR_C::~CodeGen_CoreIR_C() {
-    // print coreir to stdout
+    // typecheck and print coreir to stdout
     design->setDef(def);
     c->checkerrors();
     design->print();
     
     bool err = false;
-
-    // check that the coreir was created correctly
-    CoreIR::typecheck(c,design,&err);
-    if (err) {
-      cout << "failed typecheck" << endl;
-      exit(1);
-    }
   
     // write out the json
     CoreIR::saveModule(design, "design_target.json", &err);
@@ -451,7 +444,7 @@ CoreIR::Wireable* CodeGen_CoreIR_Target::CodeGen_CoreIR_C::get_wire(Expr e, stri
   } else if (id_cnst(e)) {
     int cnst_value = id_cnst_value(e);
     string cnst_name = "const" + name;
-    CoreIR::Wireable* cnst = def->addInstance(cnst_name,  gens["const_16"], CoreIR::Args({{"value",c->argInt(cnst_value)}}));
+    CoreIR::Wireable* cnst = def->addInstance(cnst_name,  gens["const"], {{"width",c->argInt(n)}}, {{"value",c->argInt(cnst_value)}});
     return cnst->sel("out");
   } else  {
     CoreIR::Wireable* wire = hw_input_set[name];
@@ -469,10 +462,10 @@ CoreIR::Wireable* CodeGen_CoreIR_Target::CodeGen_CoreIR_C::get_wire(Expr e, stri
 
   string out_var = id_hw_section(a, b, t, op_sym, a_name, b_name);
   if (out_var.compare("") != 0) {
-    string mult_name = op_name + a_name + b_name;
-    CoreIR::Wireable* coreir_inst = def->addInstance(mult_name,gens[coreir_name]);
-    def->wire(get_wire(a, a_name), coreir_inst->sel("in0"));
-    def->wire(get_wire(b, b_name), coreir_inst->sel("in1"));
+    string binop_name = op_name + a_name + b_name;
+    CoreIR::Wireable* coreir_inst = def->addInstance(binop_name,gens[coreir_name], {{"width",c->argInt(n)}});
+    def->wire(get_wire(a, a_name), coreir_inst->sel("in")->sel(0));
+    def->wire(get_wire(b, b_name), coreir_inst->sel("in")->sel(1));
     hw_input_set[out_var] = coreir_inst->sel("out");
 
     if (id_hw_input(a)) { stream << op_name <<"a: self.in "; } else { stream << op_name << "a: " << a_name << " "; }
@@ -486,15 +479,15 @@ CoreIR::Wireable* CodeGen_CoreIR_Target::CodeGen_CoreIR_C::get_wire(Expr e, stri
   }
 
 void CodeGen_CoreIR_Target::CodeGen_CoreIR_C::visit(const Mul *op) {
-  visit_binop(op->type, op->a, op->b, '*', "mult2_16", "mul");
+  visit_binop(op->type, op->a, op->b, '*', "mul", "mul");
 }
 
 void CodeGen_CoreIR_Target::CodeGen_CoreIR_C::visit(const Add *op) {
-  visit_binop(op->type, op->a, op->b, '+', "add2_16", "add");
+  visit_binop(op->type, op->a, op->b, '+', "add", "add");
 }
   
 void CodeGen_CoreIR_Target::CodeGen_CoreIR_C::visit(const Sub *op) {
-  visit_binop(op->type, op->a, op->b, '-', "mult2_16", "sub");
+  visit_binop(op->type, op->a, op->b, '-', "mul", "sub");
 }
 
 void CodeGen_CoreIR_Target::CodeGen_CoreIR_C::visit(const Store *op) {
