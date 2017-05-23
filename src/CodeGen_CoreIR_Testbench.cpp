@@ -12,7 +12,7 @@
 
 #include "coreir.h"
 #include "coreir-lib/stdlib.h"
-#include "coreir-pass/passes.hpp"
+#include "coreir-pass/passes.h"
 
 namespace Halide {
 
@@ -321,8 +321,8 @@ string CodeGen_CoreIR_Testbench::id_hw_section(Expr a, Expr b, Type t, char op_s
   if (out_var.compare("") != 0) {
     string binop_name = op_name + a_name + b_name;
     CoreIR::Wireable* coreir_inst = def->addInstance(binop_name,gens[coreir_name],{{"width",c->argInt(n)}});
-    def->wire(get_wire(a, a_name), coreir_inst->sel("in")->sel(0));
-    def->wire(get_wire(b, b_name), coreir_inst->sel("in")->sel(1));
+    def->connect(get_wire(a, a_name), coreir_inst->sel("in")->sel(0));
+    def->connect(get_wire(b, b_name), coreir_inst->sel("in")->sel(1));
     hw_input_set[out_var] = coreir_inst->sel("out");
 
     if (id_hw_input(a)) { stream << op_name <<"a: self.in "; } else { stream << op_name << "a: " << a_name << " "; }
@@ -378,7 +378,7 @@ void CodeGen_CoreIR_Testbench::visit(const Store *op) {
 
   if (in_hw_section){
     stream << "to out: " << id_value << endl;
-    def->wire(hw_input_set[id_value], self->sel("out"));
+    def->connect(hw_input_set[id_value], self->sel("out"));
   } else {
     stream << "out: " << id_value << endl;
   }
