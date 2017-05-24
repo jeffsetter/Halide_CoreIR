@@ -4,10 +4,10 @@
 #include <fstream>
 
 #include "CodeGen_C.h"
+#include "CodeGen_Internal.h"
 #include "CodeGen_HLS_Testbench.h"
 #include "CodeGen_Rigel_Testbench.h"
 #include "CodeGen_CoreIR_Testbench.h"
-#include "CodeGen_Internal.h"
 #include "CodeGen_Zynq_C.h"
 #include "Debug.h"
 #include "LLVM_Headers.h"
