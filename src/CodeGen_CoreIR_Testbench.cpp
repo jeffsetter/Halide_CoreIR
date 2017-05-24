@@ -86,9 +86,9 @@ CodeGen_CoreIR_Testbench::CodeGen_CoreIR_Testbench(ostream &tb_stream)
     stdlib = CoreIRLoadLibrary_stdlib(context);
 
     // add all generators from stdlib
-    std::vector<string> gen_names = {"add2_16", "mult2_16", "const_16"};
+    std::vector<string> gen_names = {"add", "mul", "const"};
     for (auto gen_name : gen_names) {
-      gens[gen_name] = stdlib->getModule(gen_name);
+      gens[gen_name] = stdlib->getGenerator(gen_name);
       assert(gens[gen_name]);
     }
 

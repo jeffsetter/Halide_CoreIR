@@ -64,26 +64,33 @@ CodeGen_CoreIR_Target::CodeGen_CoreIR_C::CodeGen_CoreIR_C(std::ostream &s, Outpu
     stdlib = CoreIRLoadLibrary_stdlib(context);
 
     // add all generators from stdlib
-    std::vector<string> gen_names = {"add2_16", "mult2_16", "const_16"};
+    std::vector<string> gen_names = {"add", "mul", "const"};
     for (auto gen_name : gen_names) {
-      gens[gen_name] = stdlib->getModule(gen_name);
+      gens[gen_name] = stdlib->getGenerator(gen_name);
       assert(gens[gen_name]);
     }
 
+    CoreIR::Type* design_type = context->Record({
+	{"in",context->Array(bitwidth,context->BitIn())},
+	{"out",context->Array(bitwidth,context->Bit())}
+    });
+    design = global_ns->newModuleDecl("PLACEHOLDER", design_type);
+    def = design->newModuleDef();
+
     // TODO: add these gens to coreir
     // create custom generators 
-    CoreIR::Type* design_type = context->Record({
+    CoreIR::Type* lb_type = context->Record({
 	{"in",context->Array(bitwidth,context->BitIn())},
 	  {"out",context->Array(3, context->Array(3, 
 						  context->Array(bitwidth,context->Bit())
 						  ))
 	      }
       });
-    CoreIR::Module* lb_design = global_ns->newModuleDecl("linebuffer33", design_type);
+    CoreIR::Module* lb_design = global_ns->newModuleDecl("linebuffer33", lb_type);
     CoreIR::ModuleDef* lb_def = lb_design->newModuleDef();
     lb_design->setDef(lb_def);
-    gens["linebuffer33"] = lb_design;
-    assert(gens["linebuffer33"]);
+    mdefs["linebuffer33"] = lb_design;
+    assert(mdefs["linebuffer33"]);
 
 }
 
@@ -113,13 +120,6 @@ CodeGen_CoreIR_Target::CodeGen_CoreIR_C::~CodeGen_CoreIR_C() {
     std::string GREEN = "\033[0;32m";
     std::string RED = "\033[0;31m";
     std::string RESET = "\033[0m";
-
-    // check that the coreir was created correctly
-//     CoreIR::typecheck(context,design,&err);
-//     if (err) {
-//       cout << RED << "failed typecheck" << RESET << endl;
-//       context->die();
-//     }
   
     // write out the json
     CoreIR::saveModule(design, "design_target.json", &err);
