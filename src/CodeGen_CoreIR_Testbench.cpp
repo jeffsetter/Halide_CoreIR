@@ -1,8 +1,8 @@
 #include <iostream>
 #include <limits>
 
-#include "CodeGen_CoreIR_Testbench.h"
 #include "CodeGen_Internal.h"
+#include "CodeGen_CoreIR_Testbench.h"
 #include "Substitute.h"
 #include "IROperator.h"
 #include "Param.h"
@@ -12,7 +12,7 @@
 
 #include "coreir.h"
 #include "coreir-lib/stdlib.h"
-#include "coreir-pass/passes.hpp"
+#include "coreir-pass/passes.h"
 
 namespace Halide {
 
@@ -95,7 +95,7 @@ CodeGen_CoreIR_Testbench::CodeGen_CoreIR_Testbench(ostream &tb_stream)
     // TODO: fix static module definition
     CoreIR::Type* design_type = context->Record({
 	{"in",context->Array(bitwidth,context->BitIn())},
-	{"out",context->Array(bitwidth,context->BitOut())}
+	{"out",context->Array(bitwidth,context->Bit())}
     });
     design = global_ns->newModuleDecl("DesignTop", design_type);
     def = design->newModuleDef();
@@ -114,11 +114,11 @@ CodeGen_CoreIR_Testbench::~CodeGen_CoreIR_Testbench() {
     std::string RED = "\033[0;31m";
     std::string RESET = "\033[0m";
 
-    CoreIR::typecheck(context,design,&err);
-    if (err) {
-      cout << RED << "failed typecheck" << RESET << endl;
-      exit(1);
-    }
+//    CoreIR::typecheck(context,design,&err);
+//    if (err) {
+//      cout << RED << "failed typecheck" << RESET << endl;
+//      exit(1);
+//    }
 
     CoreIR::saveModule(design, "design_top.json", &err);
     if (err) {
@@ -270,8 +270,8 @@ void CodeGen_CoreIR_Testbench::visit_binop(Type t, Expr a, Expr b, char op_sym, 
   if (out_var.compare("") != 0) {
     string mult_name = op_name + a_name + b_name;
     CoreIR::Wireable* coreir_inst = def->addInstance(mult_name,gens[coreir_name]);
-    def->wire(get_wire(a, a_name), coreir_inst->sel("in0"));
-    def->wire(get_wire(b, b_name), coreir_inst->sel("in1"));
+    def->connect(get_wire(a, a_name), coreir_inst->sel("in0"));
+    def->connect(get_wire(b, b_name), coreir_inst->sel("in1"));
     hw_wire_set[out_var] = coreir_inst->sel("out");
 
     if (id_hw_input(a)) { stream << op_name <<"a: self.in "; } else { stream << op_name << "a: " << a_name << " "; }
@@ -328,7 +328,7 @@ void CodeGen_CoreIR_Testbench::visit(const Store *op) {
 
   if (in_hw_section){
     stream << "to out: " << id_value << endl;
-    def->wire(hw_wire_set[id_value], self->sel("out"));
+    def->connect(hw_wire_set[id_value], self->sel("out"));
   } else {
     stream << "out: " << id_value << endl;
   }

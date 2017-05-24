@@ -273,7 +273,7 @@ TMP_DIR     = $(BUILD_DIR)/tmp
 # Compiling for CoreIR requires some extra links
 COREIR_DIR ?= $(ROOT_DIR)/../coreir
 COREIR_INCLUDES = -I$(COREIR_DIR)/include -fexceptions
-COREIR_LIBS = -L$(COREIR_DIR)/bin -Wl,-rpath,$(COREIR_DIR)/bin -lcoreir-stdlib -lcoreir-passes -lcoreir
+COREIR_LIBS = -L$(COREIR_DIR)/lib -Wl,-rpath,$(COREIR_DIR)/bin -lcoreir-stdlib -lcoreir-passes -lcoreir
 TEST_LD_FLAGS += $(COREIR_LIBS)
 
 SOURCE_FILES = \
@@ -702,7 +702,7 @@ endif
 
 $(BIN_DIR)/libHalide.$(SHARED_EXT): $(LIB_DIR)/libHalide.a
 	@-mkdir -p $(BIN_DIR)
-	$(CXX) $(BUILD_BIT_SIZE) -shared $(OBJECTS) $(INITIAL_MODULES) $(LLVM_STATIC_LIBS) $(LLVM_LD_FLAGS) $(LLVM_SHARED_LIBS) $(LIBDL) -lz -lpthread -o $(BIN_DIR)/libHalide.$(SHARED_EXT) $(COREIR_LIBS)
+	$(CXX) $(BUILD_BIT_SIZE) -shared $(OBJECTS) $(INITIAL_MODULES) $(LLVM_STATIC_LIBS) $(LLVM_LD_FLAGS) $(LLVM_SHARED_LIBS) $(LIBDL) -lz -lpthread -o $(BIN_DIR)/libHalide.$(SHARED_EXT)
 ifeq ($(UNAME), Darwin)
 	install_name_tool -id $(CURDIR)/$(BIN_DIR)/libHalide.$(SHARED_EXT) $(BIN_DIR)/libHalide.$(SHARED_EXT)
 endif

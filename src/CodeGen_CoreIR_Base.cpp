@@ -1,8 +1,8 @@
 #include <iostream>
 #include <limits>
 
-#include "CodeGen_CoreIR_Base.h"
 #include "CodeGen_Internal.h"
+#include "CodeGen_CoreIR_Base.h"
 #include "Substitute.h"
 #include "IROperator.h"
 #include "Param.h"
@@ -125,7 +125,7 @@ void CodeGen_CoreIR_Base::visit(const Call *op) {
 	  stream << "// insert linebuffer33 for " << lb_in_name << ", " << lb_out_name << " in set\n";
 	  string lb_name = "lb33" + lb_in_name;
 	  CoreIR::Wireable* coreir_lb = def->addInstance(lb_name, gens["linebuffer33"]);
-	  def->wire(hw_wire_set[lb_in_name], coreir_lb->sel("in"));
+	  def->connect(hw_wire_set[lb_in_name], coreir_lb->sel("in"));
 	  hw_wire_set[lb_out_name] = coreir_lb->sel("out");
 	}
 
@@ -208,7 +208,7 @@ void CodeGen_CoreIR_Base::visit(const Call *op) {
 	if (hw_wire_set.count(input_name) > 0) {
 	  if (hw_inout_set.count(printed_stream_name) > 0) {
 	    stream << "// " << printed_stream_name << " added as an output" << "\n";
-	    def->wire(hw_wire_set[input_name], self->sel("out"));
+	    def->connect(hw_wire_set[input_name], self->sel("out"));
 	  } else {
 	    stream << "// " << printed_stream_name << " not found as an output, adding as wire" << "\n";
 	    hw_wire_set[printed_stream_name] = hw_wire_set[input_name];
@@ -219,7 +219,7 @@ void CodeGen_CoreIR_Base::visit(const Call *op) {
 	  if (hw_wire_set.count(input_name) > 0) {
 	    if (hw_inout_set.count(printed_stream_name) > 0) {
 	      stream << "// " << printed_stream_name << " added as an output" << "\n";
-	      def->wire(hw_wire_set[input_name], self->sel("out"));
+	      def->connect(hw_wire_set[input_name], self->sel("out"));
 	    } else {
 	      stream << "// " << printed_stream_name << " not found as an output, adding as wire" << "\n";
 	      hw_wire_set[printed_stream_name] = hw_wire_set[input_name];
@@ -298,7 +298,7 @@ void CodeGen_CoreIR_Base::visit(const Call *op) {
 	  string cnst_name = "cnst" + out_var;
 	  int cnst_value = 999;
 	  CoreIR::Wireable* cnst = def->addInstance(cnst_name,  gens["const_16"], 
-						    CoreIR::Args({{"value",context->int2Arg(cnst_value)}}));
+						    CoreIR::Args({{"value",context->argInt(cnst_value)}}));
 	  hw_wire_set[out_var] = cnst->sel("out");;
 	}
 	
@@ -601,7 +601,7 @@ CoreIR::Wireable* CodeGen_CoreIR_Base::get_wire(Expr e, string name) {
     int cnst_value = id_cnst_value(e);
     string cnst_name = "const" + name;
     CoreIR::Wireable* cnst = def->addInstance(cnst_name,  gens["const_16"], 
-					      CoreIR::Args({{"value",context->int2Arg(cnst_value)}}));
+					      CoreIR::Args({{"value",context->argInt(cnst_value)}}));
     stream << "// added cnst: " << name << "\n";
     return cnst->sel("out");
   } else  {
@@ -633,8 +633,8 @@ void CodeGen_CoreIR_Base::visit_binop(Type t, Expr a, Expr b, char op_sym, strin
   if (out_var.compare("") != 0) {
     string mult_name = op_name + a_name + b_name;
     CoreIR::Wireable* coreir_inst = def->addInstance(mult_name,gens[coreir_name]);
-    def->wire(get_wire(a, a_name), coreir_inst->sel("in0"));
-    def->wire(get_wire(b, b_name), coreir_inst->sel("in1"));
+    def->connect(get_wire(a, a_name), coreir_inst->sel("in0"));
+    def->connect(get_wire(b, b_name), coreir_inst->sel("in1"));
     hw_wire_set[out_var] = coreir_inst->sel("out");
   } else {
     //    stream << "tb-performed a << op_name<< :!!! " <<endl;//<< print_type(a.type()) << " " << print_type(b.type()) << endl;

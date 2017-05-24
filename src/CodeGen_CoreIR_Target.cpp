@@ -3,8 +3,8 @@
 #include <limits>
 #include <algorithm>
 
-#include "CodeGen_CoreIR_Target.h"
 #include "CodeGen_Internal.h"
+#include "CodeGen_CoreIR_Target.h"
 #include "Substitute.h"
 #include "IRMutator.h"
 #include "IROperator.h"
@@ -15,7 +15,7 @@
 
 #include "coreir.h"
 #include "coreir-lib/stdlib.h"
-#include "coreir-pass/passes.hpp"
+#include "coreir-pass/passes.h"
 
 
 namespace Halide {
@@ -75,7 +75,7 @@ CodeGen_CoreIR_Target::CodeGen_CoreIR_C::CodeGen_CoreIR_C(std::ostream &s, Outpu
     CoreIR::Type* design_type = context->Record({
 	{"in",context->Array(bitwidth,context->BitIn())},
 	  {"out",context->Array(3, context->Array(3, 
-						  context->Array(bitwidth,context->BitOut())
+						  context->Array(bitwidth,context->Bit())
 						  ))
 	      }
       });
@@ -115,11 +115,11 @@ CodeGen_CoreIR_Target::CodeGen_CoreIR_C::~CodeGen_CoreIR_C() {
     std::string RESET = "\033[0m";
 
     // check that the coreir was created correctly
-    CoreIR::typecheck(context,design,&err);
-    if (err) {
-      cout << RED << "failed typecheck" << RESET << endl;
-      context->die();
-    }
+//     CoreIR::typecheck(context,design,&err);
+//     if (err) {
+//       cout << RED << "failed typecheck" << RESET << endl;
+//       context->die();
+//     }
   
     // write out the json
     CoreIR::saveModule(design, "design_target.json", &err);
@@ -246,7 +246,7 @@ void CodeGen_CoreIR_Target::CodeGen_CoreIR_C::add_kernel(Stmt stmt,
     // FIXME: can't create input and output for coreir dag, bc can't distinguish
     CoreIR::Type* design_type = context->Record({
 	{"in",context->Array(num_inputs, context->Array(bitwidth,context->BitIn()))},
-	{"out",context->Array(bitwidth,context->BitOut())}
+	{"out",context->Array(bitwidth,context->Bit())}
     });
     design = global_ns->newModuleDecl("DesignTarget", design_type);
     def = design->newModuleDef();
@@ -473,7 +473,7 @@ void CodeGen_CoreIR_Target::CodeGen_CoreIR_C::visit(const Store *op) {
 
   if (in_hw_section){
     stream << "to out: " << id_value << endl;
-    def->wire(hw_wire_set[id_value], self->sel("out"));
+    def->connect(hw_wire_set[id_value], self->sel("out"));
   } else {
     stream << "out: " << id_value << endl;
   }
