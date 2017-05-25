@@ -15,6 +15,7 @@
 
 #include "coreir.h"
 #include "coreir-lib/stdlib.h"
+#include "coreir-lib/cgralib.h"
 #include "coreir-pass/passes.h"
 
 
@@ -62,11 +63,19 @@ CodeGen_CoreIR_Target::CodeGen_CoreIR_C::CodeGen_CoreIR_C(std::ostream &s, Outpu
     context = CoreIR::newContext();
     global_ns = context->getGlobal();
     stdlib = CoreIRLoadLibrary_stdlib(context);
+    CoreIR::Namespace* cgralib = CoreIRLoadLibrary_cgralib(context);
 
     // add all generators from stdlib
-    std::vector<string> gen_names = {"add", "mul", "const"};
-    for (auto gen_name : gen_names) {
+    std::vector<string> std_gen_names = {"add", "mul", "const"};
+    for (auto gen_name : std_gen_names) {
       gens[gen_name] = stdlib->getGenerator(gen_name);
+      assert(gens[gen_name]);
+    }
+
+    // add all generators from cgralib
+    std::vector<string> cgra_gen_names = {"Linebuffer"};
+    for (auto gen_name : cgra_gen_names) {
+      gens[gen_name] = cgralib->getGenerator(gen_name);
       assert(gens[gen_name]);
     }
 
@@ -120,6 +129,19 @@ CodeGen_CoreIR_Target::CodeGen_CoreIR_C::~CodeGen_CoreIR_C() {
     std::string GREEN = "\033[0;32m";
     std::string RED = "\033[0;31m";
     std::string RESET = "\033[0m";
+  
+    cout << "Running Generators" << endl;
+    rungenerators(context,design,&err);
+    if (err) context->die();
+    design->print();
+    //CoreIR::Instance* i = cast<CoreIR::Instance>(design->getDef()->sel("DesignTarget"));
+    //i->getModuleRef()->print();
+
+    cout << "Flattening everything" << endl;
+    flatten(context,design,&err);
+    design->print();
+    design->getDef()->validate();
+
   
     // write out the json
     CoreIR::saveModule(design, "design_target.json", &err);

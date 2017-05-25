@@ -121,6 +121,18 @@ void CodeGen_CoreIR_Base::visit(const Call *op) {
 	Expr lb_dim1 = stencil_type.bounds[1].extent;
 	stream << "// linebuffer size: " << lb_dim0 << " " << lb_dim1 << "\n";
 
+	string lb_name = "lb" + lb_in_name;
+	int stencil_width = id_cnst_value(lb_dim0);
+	int stencil_height = id_cnst_value(lb_dim1);
+	int image_width = id_cnst_value(op->args[0]);
+	CoreIR::Wireable* coreir_lb = def->addInstance(lb_name, gens["Linebuffer"],
+  			         {{"bitwidth",context->argInt(bitwidth)}, {"stencil_width", context->argInt(stencil_width)},
+				  {"stencil_height", context->argInt(stencil_height)}, {"image_width", context->argInt(image_width)}}
+						       );
+	def->connect(hw_wire_set[lb_in_name], coreir_lb->sel("in"));
+	hw_wire_set[lb_out_name] = coreir_lb->sel("out");
+
+	/*
 	if ( id_cnst_value(lb_dim0) == 3 && id_cnst_value(lb_dim1) == 3 ) {
 	  stream << "// insert linebuffer33 for " << lb_in_name << ", " << lb_out_name << " in set\n";
 	  string lb_name = "lb33" + lb_in_name;
@@ -128,7 +140,7 @@ void CodeGen_CoreIR_Base::visit(const Call *op) {
 	  def->connect(hw_wire_set[lb_in_name], coreir_lb->sel("in"));
 	  hw_wire_set[lb_out_name] = coreir_lb->sel("out");
 	}
-
+	*/
 	
 
     } else if (op->name == "write_stream") {
