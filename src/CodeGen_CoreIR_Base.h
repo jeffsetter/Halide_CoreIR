@@ -64,9 +64,7 @@ protected:
     uint8_t bitwidth;
     CoreIR::Context* context;
     CoreIR::Namespace* global_ns;
-    CoreIR::Namespace* stdlib;
     std::map<std::string,CoreIR::Generator*> gens;
-    //std::map<std::string,CoreIR::Module*> mdefs;
     CoreIR::ModuleDef* def = NULL;
     CoreIR::Module* design = NULL;
     CoreIR::Wireable* self;

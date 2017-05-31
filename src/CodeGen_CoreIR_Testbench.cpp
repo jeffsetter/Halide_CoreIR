@@ -12,6 +12,7 @@
 
 #include "coreir.h"
 #include "coreir-lib/stdlib.h"
+#include "coreir-lib/cgralib.h"
 #include "coreir-pass/passes.h"
 
 namespace Halide {
@@ -83,12 +84,19 @@ CodeGen_CoreIR_Testbench::CodeGen_CoreIR_Testbench(ostream &tb_stream)
     bitwidth = 16;
     context = CoreIR::newContext();
     global_ns = context->getGlobal();
-    stdlib = CoreIRLoadLibrary_stdlib(context);
+    CoreIR::Namespace* stdlib = CoreIRLoadLibrary_stdlib(context);
+    CoreIR::Namespace* cgralib = CoreIRLoadLibrary_cgralib(context);
 
     // add all generators from stdlib
-    std::vector<string> gen_names = {"add", "mul", "const"};
-    for (auto gen_name : gen_names) {
+    std::vector<string> stdlib_gen_names = {"add", "mul", "const"};
+    for (auto gen_name : stdlib_gen_names) {
       gens[gen_name] = stdlib->getGenerator(gen_name);
+      assert(gens[gen_name]);
+    }
+
+    std::vector<string> cgralib_gen_names = {"IO"};
+    for (auto gen_name : cgralib_gen_names) {
+      gens[gen_name] = cgralib->getGenerator(gen_name);
       assert(gens[gen_name]);
     }
 
@@ -344,7 +352,6 @@ bool CodeGen_CoreIR_Testbench::id_hw_input(const Expr e) {
   }
 }
 
-  // TODO: add more operators
 
 }
 }

@@ -62,7 +62,7 @@ CodeGen_CoreIR_Target::CodeGen_CoreIR_C::CodeGen_CoreIR_C(std::ostream &s, Outpu
     bitwidth = 16;
     context = CoreIR::newContext();
     global_ns = context->getGlobal();
-    stdlib = CoreIRLoadLibrary_stdlib(context);
+    CoreIR::Namespace* stdlib = CoreIRLoadLibrary_stdlib(context);
     CoreIR::Namespace* cgralib = CoreIRLoadLibrary_cgralib(context);
 
     // add all generators from stdlib
@@ -73,7 +73,7 @@ CodeGen_CoreIR_Target::CodeGen_CoreIR_C::CodeGen_CoreIR_C(std::ostream &s, Outpu
     }
 
     // add all generators from cgralib
-    std::vector<string> cgra_gen_names = {"Linebuffer"};
+    std::vector<string> cgra_gen_names = {"Linebuffer", "IO"};
     for (auto gen_name : cgra_gen_names) {
       gens[gen_name] = cgralib->getGenerator(gen_name);
       assert(gens[gen_name]);
@@ -453,55 +453,15 @@ void CodeGen_CoreIR_Target::CodeGen_CoreIR_C::visit(const Allocate *op) {
     //close_scope("alloc " + print_name(op->name));
 
 }
-  /*
-void CodeGen_CoreIR_Target::CodeGen_CoreIR_C::visit(const Store *op) {
-    Type t = op->value.type();
 
-    bool type_cast_needed =
-        t.is_handle() ||
-        !allocations.contains(op->name) ||
-        allocations.get(op->name).type != t;
-
-    string id_index = print_expr(op->index);
-    string id_value = print_expr(op->value);
-    do_indent();
-
-    if (type_cast_needed) {
-        stream << "((const "
-               << print_type(t)
-               << " *)"
-               << print_name(op->name)
-               << ")";
-    } else {
-        stream << print_name(op->name);
-    }
-    stream << "["
-           << id_index
-           << "] = "
-           << id_value
-           << ";\n";
-
-  bool in_hw_section = hw_wire_set.count(id_value)>0;
-
-  if (in_hw_section){
-    stream << "to out: " << id_value << endl;
-    def->connect(hw_wire_set[id_value], self->sel("out"));
-  } else {
-    stream << "out: " << id_value << endl;
-  }
-  //  CodeGen_C::visit(op);
-}
-  */
-
-  void CodeGen_CoreIR_Target::CodeGen_CoreIR_C::visit(const Call *op) {
+void CodeGen_CoreIR_Target::CodeGen_CoreIR_C::visit(const Call *op) {
     if (op->is_intrinsic(Call::rewrite_buffer)) {
       stream << "[rewrite_buffer]";
     }
     CodeGen_CoreIR_Base::visit(op);
 
-  }
+}
 
-  // TODO: add more operators
 }
 
 
