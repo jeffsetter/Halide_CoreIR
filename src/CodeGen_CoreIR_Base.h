@@ -49,6 +49,8 @@ protected:
     void visit(const Call *);
     void visit(const Provide *);
     void visit(const Realize *);
+    void visit(const Load *);
+    void visit(const Store *);
 
 	void visit_binop(Type t, Expr a, Expr b, char op_sym, std::string coreir_name, std::string op_name);
 	void visit(const Mul *op);
@@ -64,9 +66,9 @@ protected:
     CoreIR::Namespace* global_ns;
     CoreIR::Namespace* stdlib;
     std::map<std::string,CoreIR::Generator*> gens;
-    std::map<std::string,CoreIR::Module*> mdefs;
-    CoreIR::ModuleDef* def;
-    CoreIR::Module* design;
+    //std::map<std::string,CoreIR::Module*> mdefs;
+    CoreIR::ModuleDef* def = NULL;
+    CoreIR::Module* design = NULL;
     CoreIR::Wireable* self;
 
     // keep track of coreir dag

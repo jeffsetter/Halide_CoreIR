@@ -78,29 +78,6 @@ CodeGen_CoreIR_Target::CodeGen_CoreIR_C::CodeGen_CoreIR_C(std::ostream &s, Outpu
       gens[gen_name] = cgralib->getGenerator(gen_name);
       assert(gens[gen_name]);
     }
-
-    CoreIR::Type* design_type = context->Record({
-	{"in",context->Array(bitwidth,context->BitIn())},
-	{"out",context->Array(bitwidth,context->Bit())}
-    });
-    design = global_ns->newModuleDecl("PLACEHOLDER", design_type);
-    def = design->newModuleDef();
-
-    // TODO: add these gens to coreir
-    // create custom generators 
-    CoreIR::Type* lb_type = context->Record({
-	{"in",context->Array(bitwidth,context->BitIn())},
-	  {"out",context->Array(3, context->Array(3, 
-						  context->Array(bitwidth,context->Bit())
-						  ))
-	      }
-      });
-    CoreIR::Module* lb_design = global_ns->newModuleDecl("linebuffer33", lb_type);
-    CoreIR::ModuleDef* lb_def = lb_design->newModuleDef();
-    lb_design->setDef(lb_def);
-    mdefs["linebuffer33"] = lb_design;
-    assert(mdefs["linebuffer33"]);
-
 }
 
 
@@ -119,7 +96,7 @@ CodeGen_CoreIR_Target::~CodeGen_CoreIR_Target() {
 }
 
 CodeGen_CoreIR_Target::CodeGen_CoreIR_C::~CodeGen_CoreIR_C() {
-  if (def->hasInstances()) {
+  if (def != NULL && def->hasInstances()) {
     // print coreir to stdout
     design->setDef(def);
     context->checkerrors();
@@ -129,12 +106,19 @@ CodeGen_CoreIR_Target::CodeGen_CoreIR_C::~CodeGen_CoreIR_C() {
     std::string GREEN = "\033[0;32m";
     std::string RED = "\033[0;31m";
     std::string RESET = "\033[0m";
-  
+    
+    CoreIR::saveModule(design, "design_top.txt", &err);
+    if (err) {
+      cout << RED << "Could not save dot file :(" << RESET << endl;
+      context->die();
+    }
+    
+
     cout << "Running Generators" << endl;
     rungenerators(context,design,&err);
     if (err) context->die();
     design->print();
-    //CoreIR::Instance* i = cast<CoreIR::Instance>(design->getDef()->sel("DesignTarget"));
+    //CoreIR::Instance* i = cast<CoreIR::Instance>(design->getDef()->sel("DesignTop"));
     //i->getModuleRef()->print();
 
     cout << "Flattening everything" << endl;
@@ -144,14 +128,20 @@ CodeGen_CoreIR_Target::CodeGen_CoreIR_C::~CodeGen_CoreIR_C() {
 
   
     // write out the json
-    CoreIR::saveModule(design, "design_target.json", &err);
+    CoreIR::saveModule(design, "design_top.json", &err);
     if (err) {
       cout << RED << "Could not save json :(" << RESET << endl;
       context->die();
     }
-  
+    /*
+    CoreIR::saveModule(design, "design_full.txt", &err);
+    if (err) {
+      cout << RED << "Could not save dot file :(" << RESET << endl;
+      context->die();
+    }
+    */
     // check that we can reload the created json
-    CoreIR::loadModule(context,"design_target.json", &err);
+    CoreIR::loadModule(context,"design_top.json", &err);
     if (err) {
       cout << RED << "failed to reload json" << RESET << endl;
       context->die();
@@ -270,7 +260,7 @@ void CodeGen_CoreIR_Target::CodeGen_CoreIR_C::add_kernel(Stmt stmt,
 	{"in",context->Array(num_inputs, context->Array(bitwidth,context->BitIn()))},
 	{"out",context->Array(bitwidth,context->Bit())}
     });
-    design = global_ns->newModuleDecl("DesignTarget", design_type);
+    design = global_ns->newModuleDecl("DesignTop", design_type);
     def = design->newModuleDef();
     self = def->sel("self");
     input_idx = 0;
@@ -463,7 +453,7 @@ void CodeGen_CoreIR_Target::CodeGen_CoreIR_C::visit(const Allocate *op) {
     //close_scope("alloc " + print_name(op->name));
 
 }
-
+  /*
 void CodeGen_CoreIR_Target::CodeGen_CoreIR_C::visit(const Store *op) {
     Type t = op->value.type();
 
@@ -501,6 +491,7 @@ void CodeGen_CoreIR_Target::CodeGen_CoreIR_C::visit(const Store *op) {
   }
   //  CodeGen_C::visit(op);
 }
+  */
 
   void CodeGen_CoreIR_Target::CodeGen_CoreIR_C::visit(const Call *op) {
     if (op->is_intrinsic(Call::rewrite_buffer)) {

@@ -10,7 +10,7 @@ HLS_LOG = vivado_hls.log
 #### COREIR flags
 COREIR_DIR ?= ../../../../coreir
 COREIR_LIBPATH = -L$(COREIR_DIR)/lib -Wl,-rpath,$(COREIR_DIR)/lib
-COREIR_LIBS = -lcoreir-stdlib -lcoreir-passes -lcoreir
+COREIR_LIBS = -lcoreir-stdlib -lcoreir-cgralib -lcoreir-passes -lcoreir
 
 .PHONY: all run_hls
 all: out.png

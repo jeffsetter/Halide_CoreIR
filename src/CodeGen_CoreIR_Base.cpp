@@ -119,12 +119,13 @@ void CodeGen_CoreIR_Base::visit(const Call *op) {
 	// add linebuffer to coreir
 	Expr lb_dim0 = stencil_type.bounds[0].extent;
 	Expr lb_dim1 = stencil_type.bounds[1].extent;
-	stream << "// linebuffer size: " << lb_dim0 << " " << lb_dim1 << "\n";
 
 	string lb_name = "lb" + lb_in_name;
 	int stencil_width = id_cnst_value(lb_dim0);
 	int stencil_height = id_cnst_value(lb_dim1);
-	int image_width = id_cnst_value(op->args[0]);
+	int image_width = id_cnst_value(op->args[2]);
+	stream << "// linebuffer size: " << stencil_width << " " << stencil_height << " and image width " << image_width << std::endl;
+
 	CoreIR::Wireable* coreir_lb = def->addInstance(lb_name, gens["Linebuffer"],
   			         {{"bitwidth",context->argInt(bitwidth)}, {"stencil_width", context->argInt(stencil_width)},
 				  {"stencil_height", context->argInt(stencil_height)}, {"image_width", context->argInt(image_width)}}
@@ -679,6 +680,75 @@ void CodeGen_CoreIR_Base::visit(const Cast *op) {
     } else {
       stream << "// couldn't find " << in_var << endl;
     }
+}
+
+void CodeGen_CoreIR_Base::visit(const Load *op) {
+  
+    Type t = op->type;
+    bool type_cast_needed =
+        !allocations.contains(op->name) ||
+        allocations.get(op->name).type != t;
+
+    string id_index = print_expr(op->index);
+    string name = print_name(op->name);
+    ostringstream rhs;
+    if (type_cast_needed) {
+        rhs << "(("
+            << print_type(op->type)
+            << " *)"
+            << name
+            << ")";
+    } else {
+      rhs << name;
+    }
+    rhs << "["
+        << id_index
+        << "][load]";
+
+    string out_var = print_assignment(op->type, rhs.str());
+
+    // add to coreir
+    string in_var = name + "_" + id_index;
+    if (hw_wire_set.count(in_var) > 0) {
+      hw_wire_set[out_var] = hw_wire_set[in_var];
+      stream << "// added load: " << name << "_" << id_index << std::endl;
+    } else {
+      stream << "// couldn't find " << in_var << endl;
+    }
+}
+
+void CodeGen_CoreIR_Base::visit(const Store *op) {
+    Type t = op->value.type();
+
+    bool type_cast_needed =
+        t.is_handle() ||
+        !allocations.contains(op->name) ||
+        allocations.get(op->name).type != t;
+
+    string id_index = print_expr(op->index);
+    string id_value = print_expr(op->value);
+    string name = print_name(op->name);
+    do_indent();
+
+    if (type_cast_needed) {
+        stream << "((const "
+               << print_type(t)
+               << " *)"
+               << name
+               << ")";
+    } else {
+        stream << name;
+    }
+    stream << "["
+           << id_index
+           << "] = "
+           << id_value
+           << ";\n";
+
+    // add to coreir
+    hw_wire_set[name + "_" + id_index] = get_wire(op->value, id_value);
+    stream << "// added store: " << name << "_" << id_index << std::endl;
+
 }
 
 
