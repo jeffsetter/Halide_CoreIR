@@ -3,8 +3,8 @@
 #include <limits>
 #include <algorithm>
 
-#include "CodeGen_CoreIR_Target.h"
 #include "CodeGen_Internal.h"
+#include "CodeGen_CoreIR_Target.h"
 #include "Substitute.h"
 #include "IRMutator.h"
 #include "IROperator.h"
@@ -15,7 +15,8 @@
 
 #include "coreir.h"
 #include "coreir-lib/stdlib.h"
-#include "coreir-pass/passes.hpp"
+#include "coreir-lib/cgralib.h"
+#include "coreir-pass/passes.h"
 
 
 namespace Halide {
@@ -61,30 +62,22 @@ CodeGen_CoreIR_Target::CodeGen_CoreIR_C::CodeGen_CoreIR_C(std::ostream &s, Outpu
     bitwidth = 16;
     context = CoreIR::newContext();
     global_ns = context->getGlobal();
-    stdlib = CoreIRLoadLibrary_stdlib(context);
+    CoreIR::Namespace* stdlib = CoreIRLoadLibrary_stdlib(context);
+    CoreIR::Namespace* cgralib = CoreIRLoadLibrary_cgralib(context);
 
     // add all generators from stdlib
-    std::vector<string> gen_names = {"add2_16", "mult2_16", "const_16"};
-    for (auto gen_name : gen_names) {
-      gens[gen_name] = stdlib->getModule(gen_name);
+    std::vector<string> std_gen_names = {"add", "mul", "const"};
+    for (auto gen_name : std_gen_names) {
+      gens[gen_name] = stdlib->getGenerator(gen_name);
       assert(gens[gen_name]);
     }
 
-    // TODO: add these gens to coreir
-    // create custom generators 
-    CoreIR::Type* design_type = context->Record({
-	{"in",context->Array(bitwidth,context->BitIn())},
-	  {"out",context->Array(3, context->Array(3, 
-						  context->Array(bitwidth,context->BitOut())
-						  ))
-	      }
-      });
-    CoreIR::Module* lb_design = global_ns->newModuleDecl("linebuffer33", design_type);
-    CoreIR::ModuleDef* lb_def = lb_design->newModuleDef();
-    lb_design->setDef(lb_def);
-    gens["linebuffer33"] = lb_design;
-    assert(gens["linebuffer33"]);
-
+    // add all generators from cgralib
+    std::vector<string> cgra_gen_names = {"Linebuffer", "IO"};
+    for (auto gen_name : cgra_gen_names) {
+      gens[gen_name] = cgralib->getGenerator(gen_name);
+      assert(gens[gen_name]);
+    }
 }
 
 
@@ -103,7 +96,7 @@ CodeGen_CoreIR_Target::~CodeGen_CoreIR_Target() {
 }
 
 CodeGen_CoreIR_Target::CodeGen_CoreIR_C::~CodeGen_CoreIR_C() {
-  if (def->hasInstances()) {
+  if (def != NULL && def->hasInstances()) {
     // print coreir to stdout
     design->setDef(def);
     context->checkerrors();
@@ -113,23 +106,42 @@ CodeGen_CoreIR_Target::CodeGen_CoreIR_C::~CodeGen_CoreIR_C() {
     std::string GREEN = "\033[0;32m";
     std::string RED = "\033[0;31m";
     std::string RESET = "\033[0m";
-
-    // check that the coreir was created correctly
-    CoreIR::typecheck(context,design,&err);
+    
+    CoreIR::saveModule(design, "design_top.txt", &err);
     if (err) {
-      cout << RED << "failed typecheck" << RESET << endl;
+      cout << RED << "Could not save dot file :(" << RESET << endl;
       context->die();
     }
+    
+
+    cout << "Running Generators" << endl;
+    rungenerators(context,design,&err);
+    if (err) context->die();
+    design->print();
+    //CoreIR::Instance* i = cast<CoreIR::Instance>(design->getDef()->sel("DesignTop"));
+    //i->getModuleRef()->print();
+
+    cout << "Flattening everything" << endl;
+    flatten(context,design,&err);
+    design->print();
+    design->getDef()->validate();
+
   
     // write out the json
-    CoreIR::saveModule(design, "design_target.json", &err);
+    CoreIR::saveModule(design, "design_top.json", &err);
     if (err) {
       cout << RED << "Could not save json :(" << RESET << endl;
       context->die();
     }
-  
+    /*
+    CoreIR::saveModule(design, "design_full.txt", &err);
+    if (err) {
+      cout << RED << "Could not save dot file :(" << RESET << endl;
+      context->die();
+    }
+    */
     // check that we can reload the created json
-    CoreIR::loadModule(context,"design_target.json", &err);
+    CoreIR::loadModule(context,"design_top.json", &err);
     if (err) {
       cout << RED << "failed to reload json" << RESET << endl;
       context->die();
@@ -246,9 +258,9 @@ void CodeGen_CoreIR_Target::CodeGen_CoreIR_C::add_kernel(Stmt stmt,
     // FIXME: can't create input and output for coreir dag, bc can't distinguish
     CoreIR::Type* design_type = context->Record({
 	{"in",context->Array(num_inputs, context->Array(bitwidth,context->BitIn()))},
-	{"out",context->Array(bitwidth,context->BitOut())}
+	{"out",context->Array(bitwidth,context->Bit())}
     });
-    design = global_ns->newModuleDecl("DesignTarget", design_type);
+    design = global_ns->newModuleDecl("DesignTop", design_type);
     def = design->newModuleDef();
     self = def->sel("self");
     input_idx = 0;
@@ -442,53 +454,14 @@ void CodeGen_CoreIR_Target::CodeGen_CoreIR_C::visit(const Allocate *op) {
 
 }
 
-void CodeGen_CoreIR_Target::CodeGen_CoreIR_C::visit(const Store *op) {
-    Type t = op->value.type();
-
-    bool type_cast_needed =
-        t.is_handle() ||
-        !allocations.contains(op->name) ||
-        allocations.get(op->name).type != t;
-
-    string id_index = print_expr(op->index);
-    string id_value = print_expr(op->value);
-    do_indent();
-
-    if (type_cast_needed) {
-        stream << "((const "
-               << print_type(t)
-               << " *)"
-               << print_name(op->name)
-               << ")";
-    } else {
-        stream << print_name(op->name);
-    }
-    stream << "["
-           << id_index
-           << "] = "
-           << id_value
-           << ";\n";
-
-  bool in_hw_section = hw_wire_set.count(id_value)>0;
-
-  if (in_hw_section){
-    stream << "to out: " << id_value << endl;
-    def->wire(hw_wire_set[id_value], self->sel("out"));
-  } else {
-    stream << "out: " << id_value << endl;
-  }
-  //  CodeGen_C::visit(op);
-}
-
-  void CodeGen_CoreIR_Target::CodeGen_CoreIR_C::visit(const Call *op) {
+void CodeGen_CoreIR_Target::CodeGen_CoreIR_C::visit(const Call *op) {
     if (op->is_intrinsic(Call::rewrite_buffer)) {
       stream << "[rewrite_buffer]";
     }
     CodeGen_CoreIR_Base::visit(op);
 
-  }
+}
 
-  // TODO: add more operators
 }
 
 

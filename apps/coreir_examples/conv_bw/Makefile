@@ -9,8 +9,8 @@ HLS_LOG = vivado_hls.log
 
 #### COREIR flags
 COREIR_DIR ?= ../../../../coreir
-COREIR_LIBPATH = -L$(COREIR_DIR)/bin -Wl,-rpath,$(COREIR_DIR)/bin
-COREIR_LIBS = -lcoreir-stdlib -lcoreir-passes -lcoreir
+COREIR_LIBPATH = -L$(COREIR_DIR)/lib -Wl,-rpath,$(COREIR_DIR)/lib
+COREIR_LIBS = -lcoreir-stdlib -lcoreir-cgralib -lcoreir-passes -lcoreir
 
 .PHONY: all run_hls
 all: out.png
@@ -24,14 +24,17 @@ pipeline_hls.cpp pipeline_native.o pipeline_cuda.o: pipeline
 	HL_DEBUG_CODEGEN=0 ./pipeline
 
 run: run.cpp pipeline_hls.cpp hls_target.cpp pipeline_native.o
-	$(CXX) $(CXXFLAGS) -O1 -DNDEBUG $(HLS_CXXFLAGS) -g -Wall -Werror $^ -lpthread -ldl -o $@
+	$(CXX) $(CXXFLAGS) -O1 -DNDEBUG $(HLS_CXXFLAGS) -g -Wall -Werror $^ -lpthread -ldl -o $@ $(PNGFLAGS)
 
 
 run_cuda: pipeline_native.o pipeline_cuda.o run_cuda.cpp
 	$(CXX) -O3 $(CXXFLAGS) -Wall -Werror $^ -lpthread -ldl -o $@  $(PNGFLAGS) `pkg-config --libs opencv`
 
 out.png: run
-	./run
+	./run input.png
+
+design_top.json: pipeline
+	HL_DEBUG_CODEGEN=0 ./pipeline
 
 $(HLS_LOG): ../hls_support/run_hls.tcl pipeline_hls.cpp run.cpp
 	RUN_PATH=$(realpath ./) \

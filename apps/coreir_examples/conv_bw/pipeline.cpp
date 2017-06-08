@@ -42,6 +42,7 @@ public:
         clamped = BoundaryConditions::repeat_edge(input);
         //conv1 = clamped;
         conv1(x, y) += clamped(x+win.x, y+win.y) * kernel(win.x, win.y);
+	//conv1(x, y) += clamped(x+win.x, y+win.y) * gaussian2d[win.x+1][win.y+1];
 
         // unroll the reduction
 	conv1.update(0).unroll(win.x).unroll(win.y);

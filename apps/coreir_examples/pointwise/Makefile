@@ -9,8 +9,8 @@ HLS_LOG = vivado_hls.log
 
 #### COREIR flags
 COREIR_DIR ?= ../../../../coreir
-COREIR_LIBPATH = -L$(COREIR_DIR)/bin -Wl,-rpath,$(COREIR_DIR)/bin
-COREIR_LIBS = -lcoreir-stdlib -lcoreir-passes -lcoreir
+COREIR_LIBPATH = -L$(COREIR_DIR)/lib -Wl,-rpath,$(COREIR_DIR)/lib
+COREIR_LIBS = -lcoreir-stdlib -lcoreir-cgralib -lcoreir-passes -lcoreir
 
 .PHONY: all run_hls
 all: out.png
@@ -29,7 +29,7 @@ run_cuda: pipeline_native.o pipeline_cuda.o run_cuda.cpp
 	$(CXX) -O3 $(CXXFLAGS) -Wall -Werror $^ -lpthread -ldl -o $@  $(PNGFLAGS)
 
 out.png: run
-	./run ../../images/gray.png
+	./run input.png
 
 out_cuda.png: run_cuda
 	CUDA_LAUNCH_BLOCKING=1 HL_NUM_THREADS=4 ./run_cuda ../../images/benchmark_8mp_gray.png

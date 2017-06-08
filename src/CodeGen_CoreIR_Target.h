@@ -65,7 +65,7 @@ protected:
 // 	void visit(const Add *op);
 // 	void visit(const Sub *op);
 	//	void visit(const Load *op);
-	void visit(const Store *op);
+	//void visit(const Store *op);
 	void visit(const Call *op);
 
 
