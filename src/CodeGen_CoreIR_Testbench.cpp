@@ -88,7 +88,6 @@ CodeGen_CoreIR_Testbench::CodeGen_CoreIR_Testbench(ostream &tb_stream)
     CoreIR::Namespace* cgralib = CoreIRLoadLibrary_cgralib(context);
 
     // add all generators from stdlib
-<<<<<<< HEAD
     std::vector<string> stdlib_gen_names = {"add", "mul", "const"};
     for (auto gen_name : stdlib_gen_names) {
       gens[gen_name] = stdlib->getGenerator(gen_name);
@@ -98,24 +97,13 @@ CodeGen_CoreIR_Testbench::CodeGen_CoreIR_Testbench(ostream &tb_stream)
     std::vector<string> cgralib_gen_names = {"IO"};
     for (auto gen_name : cgralib_gen_names) {
       gens[gen_name] = cgralib->getGenerator(gen_name);
-=======
-    std::vector<string> gen_names = {"add", "mul", "const"};
-    for (auto gen_name : gen_names) {
-      gens[gen_name] = stdlib->getGenerator(gen_name);
->>>>>>> 6676d8366af0acb4cd1fedb28f6fd39c704eabb8
       assert(gens[gen_name]);
     }
 
     // TODO: fix static module definition
-<<<<<<< HEAD
     CoreIR::Type* design_type = context->Record({
 	{"in",context->Array(bitwidth,context->BitIn())},
 	{"out",context->Array(bitwidth,context->Bit())}
-=======
-    CoreIR::Type* design_type = c->Record({
-	{"in",c->Array(n,c->BitIn())},
-	{"out",c->Array(n,c->Bit())}
->>>>>>> 6676d8366af0acb4cd1fedb28f6fd39c704eabb8
     });
     design = global_ns->newModuleDecl("DesignTop", design_type);
     def = design->newModuleDef();
@@ -123,7 +111,6 @@ CodeGen_CoreIR_Testbench::CodeGen_CoreIR_Testbench(ostream &tb_stream)
 }
 
 CodeGen_CoreIR_Testbench::~CodeGen_CoreIR_Testbench() {
-<<<<<<< HEAD
   if (def->hasInstances()) {
     // write coreir json
     design->setDef(def);
@@ -154,22 +141,6 @@ CodeGen_CoreIR_Testbench::~CodeGen_CoreIR_Testbench() {
     } else {
       cout << GREEN << "We passed!!! (GREEN PASS) Yay!" << RESET << endl;
     }
-=======
-  // typecheck and write coreir json
-  design->setDef(def);
-  c->checkerrors();
-  design->print();
-
-  bool err = false;
-
-  CoreIR::saveModule(design, "design_top.json", &err);
-  if (err) {
-    cout << "Could not save json :(" << endl;
-    exit(1);
-  } else {
-    cout << "We passed!!! (GREEN PASS) Yay!" << endl;
-  }
->>>>>>> 6676d8366af0acb4cd1fedb28f6fd39c704eabb8
 
     CoreIR::deleteContext(context);
   }
@@ -297,94 +268,19 @@ void CodeGen_CoreIR_Testbench::visit(const Block *op) {
     CodeGen_CoreIR_Base::visit(op);
     return;
 }
-<<<<<<< HEAD
   /*
 void CodeGen_CoreIR_Testbench::visit_binop(Type t, Expr a, Expr b, char op_sym, string coreir_name, string op_name) {
-=======
-
-
-bool CodeGen_CoreIR_Testbench::id_hw_input(const Expr e) {
-  if (e.as<Load>()) {
-    return true;
-  } else {
-    return false;
-  }
-}
-
-bool CodeGen_CoreIR_Testbench::id_cnst(const Expr e) {
-  if (e.as<IntImm>() || e.as<UIntImm>()) {
-    return true;
-  } else {
-    return false;
-  }
-}
-
-int CodeGen_CoreIR_Testbench::id_cnst_value(const Expr e) {
-  const IntImm* e_int = e.as<IntImm>();
-  const UIntImm* e_uint = e.as<UIntImm>();
-  if (e_int) {
-    return e_int->value;
-  } else if (e_uint) {
-    return e_uint->value;
-  } else {
-    cout << "invalid constant expr" <<endl;
-    return -1;
-  }
-}
-  
-string CodeGen_CoreIR_Testbench::id_hw_section(Expr a, Expr b, Type t, char op_symbol, string a_name, string b_name) {
-  bool is_input = id_hw_input(a) || id_hw_input(b);
-  bool in_hw_section = hw_input_set.count(a_name)>0 || hw_input_set.count(b_name)>0;
-  string out_var = print_assignment(t, a_name + " " + op_symbol + " " + b_name);
-
-  //  if (hw_input_set.size()>0) { stream << "a:" << print_expr(a) << " b:" << print_expr(b) << endl; }
-  if (is_input || in_hw_section) {
-    return out_var;
-    //    if (is_input) {stream << "input mult with output: " << out_var << endl; }
-    //    if (in_hw_section) {stream << "hw_section mult with output: " << out_var <<endl; }
-  } else {
-    return "";
-  }
-}
-
-  CoreIR::Wireable* CodeGen_CoreIR_Testbench::get_wire(Expr e, string name) {
-  if (id_hw_input(e)) {
-    return self->sel("in");
-  } else if (id_cnst(e)) {
-    int cnst_value = id_cnst_value(e);
-    string cnst_name = "const" + name;
-    CoreIR::Wireable* cnst = def->addInstance(cnst_name,  gens["const"],{{"width",c->argInt(n)}},{{"value",c->argInt(cnst_value)}});
-    return cnst->sel("out");
-  } else  {
-    CoreIR::Wireable* wire = hw_input_set[name];
-
-    if (wire) { }
-    else { cout << "invalid wire in tb: " << name << endl; return self->sel("in"); }
-    return wire;
-  }
-}
-
-  void CodeGen_CoreIR_Testbench::visit_binop(Type t, Expr a, Expr b, char op_sym, string coreir_name, string op_name) {
->>>>>>> 6676d8366af0acb4cd1fedb28f6fd39c704eabb8
     //  stream << "tb-saw a " << op_name << "!!!!!!!!!!!!!!!!" << endl;
   string a_name = print_expr(a);
   string b_name = print_expr(b);
 
   string out_var = id_hw_section(a, b, t, op_sym, a_name, b_name);
   if (out_var.compare("") != 0) {
-<<<<<<< HEAD
     string mult_name = op_name + a_name + b_name;
     CoreIR::Wireable* coreir_inst = def->addInstance(mult_name,gens[coreir_name]);
     def->connect(get_wire(a, a_name), coreir_inst->sel("in0"));
     def->connect(get_wire(b, b_name), coreir_inst->sel("in1"));
     hw_wire_set[out_var] = coreir_inst->sel("out");
-=======
-    string binop_name = op_name + a_name + b_name;
-    CoreIR::Wireable* coreir_inst = def->addInstance(binop_name,gens[coreir_name],{{"width",c->argInt(n)}});
-    def->connect(get_wire(a, a_name), coreir_inst->sel("in")->sel(0));
-    def->connect(get_wire(b, b_name), coreir_inst->sel("in")->sel(1));
-    hw_input_set[out_var] = coreir_inst->sel("out");
->>>>>>> 6676d8366af0acb4cd1fedb28f6fd39c704eabb8
 
     if (id_hw_input(a)) { stream << op_name <<"a: self.in "; } else { stream << op_name << "a: " << a_name << " "; }
     if (id_hw_input(b)) { stream << op_name <<"b: self.in" <<endl; } else { stream << op_name << "b: " << b_name << endl; }
@@ -398,15 +294,15 @@ string CodeGen_CoreIR_Testbench::id_hw_section(Expr a, Expr b, Type t, char op_s
   
 
 void CodeGen_CoreIR_Testbench::visit(const Mul *op) {
-  visit_binop(op->type, op->a, op->b, '*', "mul", "mul");
+  visit_binop(op->type, op->a, op->b, '*', "mult2_16", "mul");
 }
 
 void CodeGen_CoreIR_Testbench::visit(const Add *op) {
-  visit_binop(op->type, op->a, op->b, '+', "add", "add");
+  visit_binop(op->type, op->a, op->b, '+', "add2_16", "add");
 }
   
 void CodeGen_CoreIR_Testbench::visit(const Sub *op) {
-  visit_binop(op->type, op->a, op->b, '-', "mul", "sub");
+  visit_binop(op->type, op->a, op->b, '-', "mult2_16", "sub");
 }
   */
 void CodeGen_CoreIR_Testbench::visit(const Store *op) {
@@ -440,11 +336,7 @@ void CodeGen_CoreIR_Testbench::visit(const Store *op) {
 
   if (in_hw_section){
     stream << "to out: " << id_value << endl;
-<<<<<<< HEAD
     def->connect(hw_wire_set[id_value], self->sel("out"));
-=======
-    def->connect(hw_input_set[id_value], self->sel("out"));
->>>>>>> 6676d8366af0acb4cd1fedb28f6fd39c704eabb8
   } else {
     stream << "out: " << id_value << endl;
   }
