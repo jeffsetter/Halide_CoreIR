@@ -19,7 +19,7 @@ const unsigned char gaussian2d[5][5] = {
 
 
 int main(int argc, char **argv) {
-    Image<uint8_t> in(800, 800, 1);
+    Image<uint8_t> in(64, 64, 1);
     Image<uint8_t> weight(5,5);
 
     Image<uint8_t> out_native(in.width(), in.height(), in.channels());

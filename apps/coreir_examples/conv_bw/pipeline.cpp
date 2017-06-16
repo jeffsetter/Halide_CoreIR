@@ -34,9 +34,10 @@ public:
                    output("output"), hw_output("hw_output"),
                    win(-1, 3, -1, 3) {
         // Define a 3x3 Gaussian Blur with a repeat-edge boundary condition.
-        float sigma = 1.5f;
+        //float sigma = 1.5f;
 
-        kernel(x, y) = cast<uint16_t>(exp(-(x*x + y*y)/(2*sigma*sigma)) / (float)(2*M_PI*sigma*sigma));
+        //kernel(x, y) = cast<uint16_t>(exp(-(x*x + y*y)/(2*sigma*sigma)) / (float)(2*M_PI*sigma*sigma));
+        kernel(x, y) = cast<uint16_t>(1);
 
         // define the algorithm
         clamped = BoundaryConditions::repeat_edge(input);
@@ -67,7 +68,7 @@ public:
     void compile_cpu() {
         std::cout << "\ncompiling cpu code..." << std::endl;
 
-        output.tile(x, y, xo, yo, xi, yi, 256, 256);
+        output.tile(x, y, xo, yo, xi, yi, 64, 64);
         output.fuse(xo, yo, xo).parallel(xo);
 
         output.vectorize(xi, 8);
@@ -123,7 +124,7 @@ public:
 	clamped.compute_root();
      	hw_output.compute_root();
 	conv1.linebuffer();
-	hw_output.tile(x, y, xo, yo, xi, yi, 256,256).reorder(xi,yi,xo,yo);
+	hw_output.tile(x, y, xo, yo, xi, yi, 64,64).reorder(xi,yi,xo,yo);
 	hw_output.accelerate({clamped}, xi, xo, {kernel});
 
 

@@ -298,7 +298,7 @@ void CodeGen_CoreIR_Base::visit(const Call *op) {
 	  //FIXME: fix input stencil cnst
 	  stream << "// " << stencil_print_name << " not found so creating cnst" << endl;
 	  string cnst_name = "cnst" + out_var;
-	  int cnst_value = 999;
+	  int cnst_value = 1;//999
 	  CoreIR::Wireable* cnst = def->addInstance(cnst_name,  gens["const"], {{"width", context->argInt(bitwidth)}},
 						    {{"value",context->argInt(cnst_value)}});
 	  hw_wire_set[out_var] = cnst->sel("out");;
