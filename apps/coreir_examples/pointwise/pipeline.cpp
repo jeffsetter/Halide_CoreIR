@@ -32,7 +32,7 @@ public:
         std::cout << "\ncompiling cpu code..." << std::endl;
         //kernel.compute_root();
 
-        output.tile(x, y, xo, yo, xi, yi, 640, 480)
+        output.tile(x, y, xo, yo, xi, yi, 64, 64)
             .vectorize(xi, 8)
             .fuse(xo, yo, xo).parallel(xo);
         //blur_y.compute_at(output, xo).vectorize(x, 8).unroll(c);
@@ -61,7 +61,7 @@ public:
     void compile_hls() {
         std::cout << "\ncompiling HLS code..." << std::endl;
         //kernel.compute_root();
-	output.tile(x, y, xo, yo, xi, yi, 640, 480);
+	output.tile(x, y, xo, yo, xi, yi, 64, 64);
 
 	//        hw_output.compute_at(output, xo)
 	//                 .tile(x, y, xo, yo, xi, yi, 640, 480);
@@ -94,7 +94,7 @@ public:
   void compile_coreir() {
         std::cout << "\ncompiling CoreIR code..." << std::endl;
         //kernel.compute_root();
-	output.tile(x, y, xo, yo, xi, yi, 640, 480);
+	output.tile(x, y, xo, yo, xi, yi, 64, 64);
 	hw_output.accelerate({in}, xi, xo);
 
         Target coreir_target = get_target_from_environment();
