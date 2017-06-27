@@ -288,9 +288,18 @@ void CodeGen_CoreIR_Base::visit(const Call *op) {
 	  stream << "// added to wire_set: " << out_var << " using stencil+idx\n";
 	} else if (hw_wire_set.count(print_name(op->name)) > 0) {
 	  CoreIR::Wireable* stencil_wire = hw_wire_set[print_name(op->name)];
-	  for(size_t i = 0; i < op->args.size(); i++) {
+          //CoreIR::Wireable* stencil_wire_orig = stencil_wire;
+          for (size_t i = op->args.size(); i-- > 0 ;) {
 	    int index = stoi(args_indices[i]);
-	    stencil_wire = stencil_wire->sel(index);
+            if (stencil_wire->hasSel(to_string(index))) {
+              stencil_wire = stencil_wire->sel(index);
+            } else {
+              // FIXME: better way to connect
+              stream << "// couldn't find selectStr " << to_string(index) << endl;
+              stencil_wire = stencil_wire->sel(index);
+              //stencil_wire = stencil_wire_orig;
+              //break;
+            }
 	  }
 	  hw_wire_set[out_var] = stencil_wire;
 	  stream << "// added to wire_set: " << out_var << " using stencil\n";
@@ -303,7 +312,8 @@ void CodeGen_CoreIR_Base::visit(const Call *op) {
 						    {{"value",context->argInt(cnst_value)}});
 	  hw_wire_set[out_var] = cnst->sel("out");;
 	}
-	
+
+        
     } else if (op->name == "dispatch_stream") {
         // emits the calling arguments in comment
         vector<string> args(op->args.size());
@@ -454,11 +464,39 @@ void CodeGen_CoreIR_Base::visit(const Call *op) {
             stream << print_name(consumer_stream_name) << ".write("
                    << print_name(stencil_name) << ");\n";
             close_scope("");
+
+            // coreir
+            string stencil_print_name = print_name(stream_name);
+            string out_var = print_name(consumer_stream_name);
+            if (hw_wire_set.count(stencil_print_name)) {
+              hw_wire_set[out_var] = hw_wire_set[stencil_print_name];
+              stream << "// added to wire_set: " << out_var << " using stencil+idx\n";
+              cout << "added to wire set" << endl;
+            } else if (hw_inout_set.count(stencil_print_name)) {
+              hw_wire_set[out_var] = self->sel("in")->sel(input_idx);
+              input_idx++;
+              stream << "// added to wire_set: " << out_var << " using inout\n";
+              cout << "added to wire inout set at index " << input_idx-1 << endl;
+            } else {
+              //FIXME: fix input stencil cnst
+              stream << "// " << stencil_print_name << " not found so creating cnst" << endl;
+              string cnst_name = "cnst" + out_var;
+              int cnst_value = 1;//999
+              CoreIR::Wireable* cnst = def->addInstance(cnst_name,  gens["const"], {{"width", context->argInt(bitwidth)}},
+                                                        {{"value",context->argInt(cnst_value)}});
+              hw_wire_set[out_var] = cnst->sel("out");;
+      	    }
+            stream << "// we should add this one" <<endl;
+
+
+
         }
 
         close_scope("");
 
         id = "0"; // skip evaluation
+
+
     } else {
         CodeGen_C::visit(op);
     }

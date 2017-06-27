@@ -25,14 +25,17 @@ int main(int argc, char **argv) {
     Image<uint8_t> out_native(in.width(), in.height(), in.channels());
     Image<uint8_t> out_hls(in.width(), in.height(), in.channels());
 
-//    for (int y = 0; y < in.height(); y++) {
-//        for (int x = 0; x < in.width(); x++) {
-//	    for (int c = 0; c < in.channels(); c++) {
-//	        in(x, y, c) = (uint8_t) x+y;   //rand();
-//	    }
-//        }
-//    }
-
+    int l = 0;
+    for (int y = 0; y < in.height(); y++) {
+        for (int x = 0; x < in.width(); x++) {
+	    for (int c = 0; c < in.channels(); c++) {
+              //in(x, y, c) = (uint8_t) x+y;   //rand();
+              in(x,y,c) = l;
+              l++;
+	    }
+        }
+    }
+    save_image(in, "input_unique.pgm");
     in = load_image(argv[1]);
 
     for (int y = 0; y < weight.height(); y++)

@@ -255,6 +255,7 @@ void CodeGen_CoreIR_Target::CodeGen_CoreIR_C::add_kernel(Stmt stmt,
     // Emit prototype to coreir
     create_json = (num_inouts > 0);
     int num_inputs = num_inouts ? num_inouts-1 : 1;
+    cout << "design has " << num_inputs << " inputs with bitwidth " << to_string(bitwidth) << " " <<endl;
     // FIXME: can't create input and output for coreir dag, bc can't distinguish
     CoreIR::Type* design_type = context->Record({
 	{"in",context->Array(num_inputs, context->Array(bitwidth,context->BitIn()))},
