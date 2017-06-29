@@ -9,49 +9,21 @@
 
 using namespace Halide::Tools;
 
-const unsigned char gaussian2d[5][5] = {
-    {1,     3,     6,     3,     1},
-    {3,    15,    25,    15,     3},
-    {6,    25,    44,    25,     6},
-    {3,    15,    25,    15,     3},
-    {1,     3,     6,     3,     1}
-};
-
-
 int main(int argc, char **argv) {
-    Image<uint8_t> in(64, 64, 1);
-    Image<uint8_t> weight(5,5);
+  Image<uint8_t> in(10, 8, 1);
 
     Image<uint8_t> out_native(in.width(), in.height(), in.channels());
     Image<uint8_t> out_hls(in.width(), in.height(), in.channels());
-
-    int l = 0;
-    for (int y = 0; y < in.height(); y++) {
-        for (int x = 0; x < in.width(); x++) {
-	    for (int c = 0; c < in.channels(); c++) {
-              //in(x, y, c) = (uint8_t) x+y;   //rand();
-              in(x,y,c) = l;
-              l++;
-	    }
-        }
-    }
-    save_image(in, "input_unique.pgm");
     in = load_image(argv[1]);
-
-    for (int y = 0; y < weight.height(); y++)
-      for (int x = 0; x < weight.width(); x++)
-            weight(x, y) = gaussian2d[y][x];
 
     printf("start.\n");
 
-    //    pipeline_native(in, weight, 0, out_native);
     pipeline_native(in, out_native);
     save_image(out_native, "out.png");
     save_image(out_native, "out.pgm");
 
     printf("finish running native code\n");
 
-    //    pipeline_hls(in, weight, 0, out_hls);
     pipeline_hls(in, out_hls);
 
     printf("finish running HLS code\n");

@@ -27,11 +27,12 @@ run: run.cpp pipeline_hls.cpp hls_target.cpp pipeline_native.o
 	$(CXX) $(CXXFLAGS) -O1 -DNDEBUG $(HLS_CXXFLAGS) -g -Wall -Werror $^ -lpthread -ldl -o $@ $(PNGFLAGS)
 
 
-out.png: run input_ones.pgm
+out.png: run input_unique.pgm
 	./run input.png
 
-gen_testimage: gen_testimage.cpp pipeline_hls.cpp hls_target.cpp pipeline_native.o
-	$(CXX) $(CXXFLAGS) -O1 -DNDEBUG $(HLS_CXXFLAGS) -g -Wall -Werror $^ -lpthread -ldl -o $@ $(PNGFLAGS)
+gen_testimage:
+	$(MAKE) -C ../tools/gen_testimage gen_testimage
+	cp ../tools/gen_testimage/gen_testimage .
 
 input_unique.pgm: gen_testimage
 	./gen_testimage 10 10 b input_unique.pgm
@@ -49,9 +50,6 @@ $(HLS_LOG): ../hls_support/run_hls.tcl pipeline_hls.cpp run.cpp
 	RUN_ARGS= \
 	vivado_hls -f $< -l $(HLS_LOG)
 
-out_cuda.png: run_cuda
-	CUDA_LAUNCH_BLOCKING=1 HL_NUM_THREADS=4 ./run_cuda ../../images/benchmark_8mp_gray.png
-
 clean:
 	rm -f pipeline run
 	rm -f *.html
@@ -59,5 +57,5 @@ clean:
 	rm -f pipeline_hls.h pipeline_hls.cpp hls_target.h hls_target.cpp
 	rm -f pipeline_coreir.cpp pipeline_coreir.h
 	rm -f coreir_target.h coreir_target.cpp design_top.json design_target.json
-	rm -f design_top.txt graph.png
-	rm -f input* out.png
+	rm -f design_top.txt graph.png gen_testimage
+	rm -f input* out.png out.pgm

@@ -1212,9 +1212,13 @@ test_hls_apps: $(LIB_DIR)/libHalide.a $(BIN_DIR)/libHalide.$(SHARED_EXT) $(INCLU
 	done
 
 ALL_COREIR_APPS = pointwise conv_bw cascade
+ALL_COREIR_TESTS = conv_1_2 conv_2_1 conv_3_1
 # $(BIN_DIR)/libHalide.$(SHARED_EXT)
 test_coreir:  $(LIB_DIR)/libHalide.a $(INCLUDE_DIR)/Halide.h $(INCLUDE_DIR)/HalideRuntime.h
 	for app in $(ALL_COREIR_APPS); do \
+	  $(MAKE) -C apps/coreir_examples/$$app clean all HALIDE_BIN_PATH=$(CURDIR) HALIDE_SRC_PATH=$(ROOT_DIR) || exit; \
+	done
+	for app in $(ALL_COREIR_TESTS); do \
 	  $(MAKE) -C apps/coreir_examples/$$app clean all HALIDE_BIN_PATH=$(CURDIR) HALIDE_SRC_PATH=$(ROOT_DIR) || exit; \
 	done
 
@@ -1223,6 +1227,10 @@ test_coreir_prebuilt:
 	for app in $(ALL_COREIR_APPS); do \
 	  $(MAKE) -C apps/coreir_examples/$$app clean all HALIDE_BIN_PATH=$(CURDIR) HALIDE_SRC_PATH=$(ROOT_DIR) || exit; \
 	done
+	for app in $(ALL_COREIR_APPS); do \
+	  $(MAKE) -C apps/coreir_examples/$$app clean all HALIDE_BIN_PATH=$(CURDIR) HALIDE_SRC_PATH=$(ROOT_DIR) || exit; \
+	done
+
 fulltest_coreir:
 	$(MAKE) test_coreir test_correctness test_generators
 
