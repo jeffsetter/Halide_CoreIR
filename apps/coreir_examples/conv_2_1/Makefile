@@ -42,14 +42,11 @@ input_ones.pgm: gen_testimage
 	./gen_testimage 10 10 a input.png
 
 
-design_top.json: pipeline
+design_top.txt design_top.json: pipeline
 	HL_DEBUG_CODEGEN=0 ./pipeline
 
-$(HLS_LOG): ../hls_support/run_hls.tcl pipeline_hls.cpp run.cpp
-	RUN_PATH=$(realpath ./) \
-	RUN_ARGS= \
-	vivado_hls -f $< -l $(HLS_LOG)
-
+graph.png: design_top.txt
+	dot -Tpng design_top.txt > graph.png
 clean:
 	rm -f pipeline run
 	rm -f *.html
