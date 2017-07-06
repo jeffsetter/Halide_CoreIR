@@ -10,7 +10,7 @@
 using namespace Halide::Tools;
 
 int main(int argc, char **argv) {
-  Image<uint8_t> in(10, 9, 1);
+  Image<uint8_t> in(9,8 , 1);
 
     Image<uint8_t> out_native(in.width(), in.height(), in.channels());
     Image<uint8_t> out_hls(in.width(), in.height(), in.channels());
