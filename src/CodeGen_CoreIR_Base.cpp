@@ -124,11 +124,16 @@ void CodeGen_CoreIR_Base::visit(const Call *op) {
 	int stencil_width = id_cnst_value(lb_dim0);
 	int stencil_height = id_cnst_value(lb_dim1);
 	int image_width = id_cnst_value(op->args[2]);
-	stream << "// linebuffer size: " << stencil_width << " " << stencil_height << " and image width " << image_width << std::endl;
+        int fifo_depth = image_width - 3;
+        internal_assert(fifo_depth > 0);
+
+	stream << "// stencil size: " << stencil_width << " " << stencil_height << " and image width " << image_width << std::endl
+               << "//  using fifo_depth " << fifo_depth << std::endl;
+        
 
 	CoreIR::Wireable* coreir_lb = def->addInstance(lb_name, gens["Linebuffer"],
   			         {{"bitwidth",context->argInt(bitwidth)}, {"stencil_width", context->argInt(stencil_width)},
-				  {"stencil_height", context->argInt(stencil_height)}, {"image_width", context->argInt(image_width)}}
+				  {"stencil_height", context->argInt(stencil_height)}, {"image_width", context->argInt(fifo_depth)}}
 						       );
 	def->connect(hw_wire_set[lb_in_name], coreir_lb->sel("in"));
 	hw_wire_set[lb_out_name] = coreir_lb->sel("out");	
