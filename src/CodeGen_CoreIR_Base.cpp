@@ -124,7 +124,7 @@ void CodeGen_CoreIR_Base::visit(const Call *op) {
 	int stencil_width = id_cnst_value(lb_dim0);
 	int stencil_height = id_cnst_value(lb_dim1);
 	int image_width = id_cnst_value(op->args[2]);
-        int fifo_depth = image_width - 3;
+        int fifo_depth = image_width;
         internal_assert(fifo_depth > 0);
 
 	stream << "// stencil size: " << stencil_width << " " << stencil_height << " and image width " << image_width << std::endl
