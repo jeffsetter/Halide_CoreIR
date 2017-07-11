@@ -35,11 +35,11 @@ gen_testimage:
 	cp ../tools/gen_testimage/gen_testimage .
 
 input_unique.pgm: gen_testimage
-	./gen_testimage 9 9 b input_unique.pgm
-	./gen_testimage 9 9 b input.png
+	./gen_testimage 10 10 b input_unique.pgm
+	./gen_testimage 10 10 b input.png
 input_ones.pgm: gen_testimage
-	./gen_testimage 9 9 a input_ones.pgm
-	./gen_testimage 9 9 a input.png
+	./gen_testimage 10 10 a input_ones.pgm
+	./gen_testimage 10 10 a input.png
 
 
 design_top.txt design_top.json: pipeline
