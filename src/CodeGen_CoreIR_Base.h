@@ -52,7 +52,7 @@ protected:
     void visit(const Load *);
     void visit(const Store *);
 
-	void visit_binop(Type t, Expr a, Expr b, char op_sym, std::string coreir_name, std::string op_name);
+	void visit_binop(Type t, Expr a, Expr b, string op_sym, string op_name);
 	void visit(const Mul *op);
 	void visit(const Add *op);
 	void visit(const Sub *op);
@@ -78,7 +78,7 @@ protected:
     virtual bool id_hw_input(const Expr e);
     bool id_cnst(const Expr e);
     int id_cnst_value(const Expr e);
-    string id_hw_section(Expr a, Expr b, Type t, char op_symbol, string a_name, string b_name);
+    string id_hw_section(Expr a, Expr b, Type t, string op_symbol, string a_name, string b_name);
     CoreIR::Wireable* get_wire(Expr e, std::string name);
 
 };

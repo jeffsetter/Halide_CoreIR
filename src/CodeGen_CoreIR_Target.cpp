@@ -66,8 +66,8 @@ CodeGen_CoreIR_Target::CodeGen_CoreIR_C::CodeGen_CoreIR_C(std::ostream &s, Outpu
     CoreIR::Namespace* cgralib = CoreIRLoadLibrary_cgralib(context);
 
     // add all generators from stdlib
-    std::vector<string> std_gen_names = {"add", "mul", "const"};
-    for (auto gen_name : std_gen_names) {
+    std::vector<string> stdlib_gen_names = {"add", "mul", "sub", "and", "or", "eq", "ult", "ugt", "ule", "uge", "const"};
+    for (auto gen_name : stdlib_gen_names) {
       gens[gen_name] = stdlib->getGenerator(gen_name);
       assert(gens[gen_name]);
     }

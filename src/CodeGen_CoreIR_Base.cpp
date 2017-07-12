@@ -623,7 +623,7 @@ int CodeGen_CoreIR_Base::id_cnst_value(const Expr e) {
   }
 }
 
-string CodeGen_CoreIR_Base::id_hw_section(Expr a, Expr b, Type t, char op_symbol, string a_name, string b_name) {
+string CodeGen_CoreIR_Base::id_hw_section(Expr a, Expr b, Type t, string op_symbol, string a_name, string b_name) {
   bool is_input = id_hw_input(a) || id_hw_input(b);
   bool in_hw_section = hw_wire_set.count(a_name)>0 || hw_wire_set.count(b_name)>0;
   string out_var = print_assignment(t, a_name + " " + op_symbol + " " + b_name);
@@ -669,7 +669,7 @@ CoreIR::Wireable* CodeGen_CoreIR_Base::get_wire(Expr e, string name) {
   }
 }
 
-void CodeGen_CoreIR_Base::visit_binop(Type t, Expr a, Expr b, char op_sym, string coreir_name, string op_name) {
+void CodeGen_CoreIR_Base::visit_binop(Type t, Expr a, Expr b, string op_sym, string op_name) {
   //stream << "// b-saw a(n) " << op_name << endl;
   string a_name = print_expr(a);
   string b_name = print_expr(b);
@@ -677,7 +677,7 @@ void CodeGen_CoreIR_Base::visit_binop(Type t, Expr a, Expr b, char op_sym, strin
   string out_var = id_hw_section(a, b, t, op_sym, a_name, b_name);
   if (out_var.compare("") != 0) {
     string binop_name = op_name + a_name + b_name;
-    CoreIR::Wireable* coreir_inst = def->addInstance(binop_name,gens[coreir_name], {{"width", context->argInt(bitwidth)}});
+    CoreIR::Wireable* coreir_inst = def->addInstance(binop_name,gens[op_name], {{"width", context->argInt(bitwidth)}});
     def->connect(get_wire(a, a_name), coreir_inst->sel("in")->sel(0));
     def->connect(get_wire(b, b_name), coreir_inst->sel("in")->sel(1));
     hw_wire_set[out_var] = coreir_inst->sel("out");
@@ -693,16 +693,31 @@ void CodeGen_CoreIR_Base::visit_binop(Type t, Expr a, Expr b, char op_sym, strin
   
 
 void CodeGen_CoreIR_Base::visit(const Mul *op) {
-  visit_binop(op->type, op->a, op->b, '*', "mul", "mul");
+  visit_binop(op->type, op->a, op->b, "*", "mul");
+}
+void CodeGen_CoreIR_Base::visit(const Add *op) {
+  visit_binop(op->type, op->a, op->b, "+", "add");
+}
+void CodeGen_CoreIR_Base::visit(const Sub *op) {
+  visit_binop(op->type, op->a, op->b, "-", "sub");
 }
 
-void CodeGen_CoreIR_Base::visit(const Add *op) {
-  visit_binop(op->type, op->a, op->b, '+', "add", "add");
+void CodeGen_CoreIR_Base::visit(const EQ *op) {
+  visit_binop(op->type, op->a, op->b, "==", "eq");
 }
-  
-void CodeGen_CoreIR_Base::visit(const Sub *op) {
-  visit_binop(op->type, op->a, op->b, '-', "mul", "sub");
+void CodeGen_CoreIR_Base::visit(const LT *op) {
+  visit_binop(op->type, op->a, op->b, '-', "ult");
 }
+void CodeGen_CoreIR_Base::visit(const LE *op) {
+  visit_binop(op->type, op->a, op->b, '-', "ule");
+}
+void CodeGen_CoreIR_Base::visit(const GT *op) {
+  visit_binop(op->type, op->a, op->b, '-', "ugt");
+}
+void CodeGen_CoreIR_Base::visit(const GE *op) {
+  visit_binop(op->type, op->a, op->b, '-', "uge");
+}
+
 
 void CodeGen_CoreIR_Base::visit(const Cast *op) {
     string in_var = print_expr(op->value);
