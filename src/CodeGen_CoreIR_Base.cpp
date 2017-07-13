@@ -706,17 +706,18 @@ void CodeGen_CoreIR_Base::visit(const EQ *op) {
   visit_binop(op->type, op->a, op->b, "==", "eq");
 }
 void CodeGen_CoreIR_Base::visit(const LT *op) {
-  visit_binop(op->type, op->a, op->b, '-', "ult");
+  visit_binop(op->type, op->a, op->b, "<", "ult");
 }
 void CodeGen_CoreIR_Base::visit(const LE *op) {
-  visit_binop(op->type, op->a, op->b, '-', "ule");
+  visit_binop(op->type, op->a, op->b, "<=", "ule");
 }
 void CodeGen_CoreIR_Base::visit(const GT *op) {
-  visit_binop(op->type, op->a, op->b, '-', "ugt");
+  visit_binop(op->type, op->a, op->b, ">", "ugt");
 }
 void CodeGen_CoreIR_Base::visit(const GE *op) {
-  visit_binop(op->type, op->a, op->b, '-', "uge");
+  visit_binop(op->type, op->a, op->b, ">=", "uge");
 }
+  // FIXME: create signed or unsigned ops based on inputs
 
 
 void CodeGen_CoreIR_Base::visit(const Cast *op) {

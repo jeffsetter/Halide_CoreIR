@@ -243,6 +243,7 @@ void CodeGen_CoreIR_Target::CodeGen_CoreIR_C::add_kernel(Stmt stmt,
             stencils.push(args[i].name, args[i].stencil_type);
 	    if (args[i].stencil_type.type == Stencil_Type::StencilContainerType::AxiStream) {
 	      hw_inout_set.insert(arg_name);
+              cout << "inout: " << arg_name << " added with type " << CodeGen_C::print_type(stype.elemType) << " and bitwidth " << stype.elemType.bits() << endl;
 	      num_inouts++;
 	    }
         } else {

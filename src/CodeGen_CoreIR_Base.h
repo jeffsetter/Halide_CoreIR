@@ -56,6 +56,11 @@ protected:
 	void visit(const Mul *op);
 	void visit(const Add *op);
 	void visit(const Sub *op);
+	void visit(const EQ *op);
+	void visit(const LT *op);
+	void visit(const LE *op);
+	void visit(const GT *op);
+	void visit(const GE *op);
 	void visit(const Cast *op);
 
 
