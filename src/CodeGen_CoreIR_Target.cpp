@@ -107,11 +107,11 @@ CodeGen_CoreIR_Target::CodeGen_CoreIR_C::~CodeGen_CoreIR_C() {
     std::string RED = "\033[0;31m";
     std::string RESET = "\033[0m";
     
-    CoreIR::saveModule(design, "design_top.txt", &err);
-    if (err) {
-      cout << RED << "Could not save dot file :(" << RESET << endl;
-      context->die();
-    }
+    // CoreIR::saveModule(design, "design_top.txt", &err);
+    // if (err) {
+    //   cout << RED << "Could not save dot file :(" << RESET << endl;
+    //   context->die();
+    // }
     
 
     cout << "Running Generators" << endl;
@@ -133,13 +133,13 @@ CodeGen_CoreIR_Target::CodeGen_CoreIR_C::~CodeGen_CoreIR_C() {
       cout << RED << "Could not save json :(" << RESET << endl;
       context->die();
     }
-    /*
-    CoreIR::saveModule(design, "design_full.txt", &err);
+    
+    CoreIR::saveModule(design, "design_top.txt", &err);
     if (err) {
       cout << RED << "Could not save dot file :(" << RESET << endl;
       context->die();
     }
-    */
+    
     // check that we can reload the created json
     CoreIR::loadModule(context,"design_top.json", &err);
     if (err) {
