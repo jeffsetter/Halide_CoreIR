@@ -41,7 +41,7 @@ public:
 
         // define the algorithm
         clamped(x,y) = input(x,y);
-        //conv1 = clamped;
+
         conv1(x, y) += clamped(x+win.x, y+win.y) * kernel(win.x, win.y);
 	//conv1(x, y) += clamped(x+win.x, y+win.y) * gaussian2d[win.x+1][win.y+1];
 
@@ -124,7 +124,7 @@ public:
 	clamped.compute_root();
      	hw_output.compute_root();
 	conv1.linebuffer();
-	hw_output.tile(x, y, xo, yo, xi, yi, 64,64).reorder(xi,yi,xo,yo);
+	hw_output.tile(x, y, xo, yo, xi, yi, 62,62).reorder(xi,yi,xo,yo);
 	hw_output.accelerate({clamped}, xi, xo, {kernel});
 
 
