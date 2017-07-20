@@ -59,16 +59,44 @@ protected:
 
         void visit(const For *op);
         void visit(const Allocate *op);
-
-// 	void visit_binop(Type t, Expr a, Expr b, char op_sym, std::string coreir_name, std::string op_name);
-// 	void visit(const Mul *op);
-// 	void visit(const Add *op);
-// 	void visit(const Sub *op);
-	//	void visit(const Load *op);
-	//void visit(const Store *op);
 	void visit(const Call *op);
+	void visit(const Provide *op);
+        void visit(const Load *op);
+        void visit(const Store *op);
 
+        // coreir operators
+	void visit_binop(Type t, Expr a, Expr b, const char* op_sym, string op_name);
+	void visit(const Mul *op);
+	void visit(const Add *op);
+	void visit(const Sub *op);
+	void visit(const EQ *op);
+	void visit(const LT *op);
+	void visit(const LE *op);
+	void visit(const GT *op);
+	void visit(const GE *op);
+	void visit(const Cast *op);
 
+        // for coreir generation
+        bool create_json = false;
+        uint8_t bitwidth;
+        CoreIR::Context* context = NULL;
+        CoreIR::Namespace* global_ns = NULL;
+        std::map<std::string,CoreIR::Generator*> gens;
+        CoreIR::ModuleDef* def = NULL;
+        CoreIR::Module* design = NULL;
+        CoreIR::Wireable* self = NULL;
+
+        // keep track of coreir dag
+        int input_idx = 0; // tracks how many inputs have been defined so far
+        std::map<std::string,CoreIR::Wireable*> hw_wire_set;
+        std::unordered_set<std::string> hw_inout_set;
+
+        // coreir methods to wire things together
+        virtual bool id_hw_input(const Expr e);
+        bool id_cnst(const Expr e);
+        int id_cnst_value(const Expr e);
+        string id_hw_section(Expr a, Expr b, Type t, const char* op_symbol, string a_name, string b_name);
+        CoreIR::Wireable* get_wire(Expr e, std::string name);
 
     };
 

@@ -37,7 +37,16 @@ public:
         //float sigma = 1.5f;
 
         //kernel(x, y) = cast<uint16_t>(exp(-(x*x + y*y)/(2*sigma*sigma)) / (float)(2*M_PI*sigma*sigma));
-        kernel(x, y) = cast<uint16_t>(1);
+        //kernel(x, y) = cast<uint16_t>(3);
+      kernel(x,y) = select(x==0&&y==0, 11,
+                           x==0&&y==1, 12,
+                           x==0&&y==2, 13,
+                           x==1&&y==0, 14,
+                           x==1&&y==1, 15,
+                           x==1&&y==2, 16,
+                           x==2&&y==0, 17,
+                           x==2&&y==1, 18,
+                           x==2&&y==2, 19, 0);
 
         // define the algorithm
         clamped(x,y) = input(x,y);
@@ -62,7 +71,7 @@ public:
 	//args.push_back(weight);
         args.push_back(bias);
 
-        kernel.compute_root();
+
     }
 
     void compile_cpu() {
@@ -107,7 +116,7 @@ public:
         //hw_output.tile(x, y, xo, yo, xi, yi, 1920, 1080).reorder(xi, yi, xo, yo);
         hw_output.tile(x, y, xo, yo, xi, yi, 62,62).reorder(xi, yi, xo, yo);
         //hw_output.unroll(xi, 2);
-        hw_output.accelerate({clamped}, xi, xo, {kernel});  // define the inputs and the output
+        hw_output.accelerate({clamped}, xi, xo, {});  // define the inputs and the output
         conv1.linebuffer();
 	//        conv1.unroll(x).unroll(y);
 
@@ -125,7 +134,7 @@ public:
      	hw_output.compute_root();
 	conv1.linebuffer();
 	hw_output.tile(x, y, xo, yo, xi, yi, 62,62).reorder(xi,yi,xo,yo);
-	hw_output.accelerate({clamped}, xi, xo, {kernel});
+	hw_output.accelerate({clamped}, xi, xo, {});
 
 
         Target coreir_target = get_target_from_environment();
