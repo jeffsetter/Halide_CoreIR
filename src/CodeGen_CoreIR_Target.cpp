@@ -66,7 +66,7 @@ CodeGen_CoreIR_Target::CodeGen_CoreIR_C::CodeGen_CoreIR_C(std::ostream &s, Outpu
     CoreIR::Namespace* cgralib = CoreIRLoadLibrary_cgralib(context);
 
     // add all generators from stdlib
-    std::vector<string> stdlib_gen_names = {"add", "mul", "sub", "and", "or", "eq", "ult", "ugt", "ule", "uge", "const"};
+    std::vector<string> stdlib_gen_names = {"add", "mul", "sub", "and", "or", "eq", "ult", "ugt", "ule", "uge", "and", "or", "xor", "const"};
     for (auto gen_name : stdlib_gen_names) {
       gens[gen_name] = stdlib->getGenerator(gen_name);
       assert(gens[gen_name]);
@@ -227,7 +227,7 @@ void CodeGen_CoreIR_Target::CodeGen_CoreIR_C::add_kernel(Stmt stmt,
 
     // Emit the function prototype
     int num_inouts = 0;
-    CodeGen_CoreIR_Base::Stencil_Type stype_last; // keeps track of the last stencil (output)
+    CodeGen_CoreIR_Base::Stencil_Type stype_first; // keeps track of the first stencil (output)
     stream << "void " << print_name(name) << "(\n";
     for (size_t i = 0; i < args.size(); i++) {
         string arg_name = "arg_" + std::to_string(i);
@@ -246,8 +246,10 @@ void CodeGen_CoreIR_Target::CodeGen_CoreIR_C::add_kernel(Stmt stmt,
 	    if (args[i].stencil_type.type == Stencil_Type::StencilContainerType::AxiStream) {
 	      hw_inout_set.insert(arg_name);
               cout << "inout: " << arg_name << " added with type " << CodeGen_C::print_type(stype.elemType) << " and bitwidth " << stype.elemType.bits() << endl;
+              if (num_inouts == 0) {
+                  stype_first = stype;
+              }
 	      num_inouts++;
-              stype_last = stype;
 	    }
         } else {
             stream << print_type(args[i].scalar_type) << " " << arg_name;
@@ -258,15 +260,24 @@ void CodeGen_CoreIR_Target::CodeGen_CoreIR_C::add_kernel(Stmt stmt,
 
     // Emit prototype to coreir
     create_json = (num_inouts > 0);
-    int num_inputs = num_inouts ? num_inouts-1 : 1;
-    int out_bitwidth = stype_last.elemType.bits() > 1 ? 16 : 1;
+    uint num_inputs = num_inouts ? num_inouts-1 : 1;
+    uint out_bitwidth = stype_first.elemType.bits() > 1 ? 16 : 1;
 
     cout << "design has " << num_inputs << " inputs with bitwidth " << to_string(bitwidth) << " " <<endl;
-    // FIXME: can't create input and output for coreir dag, bc can't distinguish
-    // FIXME: look at the bitwidth of the inputs as well as the output
+    // FIXME: can't distinguish bw output/input easily (assuming single output first)
+    // FIXME: one bit arrays in coreir?
+    // FIXME: more closely follow input/output types
+
+    CoreIR::Type* out_type;
+    if (out_bitwidth > 1) {
+      out_type = context->Array(out_bitwidth,context->Bit());
+    } else {
+      out_type = context->Bit();
+    }
+
     CoreIR::Type* design_type = context->Record({
 	{"in",context->Array(num_inputs, context->Array(bitwidth,context->BitIn()))},
-        {"out",context->Array(out_bitwidth,context->Bit())}
+        {"out", out_type}
     });
     design = global_ns->newModuleDecl("DesignTop", design_type);
     def = design->newModuleDef();
@@ -507,7 +518,39 @@ void CodeGen_CoreIR_Target::CodeGen_CoreIR_C::visit(const Allocate *op) {
 
 
 void CodeGen_CoreIR_Target::CodeGen_CoreIR_C::visit(const Call *op) {
-    if (op->name == "linebuffer") {
+    if (op->is_intrinsic(Call::bitwise_and)) {
+        internal_assert(op->args.size() == 2);
+        Expr a = op->args[0];
+        Expr b = op->args[1];
+        visit_binop(op->type, a, b, "&", "and");
+    } else if (op->is_intrinsic(Call::bitwise_or)) {
+        internal_assert(op->args.size() == 2);
+        Expr a = op->args[0];
+        Expr b = op->args[1];
+        visit_binop(op->type, a, b, "|", "or");
+    } else if (op->is_intrinsic(Call::bitwise_xor)) {
+        internal_assert(op->args.size() == 2);
+        Expr a = op->args[0];
+        Expr b = op->args[1];
+        visit_binop(op->type, a, b, "^", "xor");
+
+    } else if (op->is_intrinsic(Call::reinterpret)) {
+        string in_var = print_expr(op->args[0]);
+        print_reinterpret(op->type, op->args[0]);
+
+        stream << "// reinterpreting " << op->args[0] << " as " << in_var << endl;
+        hw_wire_set[in_var] = get_wire(op->args[0], in_var);
+
+        if (hw_wire_set.count(in_var) > 0) {
+          stream << "// found " << in_var << endl;
+        } else {
+          stream << "// couldn't find " << in_var << endl;
+        }
+    } else if (op->is_intrinsic(Call::address_of)) {
+      cout   << "ignoring address_of" << endl;
+      stream << "ignoring address_of" << endl;
+
+    } else if (op->name == "linebuffer") {
         //IR: linebuffer(buffered.stencil_update.stream, buffered.stencil.stream, extent_0[, extent_1, ...])
         //C: linebuffer<extent_0[, extent_1, ...]>(buffered.stencil_update.stream, buffered.stencil.stream)
         internal_assert(op->args.size() >= 3);
@@ -1003,7 +1046,7 @@ CoreIR::Wireable* CodeGen_CoreIR_Target::CodeGen_CoreIR_C::get_wire(Expr e, stri
     if (wire) { 
       return wire;
     } else {
-      cout << "ERROR: invalid wire in tb: " << name << endl; 
+      cout << "ERROR: invalid wire: " << name << endl; 
       stream << "// invalid wire: couldn't find " << name << endl;
 	stream << "\n// hw_wire_set contains: ";
 	for (auto x : hw_wire_set) {
@@ -1034,12 +1077,14 @@ void CodeGen_CoreIR_Target::CodeGen_CoreIR_C::visit_binop(Type t, Expr a, Expr b
     //    stream << "tb-performed a << op_name<< :!!! " <<endl;//<< print_type(a.type()) << " " << print_type(b.type()) << endl;
   }
 
-    if (id_hw_input(a)) { stream << "// " << op_name <<"a: self.in "; } else { stream << "// " << op_name << "a: " << a_name << " "; }
-    if (id_hw_input(b)) { stream << "// " << op_name <<"b: self.in "; } else { stream << "// " << op_name << "b: " << b_name << " "; }
-    stream << "o: " << out_var << endl;
+  if (id_hw_input(a)) { stream << "// " << op_name <<"a: self.in "; } else { stream << "// " << op_name << "a: " << a_name << " "; }
+  if (id_hw_input(b)) { stream << "// " << op_name <<"b: self.in "; } else { stream << "// " << op_name << "b: " << b_name << " "; }
+  stream << "o: " << out_var << endl;
+}
 
-  }
-  
+void CodeGen_CoreIR_Target::CodeGen_CoreIR_C::visit_ternop(Type t, Expr a, Expr b, Expr c, const char*  op_sym1, const char* op_sym2, string op_name) {
+
+}  
 
 void CodeGen_CoreIR_Target::CodeGen_CoreIR_C::visit(const Mul *op) {
   visit_binop(op->type, op->a, op->b, "*", "mul");
@@ -1068,8 +1113,21 @@ void CodeGen_CoreIR_Target::CodeGen_CoreIR_C::visit(const GE *op) {
 }
   // FIXME: create signed or unsigned ops based on inputs
 
+void CodeGen_CoreIR_Target::CodeGen_CoreIR_C::visit(const Select *op) {
+  visit_ternop(op->type, op->condition, op->true_value, op->false_value, "?",":", "mux");
+}
+  /*
+void CodeGen_CoreIR_Target::CodeGen_CoreIR_C::visit(const GE *op) {
+  visit_binop(op->type, op->a, op->b, "^", "uge");
+}
+void CodeGen_CoreIR_Target::CodeGen_CoreIR_C::visit(const GE *op) {
+  visit_binop(op->type, op->a, op->b, "", "uge");
+}
+  */
+
 
 void CodeGen_CoreIR_Target::CodeGen_CoreIR_C::visit(const Cast *op) {
+  stream << "[cast]";
     string in_var = print_expr(op->value);
     string out_var = print_assignment(op->type, "(" + print_type(op->type) + ")(" + in_var + ")");
     if (hw_wire_set.count(in_var) > 0) {

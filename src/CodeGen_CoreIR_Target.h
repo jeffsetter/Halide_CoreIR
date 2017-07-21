@@ -75,6 +75,8 @@ protected:
 	void visit(const GT *op);
 	void visit(const GE *op);
 	void visit(const Cast *op);
+        void visit_ternop(Type t, Expr a, Expr b, Expr c, const char*  op_sym1, const char* op_sym2, string op_name);
+        void visit(const Select *op);
 
         // for coreir generation
         bool create_json = false;
