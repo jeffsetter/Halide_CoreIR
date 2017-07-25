@@ -302,7 +302,7 @@ string CodeGen_C::print_type(Type type, AppendSpaceIfNeeded space_option) {
 
 string CodeGen_C::print_reinterpret(Type type, Expr e) {
     ostringstream oss;
-    oss << "reinterpret<" << print_type(type) << ">(" << print_expr(e) << ")";
+    oss << "static_cast<" << print_type(type) << ">(" << print_expr(e) << ")";
     return oss.str();
 }
 

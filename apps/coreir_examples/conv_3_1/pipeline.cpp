@@ -25,7 +25,10 @@ public:
                    win(0, 1, 0, 3) {
         // Define a 3x1 Box Blur
 
-        kernel(x, y) = cast<uint16_t>(1);
+      //  kernel(x, y) = cast<uint16_t>(1);
+      kernel(x,y) = select(y==0, 3,
+                           y==1, 5,
+                           y==2, 7, 0);
 
         // define the algorithm
         //clamped = BoundaryConditions::repeat_edge(input);
@@ -41,7 +44,6 @@ public:
 
         args.push_back(input);
 
-        kernel.compute_root();
     }
 
     void compile_cpu() {
@@ -71,7 +73,7 @@ public:
         //hw_output.tile(x, y, xo, yo, xi, yi, 1920, 1080).reorder(xi, yi, xo, yo);
         hw_output.tile(x, y, xo, yo, xi, yi, 10,8).reorder(xi, yi, xo, yo);
         //hw_output.unroll(xi, 2);
-        hw_output.accelerate({clamped}, xi, xo, {kernel});  // define the inputs and the output
+        hw_output.accelerate({clamped}, xi, xo, {});  // define the inputs and the output
         conv1.linebuffer();
 	//        conv1.unroll(x).unroll(y);
 
@@ -89,7 +91,7 @@ public:
      	hw_output.compute_root();
 	conv1.linebuffer();
 	hw_output.tile(x, y, xo, yo, xi, yi, 10,8).reorder(xi,yi,xo,yo);
-	hw_output.accelerate({clamped}, xi, xo, {kernel});
+	hw_output.accelerate({clamped}, xi, xo, {});
 
 
         Target coreir_target = get_target_from_environment();

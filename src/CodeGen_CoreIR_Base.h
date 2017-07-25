@@ -49,37 +49,9 @@ protected:
     void visit(const Call *);
     void visit(const Provide *);
     void visit(const Realize *);
-    void visit(const Load *);
-    void visit(const Store *);
+    //void visit(const Load *);
+    //void visit(const Store *);
 
-	void visit_binop(Type t, Expr a, Expr b, char op_sym, std::string coreir_name, std::string op_name);
-	void visit(const Mul *op);
-	void visit(const Add *op);
-	void visit(const Sub *op);
-	void visit(const Cast *op);
-
-
-    // for coreir generation
-    bool create_json = false;
-    uint8_t bitwidth;
-    CoreIR::Context* context;
-    CoreIR::Namespace* global_ns;
-    std::map<std::string,CoreIR::Generator*> gens;
-    CoreIR::ModuleDef* def = NULL;
-    CoreIR::Module* design = NULL;
-    CoreIR::Wireable* self;
-
-    // keep track of coreir dag
-    int input_idx = 0; // tracks how many inputs have been defined so far
-    std::map<std::string,CoreIR::Wireable*> hw_wire_set;
-    std::unordered_set<std::string> hw_inout_set;
-
-    // coreir methods to wire things together
-    virtual bool id_hw_input(const Expr e);
-    bool id_cnst(const Expr e);
-    int id_cnst_value(const Expr e);
-    string id_hw_section(Expr a, Expr b, Type t, char op_symbol, string a_name, string b_name);
-    CoreIR::Wireable* get_wire(Expr e, std::string name);
 
 };
 

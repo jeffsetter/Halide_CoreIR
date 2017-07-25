@@ -80,6 +80,7 @@ CodeGen_CoreIR_Testbench::CodeGen_CoreIR_Testbench(ostream &tb_stream)
 
     stream << hls_headers;
 
+    /*
     // set up coreir generation
     bitwidth = 16;
     context = CoreIR::newContext();
@@ -88,7 +89,7 @@ CodeGen_CoreIR_Testbench::CodeGen_CoreIR_Testbench(ostream &tb_stream)
     CoreIR::Namespace* cgralib = CoreIRLoadLibrary_cgralib(context);
 
     // add all generators from stdlib
-    std::vector<string> stdlib_gen_names = {"add", "mul", "const"};
+    std::vector<string> stdlib_gen_names = {"add", "mul", "sub", "and", "or", "ult", "ugt", "ule", "uge", "const"};
     for (auto gen_name : stdlib_gen_names) {
       gens[gen_name] = stdlib->getGenerator(gen_name);
       assert(gens[gen_name]);
@@ -108,9 +109,11 @@ CodeGen_CoreIR_Testbench::CodeGen_CoreIR_Testbench(ostream &tb_stream)
     design = global_ns->newModuleDecl("DesignTop", design_type);
     def = design->newModuleDef();
     self = def->sel("self");
+    */
 }
 
 CodeGen_CoreIR_Testbench::~CodeGen_CoreIR_Testbench() {
+  /*
   if (def->hasInstances()) {
     // write coreir json
     design->setDef(def);
@@ -144,6 +147,7 @@ CodeGen_CoreIR_Testbench::~CodeGen_CoreIR_Testbench() {
 
     CoreIR::deleteContext(context);
   }
+  */
 }
 
 void CodeGen_CoreIR_Testbench::visit(const ProducerConsumer *op) {
@@ -304,7 +308,7 @@ void CodeGen_CoreIR_Testbench::visit(const Add *op) {
 void CodeGen_CoreIR_Testbench::visit(const Sub *op) {
   visit_binop(op->type, op->a, op->b, '-', "mult2_16", "sub");
 }
-  */
+
 void CodeGen_CoreIR_Testbench::visit(const Store *op) {
     Type t = op->value.type();
 
@@ -351,7 +355,7 @@ bool CodeGen_CoreIR_Testbench::id_hw_input(const Expr e) {
     return false;
   }
 }
-
+  */
 
 }
 }

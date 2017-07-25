@@ -9,6 +9,7 @@ Var xo("xo"), yo("yo"), xi("xi"), yi("yi");
 class MyPipeline {
 public:
     ImageParam in;
+  Func clamped;
     Func modified;
     Func output, hw_output;
     std::vector<Argument> args;
@@ -18,14 +19,15 @@ public:
 	output("output"), hw_output("hw_output")
     {
         // Pointwise operations
-      modified(x, y) = in(x, y) *2;
+        clamped(x,y) = in(x,y);
+        modified(x, y) = clamped(x, y) *2;
 
         hw_output(x, y) = modified(x, y);
 
         output(x, y) = hw_output(x, y);
 
         // Arguments
-        args = {in};
+        args.push_back(in);
     }
 
     void compile_cpu() {
@@ -60,14 +62,12 @@ public:
 
     void compile_hls() {
         std::cout << "\ncompiling HLS code..." << std::endl;
-        //kernel.compute_root();
+
+        hw_output.compute_root();
+        clamped.compute_root();
+
 	output.tile(x, y, xo, yo, xi, yi, 64, 64);
-
-	//        hw_output.compute_at(output, xo)
-	//                 .tile(x, y, xo, yo, xi, yi, 640, 480);
-	//        hw_output.unroll(xi, 8);
-
-        hw_output.accelerate({in}, xi, xo);
+        hw_output.accelerate({clamped}, xi, xo);
 
         //blur_y.linebuffer().unroll(x).unroll(y);
 
@@ -78,24 +78,16 @@ public:
         output.compile_to_lowered_stmt("pipeline_hls.ir.html", args, HTML, hls_target);
         output.compile_to_hls("pipeline_hls.cpp", args, "pipeline_hls", hls_target);
         output.compile_to_header("pipeline_hls.h", args, "pipeline_hls", hls_target);
-
-        std::vector<Target::Feature> features({Target::Zynq});
-        Target target(Target::Linux, Target::ARM, 32, features);
-        output.compile_to_zynq_c("pipeline_zynq.c", args, "pipeline_zynq", target);
-        output.compile_to_header("pipeline_zynq.h", args, "pipeline_zynq", target);
-
-        output.vectorize(xi, 16);
-        output.fuse(xo, yo, xo).parallel(xo);
-
-        output.compile_to_object("pipeline_zynq.o", args, "pipeline_zynq", target);
-        output.compile_to_lowered_stmt("pipeline_zynq.ir.html", args, HTML, target);
     }
 
   void compile_coreir() {
         std::cout << "\ncompiling CoreIR code..." << std::endl;
         //kernel.compute_root();
 	output.tile(x, y, xo, yo, xi, yi, 64, 64);
-	hw_output.accelerate({in}, xi, xo);
+	hw_output.tile(x, y, xo, yo, xi, yi, 64, 64);
+        hw_output.compute_root();
+        clamped.compute_root();
+	hw_output.accelerate({clamped}, xi, xo);
 
         Target coreir_target = get_target_from_environment();
         coreir_target.set_feature(Target::CPlusPlusMangling);
@@ -109,10 +101,10 @@ int main(int argc, char **argv) {
     p1.compile_cpu();
 
     MyPipeline p4;
-    p4.compile_coreir();
+    p4.compile_hls();
 
     MyPipeline p2;
-    p2.compile_hls();
+    p2.compile_coreir();
 // 
 //     MyPipeline p3;
 //     p3.compile_gpu();

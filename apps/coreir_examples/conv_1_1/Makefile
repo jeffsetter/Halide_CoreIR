@@ -44,6 +44,8 @@ input_ones.pgm: gen_testimage
 
 design_top.json: pipeline
 	HL_DEBUG_CODEGEN=0 ./pipeline
+graph.png: design_top.json
+	dot -Tpng design_top.txt > graph.png
 
 $(HLS_LOG): ../hls_support/run_hls.tcl pipeline_hls.cpp run.cpp
 	RUN_PATH=$(realpath ./) \
