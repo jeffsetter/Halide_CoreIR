@@ -364,7 +364,23 @@ void CodeGen_CoreIR_Base::visit(const Call *op) {
         close_scope("");
 
         id = "0"; // skip evaluation
-
+    } else if (op->is_intrinsic(Call::address_of)) {
+        const Load *l = op->args[0].as<Load>();
+        if (l) {
+          internal_assert(op->args.size() == 1 && l);
+          stream << "(("
+                 << print_type(l->type.element_of()) // index is in elements, not vectors.
+                 << " *)"
+                 << print_name(l->name)
+                 << " + "
+                 << print_expr(l->index)
+                 << ")";
+        } else {
+          // if it's not a load, then it's a cast
+          const Cast *c = op->args[0].as<Cast>();
+          internal_assert(op->args.size() == 1 && c);
+          stream << print_assignment(c->type, "(" + print_type(c->type) + ")(" + print_expr(c->value) + ")");
+        }
 
     } else {
         CodeGen_C::visit(op);

@@ -94,10 +94,10 @@ protected:
         std::unordered_set<std::string> hw_inout_set;
 
         // coreir methods to wire things together
-        virtual bool id_hw_input(const Expr e);
-        bool id_cnst(const Expr e);
+        bool is_cnst(const Expr e);
+        bool is_inout(string var_name);
+        bool is_wire(string var_name);
         int id_cnst_value(const Expr e);
-        string id_hw_section(Expr a, Expr b, Type t, const char* op_symbol, string a_name, string b_name);
         CoreIR::Wireable* get_wire(Expr e, std::string name);
 
     };

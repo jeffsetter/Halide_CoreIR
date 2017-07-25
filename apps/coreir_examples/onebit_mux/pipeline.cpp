@@ -23,7 +23,7 @@ public:
         //clamped = BoundaryConditions::repeat_edge(input);
         clamped(x,y) = input(x, y);
         uint8_t threshold = 5;//(uint8_t) 0x55;
-        modified(x, y) = select( clamped(x,y) > threshold, 0, 40);
+        modified(x, y) = cast<uint8_t>( select( clamped(x,y) > threshold, 0, 40) );
 
 	hw_output(x,y) = modified(x,y);
         output(x, y) = hw_output(x, y);
