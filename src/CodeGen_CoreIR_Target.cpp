@@ -107,11 +107,11 @@ CodeGen_CoreIR_Target::CodeGen_CoreIR_C::~CodeGen_CoreIR_C() {
     std::string RED = "\033[0;31m";
     std::string RESET = "\033[0m";
     
-    CoreIR::saveModule(design, "design_top.txt", &err);
-    if (err) {
-      cout << RED << "Could not save dot file :(" << RESET << endl;
-      context->die();
-    }
+    // CoreIR::saveModule(design, "design_top.txt", &err);
+    // if (err) {
+    //   cout << RED << "Could not save dot file :(" << RESET << endl;
+    //   context->die();
+    // }
     
 
     cout << "Running Generators" << endl;
@@ -133,13 +133,13 @@ CodeGen_CoreIR_Target::CodeGen_CoreIR_C::~CodeGen_CoreIR_C() {
       cout << RED << "Could not save json :(" << RESET << endl;
       context->die();
     }
-    /*
-    CoreIR::saveModule(design, "design_full.txt", &err);
+    
+    CoreIR::saveModule(design, "design_top.txt", &err);
     if (err) {
       cout << RED << "Could not save dot file :(" << RESET << endl;
       context->die();
     }
-    */
+    
     // check that we can reload the created json
     CoreIR::loadModule(context,"design_top.json", &err);
     if (err) {
@@ -787,7 +787,7 @@ void CodeGen_CoreIR_Target::CodeGen_CoreIR_C::visit(const Call *op) {
 	  //FIXME: fix input stencil cnst
 	  stream << "// " << stencil_print_name << " not found so creating cnst" << endl;
 	  string cnst_name = "cnst" + out_var;
-	  int cnst_value = 1;//999
+	  int cnst_value = 999;
 	  CoreIR::Wireable* cnst = def->addInstance(cnst_name,  gens["const"], {{"width", context->argInt(bitwidth)}},
 						    {{"value",context->argInt(cnst_value)}});
 	  hw_wire_set[out_var] = cnst->sel("out");;
