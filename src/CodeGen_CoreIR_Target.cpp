@@ -15,6 +15,7 @@
 
 #include "coreir.h"
 #include "coreir-lib/stdlib.h"
+#include "coreir-lib/commonlib.h"
 #include "coreir-lib/cgralib.h"
 #include "coreir-pass/passes.h"
 
@@ -62,19 +63,33 @@ CodeGen_CoreIR_Target::CodeGen_CoreIR_C::CodeGen_CoreIR_C(std::ostream &s, Outpu
     bitwidth = 16;
     context = CoreIR::newContext();
     global_ns = context->getGlobal();
-    CoreIR::Namespace* stdlib = CoreIRLoadLibrary_stdlib(context);
-    CoreIR::Namespace* cgralib = CoreIRLoadLibrary_cgralib(context);
 
     // add all generators from stdlib
-    std::vector<string> stdlib_gen_names = {"add", "mul", "sub", "and", "or", "eq", "ult", "ugt", "ule", "uge", "and", "or", "xor", "mux", "const"};
+    CoreIR::Namespace* stdlib = CoreIRLoadLibrary_stdlib(context);
+    std::vector<string> stdlib_gen_names = {"mul", "add", "sub", 
+                                            "and", "or", "xor",
+                                            "eq",
+                                            "ult", "ugt", "ule", "uge",
+                                            "slt", "sgt", "sle", "sge", 
+                                            "dshl", "dashr",
+                                            "mux", "const"};
     for (auto gen_name : stdlib_gen_names) {
       gens[gen_name] = stdlib->getGenerator(gen_name);
       assert(gens[gen_name]);
     }
 
+    // add all generators from commonlib
+    CoreIR::Namespace* commonlib = CoreIRLoadLibrary_commonlib(context);
+    std::vector<string> commonlib_gen_names = {"umin", "smin", "umax", "smax"};
+    for (auto gen_name : commonlib_gen_names) {
+      gens[gen_name] = commonlib->getGenerator(gen_name);
+      assert(gens[gen_name]);
+    }
+
     // add all generators from cgralib
-    std::vector<string> cgra_gen_names = {"Linebuffer", "IO"};
-    for (auto gen_name : cgra_gen_names) {
+    CoreIR::Namespace* cgralib = CoreIRLoadLibrary_cgralib(context);
+    std::vector<string> cgralib_gen_names = {"Linebuffer", "IO"};
+    for (auto gen_name : cgralib_gen_names) {
       gens[gen_name] = cgralib->getGenerator(gen_name);
       assert(gens[gen_name]);
     }
@@ -534,6 +549,19 @@ void CodeGen_CoreIR_Target::CodeGen_CoreIR_C::visit(const Call *op) {
         Expr b = op->args[1];
         visit_binop(op->type, a, b, "^", "xor");
 
+    } else if (op->is_intrinsic(Call::shift_left)) {
+        internal_assert(op->args.size() == 2);
+        Expr a = op->args[0];
+        Expr b = op->args[1];
+        stream << "[shift left] ";
+        visit_binop(op->type, a, b, "<<", "dshl");
+    } else if (op->is_intrinsic(Call::shift_right)) {
+        internal_assert(op->args.size() == 2);
+        Expr a = op->args[0];
+        Expr b = op->args[1];
+        stream << "[shift right] ";
+        visit_binop(op->type, a, b, ">>", "dashr");
+
     } else if (op->is_intrinsic(Call::reinterpret)) {
         string in_var = print_expr(op->args[0]);
         print_reinterpret(op->type, op->args[0]);
@@ -974,6 +1002,7 @@ void CodeGen_CoreIR_Target::CodeGen_CoreIR_C::visit(const Call *op) {
         id = "0"; // skip evaluation
 
     } else {
+      stream << "couldn't find " << op << endl;
         CodeGen_CoreIR_Base::visit(op);
     }
 }
@@ -1012,7 +1041,8 @@ bool CodeGen_CoreIR_Target::CodeGen_CoreIR_C::is_inout(string var_name) {
 CoreIR::Wireable* CodeGen_CoreIR_Target::CodeGen_CoreIR_C::get_wire(Expr e, string name) {
   if (is_cnst(e)) {
     int cnst_value = id_cnst_value(e);
-    string cnst_name = "const" + name;
+    string cnst_name = unique_name("const" + to_string(cnst_value) + "_");
+    internal_assert(gens["const"]);
     CoreIR::Wireable* cnst = def->addInstance(cnst_name,  gens["const"], {{"width", context->argInt(bitwidth)}},
 					      {{"value",context->argInt(cnst_value)}});
     stream << "// added cnst: " << name << "\n";
@@ -1051,8 +1081,13 @@ void CodeGen_CoreIR_Target::CodeGen_CoreIR_C::visit_binop(Type t, Expr a, Expr b
 
   if (a_wire != NULL && b_wire != NULL) {
     out_var = print_assignment(t, a_name + " " + op_sym + " " + b_name);
+    // return if this variable is cached
+    if (hw_wire_set[out_var]) { return; }
+
+    internal_assert(a.type().bits() == b.type().bits()) << "function " << op_name << " with " << a_name << " and " << b_name;
+    uint inst_bits = a.type().bits() == 1 ? 1 : bitwidth;
     string binop_name = op_name + a_name + b_name;
-    CoreIR::Wireable* coreir_inst = def->addInstance(binop_name,gens[op_name], {{"width", context->argInt(bitwidth)}});
+    CoreIR::Wireable* coreir_inst = def->addInstance(binop_name,gens[op_name], {{"width", context->argInt(inst_bits)}});
 
     def->connect(a_wire, coreir_inst->sel("in")->sel(0));
     def->connect(b_wire, coreir_inst->sel("in")->sel(1));
@@ -1079,9 +1114,14 @@ void CodeGen_CoreIR_Target::CodeGen_CoreIR_C::visit_ternop(Type t, Expr a, Expr 
 
   if (a_wire != NULL && b_wire != NULL && c_wire != NULL) {
     out_var = print_assignment(t, a_name + " " + op_sym1 + " " + b_name + " " + op_sym2 + " " + c_name);
-    string ternop_name = op_name + a_name + b_name + c_name;
+    // return if this variable is cached
+    if (hw_wire_set[out_var]) { return; }
 
-    CoreIR::Wireable* coreir_inst = def->addInstance(ternop_name,gens[op_name], {{"width", context->argInt(bitwidth)}});
+    internal_assert(b.type().bits() == c.type().bits());
+    uint inst_bits = b.type().bits() == 1 ? 1 : bitwidth;
+    string ternop_name = op_name + a_name + b_name + c_name;
+    CoreIR::Wireable* coreir_inst = def->addInstance(ternop_name,gens[op_name], {{"width", context->argInt(inst_bits)}});
+
     def->connect(a_wire, coreir_inst->sel("in")->sel("bit"));
     def->connect(b_wire, coreir_inst->sel("in")->sel("data")->sel(0));
     def->connect(c_wire, coreir_inst->sel("in")->sel("data")->sel(1));
@@ -1108,27 +1148,72 @@ void CodeGen_CoreIR_Target::CodeGen_CoreIR_C::visit(const Add *op) {
 void CodeGen_CoreIR_Target::CodeGen_CoreIR_C::visit(const Sub *op) {
   visit_binop(op->type, op->a, op->b, "-", "sub");
 }
+void CodeGen_CoreIR_Target::CodeGen_CoreIR_C::visit(const Div *op) {
+    int shift_amt;
+    if (is_const_power_of_two_integer(op->b, &shift_amt)) {
+      uint param_bitwidth = op->a.type().bits();
+      Expr shift_expr = UIntImm::make(UInt(param_bitwidth), shift_amt);
+      visit_binop(op->type, op->a, shift_expr, ">>", "dashr");
+    } else {
+      stream << "divide is not fully supported" << endl;
+    }
+}
+void CodeGen_CoreIR_Target::CodeGen_CoreIR_C::visit(const And *op) {
+  visit_binop(op->type, op->a, op->b, "&&", "and");
+}
+void CodeGen_CoreIR_Target::CodeGen_CoreIR_C::visit(const Or *op) {
+  visit_binop(op->type, op->a, op->b, "||", "or");
+}
 
 void CodeGen_CoreIR_Target::CodeGen_CoreIR_C::visit(const EQ *op) {
   visit_binop(op->type, op->a, op->b, "==", "eq");
 }
 void CodeGen_CoreIR_Target::CodeGen_CoreIR_C::visit(const LT *op) {
-  visit_binop(op->type, op->a, op->b, "<", "ult");
+  if (op->type.is_uint()) {
+    visit_binop(op->type, op->a, op->b, "<",  "ult");
+  } else {
+    visit_binop(op->type, op->a, op->b, "s<", "slt");
+  }
 }
 void CodeGen_CoreIR_Target::CodeGen_CoreIR_C::visit(const LE *op) {
-  visit_binop(op->type, op->a, op->b, "<=", "ule");
+  if (op->type.is_uint()) {
+    visit_binop(op->type, op->a, op->b, "<=",  "ule");
+  } else {
+    visit_binop(op->type, op->a, op->b, "s<=", "sle");
+  }
 }
 void CodeGen_CoreIR_Target::CodeGen_CoreIR_C::visit(const GT *op) {
-  visit_binop(op->type, op->a, op->b, ">", "ugt");
+  if (op->type.is_uint()) {
+    visit_binop(op->type, op->a, op->b, ">",  "ugt");
+  } else {
+    visit_binop(op->type, op->a, op->b, "s>", "sgt");
+  }
 }
 void CodeGen_CoreIR_Target::CodeGen_CoreIR_C::visit(const GE *op) {
-  visit_binop(op->type, op->a, op->b, ">=", "uge");
+  if (op->type.is_uint()) {
+    visit_binop(op->type, op->a, op->b, ">=",  "uge");
+  } else {
+    visit_binop(op->type, op->a, op->b, "s>=", "sge");
+  }
 }
-  // FIXME: create signed or unsigned ops based on inputs
+
+void CodeGen_CoreIR_Target::CodeGen_CoreIR_C::visit(const Max *op) {
+  if (op->type.is_uint()) {
+    visit_binop(op->type, op->a, op->b, "<max>",  "umax");
+  } else {
+    visit_binop(op->type, op->a, op->b, "<smax>", "smax");
+  }
+}
+void CodeGen_CoreIR_Target::CodeGen_CoreIR_C::visit(const Min *op) {
+  if (op->type.is_uint()) {
+    visit_binop(op->type, op->a, op->b, "<min>",  "umin");
+  } else {
+    visit_binop(op->type, op->a, op->b, "<smin>", "smin");
+  }
+}
 
 void CodeGen_CoreIR_Target::CodeGen_CoreIR_C::visit(const Select *op) {
   visit_ternop(op->type, op->condition, op->true_value, op->false_value, "?",":", "mux");
-  //CodeGen_C::visit(op);
 }
   /*
 void CodeGen_CoreIR_Target::CodeGen_CoreIR_C::visit(const GE *op) {

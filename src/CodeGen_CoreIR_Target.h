@@ -67,13 +67,18 @@ protected:
         // coreir operators
 	void visit_binop(Type t, Expr a, Expr b, const char* op_sym, string op_name);
 	void visit(const Mul *op);
+	void visit(const Div *op);
 	void visit(const Add *op);
 	void visit(const Sub *op);
+	void visit(const And *op);
+	void visit(const Or *op);
 	void visit(const EQ *op);
 	void visit(const LT *op);
 	void visit(const LE *op);
 	void visit(const GT *op);
 	void visit(const GE *op);
+        void visit(const Max *op);
+        void visit(const Min *op);
 	void visit(const Cast *op);
         void visit_ternop(Type t, Expr a, Expr b, Expr c, const char*  op_sym1, const char* op_sym2, string op_name);
         void visit(const Select *op);
