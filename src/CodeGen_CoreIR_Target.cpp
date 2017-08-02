@@ -390,6 +390,7 @@ void CodeGen_CoreIR_Target::CodeGen_CoreIR_C::visit(const Provide *op) {
 
         do_indent();
 	stream << "[provide]" << op->name << " ";
+        // FIXME: ugly array method of wireables
         stream << print_name(op->name) << "(";
 	string new_name = print_name(op->name);
 
@@ -605,7 +606,6 @@ void CodeGen_CoreIR_Target::CodeGen_CoreIR_C::visit(const Call *op) {
         int fifo_depth = image_width;
         internal_assert(fifo_depth > 0);
 
-        cout << "hooking up a linebuffer" << endl;
 	stream << "// stencil size: " << stencil_width << " " << stencil_height << " and image width " << image_width << std::endl
                << "//  using fifo_depth " << fifo_depth << std::endl;
         
@@ -619,8 +619,6 @@ void CodeGen_CoreIR_Target::CodeGen_CoreIR_C::visit(const Call *op) {
         CoreIR::Wireable* lb_in_wire = get_wire(lb_in_name, op->args[0]);
 	def->connect(lb_in_wire, coreir_lb->sel("in"));
 	hw_wire_set[lb_out_name] = coreir_lb->sel("out");
-
-        cout << "done: hooking up a linebuffer" << endl;
 
     } else if (op->name == "write_stream") {
         string printed_stream_name;
@@ -701,6 +699,8 @@ void CodeGen_CoreIR_Target::CodeGen_CoreIR_C::visit(const Call *op) {
 	} else {
 	  // FIXME: remove this temp fix for stencils
 	  input_name += "_0_0";
+          //cout << "using this hack!!! HACKK!!!!!!!" << endl;
+          //stream << "using this hack!!! HACKK!!!!!!!" << endl;
           add_wire(printed_stream_name, input_name, op->args[1]);
 	}
 
@@ -1218,6 +1218,7 @@ void CodeGen_CoreIR_Target::CodeGen_CoreIR_C::visit(const Load *op) {
     string out_var = print_assignment(op->type, rhs.str());
 
     // generate coreir
+    // FIXME: ugly way to create array of wireables
     string in_var = name + "_" + id_index;
     add_wire(out_var, in_var, Expr());
 }
@@ -1251,6 +1252,7 @@ void CodeGen_CoreIR_Target::CodeGen_CoreIR_C::visit(const Store *op) {
            << ";\n";
 
     // generate coreir
+    // FIXME: ugly way to create array of wireables
     string out_var = name + "_" + id_index;
     add_wire(out_var, id_value, op->value);
 

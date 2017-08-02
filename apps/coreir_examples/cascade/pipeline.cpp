@@ -65,7 +65,7 @@ public:
 	//args.push_back(weight);
         args.push_back(bias);
 
-        kernel.compute_root();
+
     }
 
     void compile_cpu() {
@@ -110,7 +110,7 @@ public:
         //hw_output.tile(x, y, xo, yo, xi, yi, 1920, 1080).reorder(xi, yi, xo, yo);
         hw_output.tile(x, y, xo, yo, xi, yi, 256, 256).reorder(xi, yi, xo, yo);
         //hw_output.unroll(xi, 2);
-        hw_output.accelerate({clamped}, xi, xo, {kernel});  // define the inputs and the output
+        hw_output.accelerate({clamped}, xi, xo, {});  // define the inputs and the output
         conv1.linebuffer();
 	//        conv1.unroll(x).unroll(y);
 
@@ -128,7 +128,7 @@ public:
      	hw_output.compute_root();
 	conv1.linebuffer();
 	hw_output.tile(x, y, xo, yo, xi, yi, 256,256).reorder(xi,yi,xo,yo);
-	hw_output.accelerate({clamped}, xi, xo, {kernel});
+	hw_output.accelerate({clamped}, xi, xo, {});
 
 
         Target coreir_target = get_target_from_environment();
