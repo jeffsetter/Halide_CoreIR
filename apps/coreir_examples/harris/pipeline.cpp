@@ -10,8 +10,9 @@ Var xio("xio"), yio("yio"), xv("xv"), yp("yp");
 int blockSize = 3;
 int Ksize = 3;
 
+// k should vary from 0.04 to 0.15
 float k = 0.04;
-int invk = 4;
+int shiftk = 4; // equiv to k = 0.0625
 int threshold = 100;
 
 class MyPipeline {
@@ -51,13 +52,14 @@ public:
                                      2*padded16(x,y+1) - 2*padded16(x,y-1) +
                                      padded16(x+1,y+1) - padded16(x+1,y-1));
 
+        // product of gradients
         grad_xx(x, y) = cast<int32_t>(grad_x(x,y)) * cast<int32_t>(grad_x(x,y));
         grad_yy(x, y) = cast<int32_t>(grad_y(x,y)) * cast<int32_t>(grad_y(x,y));
         grad_xy(x, y) = cast<int32_t>(grad_x(x,y)) * cast<int32_t>(grad_y(x,y));
 
         // box filter (i.e. windowed sum)
-        grad_gx(x, y) += grad_xx(x+box.x, y+box.y);
-        grad_gy(x, y) += grad_yy(x+box.x, y+box.y);
+        grad_gx(x, y)  += grad_xx(x+box.x, y+box.y);
+        grad_gy(x, y)  += grad_yy(x+box.x, y+box.y);
         grad_gxy(x, y) += grad_xy(x+box.x, y+box.y);
 
         // calculate Cim
@@ -65,12 +67,15 @@ public:
 //        Expr lgx = cast<float>(grad_gx(x, y) / scale / scale);
 //        Expr lgy = cast<float>(grad_gy(x, y) / scale / scale);
 //        Expr lgxy = cast<float>(grad_gxy(x, y) / scale / scale);
-        Expr lgx = grad_gx(x, y) >> 7;
-        Expr lgy = grad_gy(x, y) >> 7;
+
+        // scale==12, so dividing by 144
+        // approx~ 1>>7==divide by 128
+        Expr lgx  = grad_gx(x, y)  >> 7;
+        Expr lgy  = grad_gy(x, y)  >> 7;
         Expr lgxy = grad_gxy(x, y) >> 7;
         Expr det = lgx*lgy - lgxy*lgxy;
         Expr trace = lgx + lgy;
-        cim(x, y) = det - (trace*trace >> invk);
+        cim(x, y) = det - (trace*trace >> shiftk);
 
         // Perform non-maximal suppression
         Expr is_max = cim(x, y) > cim(x-1, y-1) && cim(x, y) > cim(x, y-1) &&
