@@ -72,7 +72,7 @@ CodeGen_CoreIR_Target::CodeGen_CoreIR_C::CodeGen_CoreIR_C(std::ostream &s, Outpu
                                             "ult", "ugt", "ule", "uge",
                                             "slt", "sgt", "sle", "sge", 
                                             "dshl", "dashr",
-                                            "mux", "const"};
+                                            "mux", "const", "passthrough"};
     for (auto gen_name : stdlib_gen_names) {
       gens[gen_name] = stdlib->getGenerator(gen_name);
       assert(gens[gen_name]);
@@ -514,7 +514,12 @@ void CodeGen_CoreIR_Target::CodeGen_CoreIR_C::visit(const Allocate *op) {
     do_indent();
     stream << print_type(op->type) << ' '
            << print_name(alloc_name)
-           << "[" << constant_size << "];\n";
+           << "[" << constant_size << "]; [alloc]\n";
+
+  //  CoreIR::Type* type_input = context->Bit()->Arr(bitwidth)->Arr(constant_size);
+  //  CoreIR::Wireable* wire_array = def->addInstance("array", gens["passthrough"], {{"type", context->argType(type_input)}});
+  //  hw_wire_set[print_name(alloc_name)] = wire_array;
+
     // add a 'ARRAY_PARTITION" pragma
     //stream << "#pragma CoreIR ARRAY_PARTITION variable=" << print_name(op->name) << " complete dim=0\n\n";
 
@@ -770,7 +775,7 @@ void CodeGen_CoreIR_Target::CodeGen_CoreIR_C::visit(const Call *op) {
 
             } else {
               stream << "// couldn't find selectStr " << to_string(index) << endl;
-              cout << "couldn't find selectStr " << to_string(index) << endl;
+              //cout << "couldn't find selectStr " << to_string(index) << endl;
               stencil_wire = orig_stencil_wire;
               break;
             }
@@ -1017,9 +1022,20 @@ CoreIR::Wireable* CodeGen_CoreIR_Target::CodeGen_CoreIR_C::get_wire(string name,
   }
 }
 
+void CodeGen_CoreIR_Target::CodeGen_CoreIR_C::add_wire(string new_name, CoreIR::Wireable* in_wire) {
+  if (in_wire!=NULL && is_output(new_name)) {
+    stream << "// " << new_name << " added as an output from " << in_wire << "\n";
+    def->connect(in_wire, self->sel("out"));
+
+  } else if (in_wire) {
+    hw_wire_set[new_name] = in_wire;
+    stream << "// added/modified in  wire_set: " << new_name << " = " << in_wire << "\n";
+  } else {
+    stream << "// " << in_wire << " not found\n";
+  }  
+}
 void CodeGen_CoreIR_Target::CodeGen_CoreIR_C::add_wire(string new_name, string in_name, Expr in_expr) {
   CoreIR::Wireable* in_wire = get_wire(in_name, in_expr);
-
   if (in_wire!=NULL && is_output(new_name)) {
     stream << "// " << new_name << " added as an output from " << in_name << "\n";
     def->connect(in_wire, self->sel("out"));
@@ -1047,7 +1063,7 @@ void CodeGen_CoreIR_Target::CodeGen_CoreIR_C::visit_binop(Type t, Expr a, Expr b
     internal_assert(a.type().bits() == b.type().bits()) << "function " << op_name << " with " << a_name << " and " << b_name;
     uint inst_bits = a.type().bits() == 1 ? 1 : bitwidth;
     string binop_name = op_name + a_name + b_name;
-    CoreIR::Wireable* coreir_inst = def->addInstance(binop_name,gens[op_name], {{"width", context->argInt(inst_bits)}});
+    CoreIR::Wireable* coreir_inst = def->addInstance(binop_name, gens[op_name], {{"width", context->argInt(inst_bits)}});
 
     def->connect(a_wire, coreir_inst->sel("in")->sel(0));
     def->connect(b_wire, coreir_inst->sel("in")->sel(1));
@@ -1219,6 +1235,7 @@ void CodeGen_CoreIR_Target::CodeGen_CoreIR_C::visit(const Load *op) {
 
     // generate coreir
     // FIXME: ugly way to create array of wireables
+
     string in_var = name + "_" + id_index;
     add_wire(out_var, in_var, Expr());
 }
@@ -1253,6 +1270,7 @@ void CodeGen_CoreIR_Target::CodeGen_CoreIR_C::visit(const Store *op) {
 
     // generate coreir
     // FIXME: ugly way to create array of wireables
+
     string out_var = name + "_" + id_index;
     add_wire(out_var, id_value, op->value);
 

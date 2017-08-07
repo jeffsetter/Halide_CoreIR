@@ -107,6 +107,7 @@ protected:
         int id_cnst_value(const Expr e);
         CoreIR::Wireable* get_wire(std::string name, Expr e);
         void add_wire(string new_name, string in_name, Expr in_expr);
+        void add_wire(string new_name, CoreIR::Wireable* in_wire);
 
     };
 
