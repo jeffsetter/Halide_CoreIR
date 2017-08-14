@@ -22,7 +22,7 @@ public:
         // define the algorithm
         //clamped = BoundaryConditions::repeat_edge(input);
         clamped(x,y) = input(x, y);
-        modified(x, y) = clamped(x, y) > 15;
+        modified(x, y) = clamped(x, y) != 15;
 
 	hw_output(x,y) = modified(x,y);
         output(x, y) = hw_output(x, y);

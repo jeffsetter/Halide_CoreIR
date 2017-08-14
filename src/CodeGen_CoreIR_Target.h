@@ -26,6 +26,20 @@ struct CoreIR_Argument {
     CodeGen_CoreIR_Base::Stencil_Type stencil_type;
 };
 
+struct CoreIR_Inst_Args {
+  std::string name;
+  CoreIR::Generator* gen;
+  CoreIR::Args args;
+  CoreIR::Args genargs;
+  std::string wirename;
+  std::string selname;
+
+  CoreIR_Inst_Args(std::string name, std::string wirename, std::string selname,
+    CoreIR::Generator* gen, CoreIR::Args args, CoreIR::Args genargs) :
+ name(name), gen(gen), args(args), genargs(genargs), wirename(wirename), selname(selname) {}
+
+};
+
 /** This class emits Xilinx Vivado HLS compatible C++ code.
  */
 class CodeGen_CoreIR_Target {
@@ -73,10 +87,12 @@ protected:
 	void visit(const And *op);
 	void visit(const Or *op);
 	void visit(const EQ *op);
+	void visit(const NE *op);
 	void visit(const LT *op);
 	void visit(const LE *op);
 	void visit(const GT *op);
 	void visit(const GE *op);
+        void visit(const Not *op);
         void visit(const Max *op);
         void visit(const Min *op);
 	void visit(const Cast *op);
@@ -96,6 +112,7 @@ protected:
         // keep track of coreir dag
         int input_idx = 0; // tracks how many inputs have been defined so far
         std::map<std::string,CoreIR::Wireable*> hw_wire_set;
+        std::map<std::string,CoreIR_Inst_Args*> def_hw_set;
         std::unordered_set<std::string> hw_input_set;
         std::string hw_output_name;
 
@@ -103,6 +120,7 @@ protected:
         bool is_cnst(const Expr e);
         bool is_input(string var_name);
         bool is_output(string var_name);
+        bool is_defined(string var_name);
         bool is_wire(string var_name);
         int id_cnst_value(const Expr e);
         CoreIR::Wireable* get_wire(std::string name, Expr e);
