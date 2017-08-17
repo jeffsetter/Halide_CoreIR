@@ -81,7 +81,7 @@ CodeGen_CoreIR_Target::CodeGen_CoreIR_C::CodeGen_CoreIR_C(std::ostream &s, Outpu
     // add all generators from commonlib
     CoreIR::Namespace* commonlib = CoreIRLoadLibrary_commonlib(context);
     std::vector<string> commonlib_gen_names = {"umin", "smin", "umax", "smax",
-                                               "neq", "muxN"};
+                                               "neq", "muxn"};
     for (auto gen_name : commonlib_gen_names) {
       gens[gen_name] = commonlib->getGenerator(gen_name);
       assert(gens[gen_name]);
@@ -790,78 +790,101 @@ void CodeGen_CoreIR_Target::CodeGen_CoreIR_C::visit(const Call *op) {
 	  stream << "// added to wire_set: " << out_var << " using stencil+idx\n";
 	} else if (hw_wire_set.count(print_name(op->name)) > 0) {
           stream << "// trying to hook up " << print_name(op->name) << endl;
-          //cout << "trying to hook up " << print_name(op->name) << endl;
+          cout << "trying to hook up " << print_name(op->name) << endl;
 
-          vector<int> indices;
-
-	  CoreIR::Wireable* stencil_wire = hw_wire_set[print_name(op->name)];
-          //vector<CoreIR::Wireable*> stencil_outputs;
+	  CoreIR::Wireable* stencil_wire = hw_wire_set[print_name(op->name)]; // one example wire
           CoreIR::Wireable* orig_stencil_wire = stencil_wire;
-          vector<CoreIR::Wireable*> hw_inputs;
+          vector<std::pair<CoreIR::Wireable*, CoreIR::Wireable*>> stencil_mux_pairs;
 
-          CoreIR::Wireable* pt = def->addInstance(out_var + "_pt", gens["passthrough"], {{"width",context->argInt(bitwidth)}});
-          hw_inputs.push_back(pt->sel("in"));
+          CoreIR::Type* ptype = context->Bit()->Arr(bitwidth);
+          string pt_name = unique_name(out_var + "_pt");
+          CoreIR::Wireable* pt = def->addInstance(pt_name, gens["passthrough"], {{"type",context->argType(ptype)}});
+          stencil_mux_pairs.push_back(make_pair(stencil_wire, pt->sel("in")));
 
           // for every dim in the stencil, keep track of correct index and create muxes
           for (size_t i = op->args.size(); i-- > 0 ;) { // count down from args-1 to 0
+            vector<std::pair<CoreIR::Wireable*, CoreIR::Wireable*>> new_pairs;
+            
             CoreIR::Type* wire_type = stencil_wire->getType();
             uint array_len = wire_type->getKind() == CoreIR::Type::TypeKind::TK_Array ?
               static_cast<CoreIR::ArrayType*>(wire_type)->getLen() : 0;
 
             if (is_cnst(op->args[i])) {
               // constant index
+              cout << "  constant index" << endl;
 
               uint index = stoi(args_indices[i]);
               //cout << "type is " << wire_type->getKind() << " and has length " << static_cast<CoreIR::ArrayType*>(wire_type)->getLen() << endl;
 
               if (index < array_len) {
-                //cout << "found a " << to_string(index) << endl;
+                stream << "// using constant index " << to_string(index) << endl;
                 stencil_wire = stencil_wire->sel(index);
-                indices[i] = index;
+
+                // keep track of corresponding stencil and mux inputs
+                for (auto sm_pair : stencil_mux_pairs) {
+                  CoreIR::Wireable* stencil_i = sm_pair.first;
+                  CoreIR::Wireable* mux_i = sm_pair.second;
+                  new_pairs.push_back(make_pair(stencil_i->sel(index), mux_i));
+                }
+                stencil_mux_pairs = new_pairs;
 
               } else {
                 stream << "// couldn't find selectStr " << to_string(index) << endl;
                 //cout << "couldn't find selectStr " << to_string(index) << endl;
                 
-                def->connect(orig_stencil_wire->sel("out"), pt->sel("in"));
+                stencil_mux_pairs.clear();
+                stencil_mux_pairs.push_back(make_pair(orig_stencil_wire, pt->sel("in")));
                 break;
               }
 
             } else {
               // non-constant, variable index
-              // FIXME: create muxes 
-              vector<CoreIR::Wireable*> hw_inputs_new;
+              // create muxes 
+              uint num_muxes = stencil_mux_pairs.size();
+              cout << "  variable index creating " << num_muxes << " mux(es)" << endl;
+              stream << "// variable index creating " << num_muxes << " mux(es)" << endl;
 
               // create mux for every input from previous layer
-              for (uint j = 0; j < hw_inputs.size(); j++) {
-                string mux_name = print_name(op->name) + to_string(i) + 
-                  "_mux" + to_string(array_len) + "_" + to_string(j);
-                CoreIR::Wireable* mux_inst = def->addInstance(mux_name, gens["muxN"], 
+              for (uint j = 0; j < num_muxes; j++) {
+                CoreIR::Wireable* stencil_i = stencil_mux_pairs[j].first;
+                CoreIR::Wireable* mux_i = stencil_mux_pairs[j].second;
+
+                string mux_name = unique_name(print_name(op->name) + to_string(i) + 
+                                              "_mux" + to_string(array_len) + "_" + to_string(j));
+                CoreIR::Wireable* mux_inst = def->addInstance(mux_name, gens["muxn"], 
                                                               {{"width",context->argInt(bitwidth)},{"N",context->argInt(array_len)}});
-                def->connect(mux_inst->sel("out"), hw_inputs[j]->sel("in"));
+                def->connect(mux_inst->sel("out"), mux_i);
+                stream << "// created mux called " << mux_name << endl;
 
-                // FIXME: wire up select
-                //def->connect(get_wire(op->args[i]), mux_inst->sel("in")->sel("bit"));
+                // wire up select
+                def->connect(get_wire(args_indices[i], op->args[i]), mux_inst->sel("in")->sel("sel"));
 
-                // add each mux input to hw_inputs list
+                // add each corresponding stencil and mux input to list
                 for (uint mux_i = 0; mux_i < array_len; ++mux_i) {
-                  hw_inputs_new.push_back(mux_inst->sel("in")->sel(mux_i));
-                }
-              }
-
-              // store index as -1, and choose the first wire
-              indices[i] = -1;
+                  CoreIR::Wireable* stencil_new = stencil_i->sel(mux_i);
+                  CoreIR::Wireable* mux_new = mux_inst->sel("in")->sel("data")->sel(mux_i);
+                  new_pairs.push_back(make_pair(stencil_new, mux_new));
+                } // for every mux input
+              } // for every mux
+              
+              //cout << "all muxes created" << endl;
               stencil_wire = stencil_wire->sel(0);
+              stencil_mux_pairs = new_pairs;
             }
           } // for every dimension in stencil
 
-          // store hw_output
+          // connect the passthrough output
           hw_wire_set[out_var] = pt->sel("out");
           
-          // FIXME: wire up stencil to generated muxes
-          def->connect(stencil_wire, pt->sel("in"));
+          // wire up stencil to generated muxes
+          for (auto sm_pair : stencil_mux_pairs) {
+            CoreIR::Wireable* stencil_i = sm_pair.first;
+            CoreIR::Wireable* mux_i = sm_pair.second;
+            def->connect(stencil_i, mux_i);
+          }
 
 	  stream << "// added to wire_set: " << out_var << " using stencil\n";
+	  cout << "// added to wire_set: " << out_var << " using stencil\n";
 	} else {
           cout << "// " << stencil_print_name << " not found so it's not going to work" << endl;
 	}
