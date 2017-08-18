@@ -14,10 +14,7 @@
 #include "Simplify.h"
 
 #include "coreir.h"
-#include "coreir-lib/stdlib.h"
 #include "coreir-lib/cgralib.h"
-#include "coreir-pass/passes.h"
-
 
 namespace Halide {
 namespace Internal {
@@ -62,13 +59,13 @@ CodeGen_CoreIR_Target::CodeGen_CoreIR_C::CodeGen_CoreIR_C(std::ostream &s, Outpu
     bitwidth = 16;
     context = CoreIR::newContext();
     global_ns = context->getGlobal();
-    CoreIR::Namespace* stdlib = CoreIRLoadLibrary_stdlib(context);
+    CoreIR::Namespace* coreir  = context->getNamespace("coreir");
     CoreIR::Namespace* cgralib = CoreIRLoadLibrary_cgralib(context);
 
-    // add all generators from stdlib
-    std::vector<string> stdlib_gen_names = {"add", "mul", "sub", "and", "or", "eq", "ult", "ugt", "ule", "uge", "and", "or", "xor", "mux", "const"};
-    for (auto gen_name : stdlib_gen_names) {
-      gens[gen_name] = stdlib->getGenerator(gen_name);
+    // add all generators from coreir lib
+    std::vector<string> corelib_gen_names = {"add", "mul", "sub", "and", "or", "eq", "ult", "ugt", "ule", "uge", "and", "or", "xor", "mux", "const"};
+    for (auto gen_name : corelib_gen_names) {
+      gens[gen_name] = coreir->getGenerator(gen_name);
       assert(gens[gen_name]);
     }
 
@@ -102,7 +99,7 @@ CodeGen_CoreIR_Target::CodeGen_CoreIR_C::~CodeGen_CoreIR_C() {
     context->checkerrors();
     //design->print();
     
-    bool err = false;
+    //bool err = false;
     std::string GREEN = "\033[0;32m";
     std::string RED = "\033[0;31m";
     std::string RESET = "\033[0m";
@@ -112,42 +109,30 @@ CodeGen_CoreIR_Target::CodeGen_CoreIR_C::~CodeGen_CoreIR_C() {
     //   cout << RED << "Could not save dot file :(" << RESET << endl;
     //   context->die();
     // }
-    
 
-    cout << "Running Generators" << endl;
-    rungenerators(context,design,&err);
-    if (err) context->die();
-    //design->print();
-    //CoreIR::Instance* i = cast<CoreIR::Instance>(design->getDef()->sel("DesignTop"));
-    //i->getModuleRef()->print();
-
-    cout << "Flattening everything" << endl;
-    flatten(context,design,&err);
-    design->print();
+    cout << "Running Passes: generators and flattening" << endl;    
+    context->runPasses({"rungenerators","flatten"});
     design->getDef()->validate();
 
   
     // write out the json
-    CoreIR::saveModule(design, "design_top.json", &err);
-    if (err) {
-      cout << RED << "Could not save json :(" << RESET << endl;
+    cout << "Saving json" << endl;
+    if (!saveToFile(global_ns, "design_top.json", design)) {
+      cout << RED << "Could not save to json!!" << RESET << endl;
       context->die();
     }
-    
-    CoreIR::saveModule(design, "design_top.txt", &err);
-    if (err) {
-      cout << RED << "Could not save dot file :(" << RESET << endl;
+    if (!saveToDot(design, "design_top.txt")) {
+      cout << RED << "Could not save to dot file :(" << RESET << endl;
       context->die();
     }
-    
-    // check that we can reload the created json
-    CoreIR::loadModule(context,"design_top.json", &err);
-    if (err) {
-      cout << RED << "failed to reload json" << RESET << endl;
+  
+    CoreIR::Module* m = nullptr;
+    if (!loadFromFile(context, "design_top.json", &m)) {
+      cout << RED << "Could not Load from json!!" << RESET << endl;
       context->die();
-    } else {
-      cout << GREEN << "We created the .json!!! (GREEN PASS) Yay!" << RESET << endl;
     }
+    ASSERT(m, "Could not load top: design");
+    m->print();
     
     CoreIR::deleteContext(context);
   } else {
@@ -1054,8 +1039,8 @@ void CodeGen_CoreIR_Target::CodeGen_CoreIR_C::visit_binop(Type t, Expr a, Expr b
     string binop_name = op_name + a_name + b_name;
     CoreIR::Wireable* coreir_inst = def->addInstance(binop_name,gens[op_name], {{"width", context->argInt(bitwidth)}});
 
-    def->connect(a_wire, coreir_inst->sel("in")->sel(0));
-    def->connect(b_wire, coreir_inst->sel("in")->sel(1));
+    def->connect(a_wire, coreir_inst->sel("in0"));
+    def->connect(b_wire, coreir_inst->sel("in1"));
     hw_wire_set[out_var] = coreir_inst->sel("out");
   } else {
     out_var = "";
@@ -1082,9 +1067,9 @@ void CodeGen_CoreIR_Target::CodeGen_CoreIR_C::visit_ternop(Type t, Expr a, Expr 
     string ternop_name = op_name + a_name + b_name + c_name;
 
     CoreIR::Wireable* coreir_inst = def->addInstance(ternop_name,gens[op_name], {{"width", context->argInt(bitwidth)}});
-    def->connect(a_wire, coreir_inst->sel("in")->sel("bit"));
-    def->connect(b_wire, coreir_inst->sel("in")->sel("data")->sel(0));
-    def->connect(c_wire, coreir_inst->sel("in")->sel("data")->sel(1));
+    def->connect(a_wire, coreir_inst->sel("sel"));
+    def->connect(b_wire, coreir_inst->sel("in0"));
+    def->connect(c_wire, coreir_inst->sel("in1"));
     hw_wire_set[out_var] = coreir_inst->sel("out");
 
   } else {
