@@ -2755,11 +2755,6 @@ void Func::compile_to_hls(const string &filename, const vector<Argument> &args,
     pipeline().compile_to_hls(filename, args, fn_name, target);
 }
 
-void Func::compile_to_rigel(const string &filename, const vector<Argument> &args,
-                          const string &fn_name, const Target &target) {
-    pipeline().compile_to_rigel(filename, args, fn_name, target);
-}
-
 void Func::compile_to_coreir(const string &filename, const vector<Argument> &args,
                           const string &fn_name, const Target &target) {
     pipeline().compile_to_coreir(filename, args, fn_name, target);

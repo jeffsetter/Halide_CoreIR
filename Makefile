@@ -310,9 +310,6 @@ SOURCE_FILES = \
   CodeGen_PowerPC.cpp \
   CodeGen_PTX_Dev.cpp \
   CodeGen_Renderscript_Dev.cpp \
-  CodeGen_Rigel_Base.cpp \
-  CodeGen_Rigel_Target.cpp \
-  CodeGen_Rigel_Testbench.cpp \
   CodeGen_X86.cpp \
   CodeGen_Zynq_C.cpp \
   CodeGen_Zynq_LLVM.cpp \

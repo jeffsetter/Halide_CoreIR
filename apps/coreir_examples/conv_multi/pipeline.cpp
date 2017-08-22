@@ -7,6 +7,8 @@ using std::string;
 Var x("x"), y("y");
 Var xo("xo"), xi("xi"), yi("yi"), yo("yo");
 
+uint8_t constants[3][3] = {{11,12,13}, {14,15,16}, {17,18,19}};
+
 class MyPipeline {
 public:
     ImageParam input;
@@ -28,21 +30,25 @@ public:
 
         //kernel(x, y) = cast<uint16_t>(exp(-(x*x + y*y)/(2*sigma*sigma)) / (float)(2*M_PI*sigma*sigma));
         //kernel(x, y) = cast<uint16_t>(3);
-      kernel(x,y) = select(x==0&&y==0, 11,
-                           x==0&&y==1, 12,
-                           x==0&&y==2, 13,
-                           x==1&&y==0, 14,
-                           x==1&&y==1, 15,
-                           x==1&&y==2, 16,
-                           x==2&&y==0, 17,
-                           x==2&&y==1, 18,
-                           x==2&&y==2, 19, 0);
+      //kernel(x,y) = select(x==0&&y==0, 11,
+      //                     x==0&&y==1, 12,
+      //                     x==0&&y==2, 13,
+      //                     x==1&&y==0, 14,
+      //                     x==1&&y==1, 15,
+      //                     x==1&&y==2, 16,
+      //                     x==2&&y==0, 17,
+      //                     x==2&&y==1, 18,
+      //                     x==2&&y==2, 19, 0);
+      kernel(x,y) = select(x==0, select(y==0, 11, y==1, 12, y==2, 13, 0),
+                           x==1, select(y==0, 14, y==1, 15, y==2, 16, 0),
+                           x==2, select(y==0, 17, y==1, 18, y==2, 19, 0), 0);
+
 
         // define the algorithm
         clamped(x,y) = input(x,y);
 
         conv1(x, y) += clamped(x+win.x, y+win.y) * kernel(win.x, win.y);
-	//conv1(x, y) += clamped(x+win.x, y+win.y) * gaussian2d[win.x+1][win.y+1];
+	//conv1(x, y) += clamped(x+win.x, y+win.y) * constants[win.x][win.y];
 
         // unroll the reduction only in x
 	conv1.update(0).unroll(win.x);

@@ -1331,6 +1331,8 @@ void CodeGen_CoreIR_Target::CodeGen_CoreIR_C::visit(const Min *op) {
 }
 
 void CodeGen_CoreIR_Target::CodeGen_CoreIR_C::visit(const Select *op) {
+  //const Select* sel_op = op->false_value.as<Select>();
+  //if (sel_op) { stream << "select is recursive!" << endl; }
   visit_ternop(op->type, op->condition, op->true_value, op->false_value, "?",":", "mux");
 }
   /*
