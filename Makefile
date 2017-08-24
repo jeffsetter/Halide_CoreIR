@@ -273,7 +273,7 @@ TMP_DIR     = $(BUILD_DIR)/tmp
 # Compiling for CoreIR requires some extra links
 COREIR_DIR ?= $(ROOT_DIR)/../coreir
 COREIR_INCLUDES = -I$(COREIR_DIR)/include -fexceptions
-COREIR_LIBS = -L$(COREIR_DIR)/lib -Wl,-rpath,$(COREIR_DIR)/lib -lcoreir-cgralib -lcoreir-stdlib -lcoreir-passes -lcoreir
+COREIR_LIBS = -L$(COREIR_DIR)/lib -Wl,-rpath,$(COREIR_DIR)/lib -lcoreir-cgralib -lcoreir
 TEST_LD_FLAGS += $(COREIR_LIBS)
 
 SOURCE_FILES = \

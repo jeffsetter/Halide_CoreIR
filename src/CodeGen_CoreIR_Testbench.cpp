@@ -11,9 +11,7 @@
 #include "Simplify.h"
 
 #include "coreir.h"
-#include "coreir-lib/stdlib.h"
 #include "coreir-lib/cgralib.h"
-#include "coreir-pass/passes.h"
 
 namespace Halide {
 
