@@ -97,7 +97,7 @@ CodeGen_CoreIR_Target::CodeGen_CoreIR_C::~CodeGen_CoreIR_C() {
     // check the completed coreir design
     design->setDef(def);
     context->checkerrors();
-    //design->print();
+    design->print();
     
     //bool err = false;
     std::string GREEN = "\033[0;32m";
@@ -111,7 +111,19 @@ CodeGen_CoreIR_Target::CodeGen_CoreIR_C::~CodeGen_CoreIR_C() {
     // }
 
     cout << "Running Passes: generators and flattening" << endl;    
-    context->runPasses({"rungenerators","flatten"});
+    //context->runPasses({"rungenerators","flatten"});
+    if (!saveToFile(global_ns, "design_prepass.json", design)) {
+      cout << RED << "Could not save to json!!" << RESET << endl;
+      context->die();
+    }
+    context->runPasses({"rungenerators"});
+    //design->print();
+    //context->runPasses({"flattentypes"});
+    //design->print();
+    context->runPasses({"flatten"});
+    //design->print();
+
+
     design->getDef()->validate();
 
   
@@ -1011,7 +1023,7 @@ CoreIR::Wireable* CodeGen_CoreIR_Target::CodeGen_CoreIR_C::get_wire(Expr e, stri
   } else if (is_wire(name)) {
     CoreIR::Wireable* wire = hw_wire_set[name];
     internal_assert(wire);
-    //cout << "using wire " << name << endl;
+    stream << "// using wire " << name << endl;
     return wire;
 
   } else {
@@ -1045,6 +1057,9 @@ void CodeGen_CoreIR_Target::CodeGen_CoreIR_C::visit_binop(Type t, Expr a, Expr b
   } else {
     out_var = "";
     print_assignment(t, a_name + " " + op_sym + " " + b_name);
+    if (a_wire == NULL) { stream << "// input 'a' was invalid!!" << endl; }
+    if (b_wire == NULL) { stream << "// input 'b' was invalid!!" << endl; }
+
     //    stream << "tb-performed a << op_name<< :!!! " <<endl;//<< print_type(a.type()) << " " << print_type(b.type()) << endl;
   }
 
