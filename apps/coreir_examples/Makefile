@@ -1,6 +1,6 @@
 ALL_COREIR_APPS = pointwise \
 	conv_1_1 conv_1_2 conv_2_1 conv_3_1 conv_bw cascade \
-	onebit_comp onebit_and onebit_mux
+	onebit_comp onebit_and onebit_mux onebit_bool
 
 NOT_WORKING_APPS = conv_rgb
 
@@ -19,7 +19,7 @@ test_conv:
 	done
 
 test_onebit:
-	for app in onebit_comp onebit_and onebit_mux; do \
+	for app in onebit_comp onebit_and onebit_mux onebit_bool; do \
 	  $(MAKE) -C $$app || exit 1; \
 	done
 

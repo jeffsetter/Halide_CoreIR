@@ -65,6 +65,8 @@ protected:
         void visit(const Store *op);
 
         // coreir operators
+        void visit_unaryop(Type t, Expr a, const char* op_sym, string op_name);
+	void visit(const Not *op);
 	void visit_binop(Type t, Expr a, Expr b, const char* op_sym, string op_name);
 	void visit(const Mul *op);
 	void visit(const Add *op);
@@ -83,7 +85,7 @@ protected:
         uint8_t bitwidth;
         CoreIR::Context* context = NULL;
         CoreIR::Namespace* global_ns = NULL;
-        std::map<std::string,CoreIR::Generator*> gens;
+        std::map<std::string,CoreIR::Instantiable*> gens;
         CoreIR::ModuleDef* def = NULL;
         CoreIR::Module* design = NULL;
         CoreIR::Wireable* self = NULL;

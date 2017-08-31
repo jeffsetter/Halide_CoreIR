@@ -64,9 +64,14 @@ CodeGen_CoreIR_Target::CodeGen_CoreIR_C::CodeGen_CoreIR_C(std::ostream &s, Outpu
 
     // add all generators from coreir lib
     std::vector<string> corelib_gen_names = {"add", "mul", "sub", "and", "or", "eq", "ult", "ugt", "ule", "uge", "and", "or", "xor", "mux", "const"};
+    std::vector<string> corelib_mod_names = {"bitand","bitor","bitxor","bitnot","bitmux","bitconst"};
     for (auto gen_name : corelib_gen_names) {
       gens[gen_name] = coreir->getGenerator(gen_name);
       assert(gens[gen_name]);
+    }
+    for (auto mod_name : corelib_mod_names) {
+      gens[mod_name] = coreir->getModule(mod_name);
+      assert(gens[mod_name]);
     }
 
     // add all generators from cgralib
@@ -140,7 +145,7 @@ CodeGen_CoreIR_Target::CodeGen_CoreIR_C::~CodeGen_CoreIR_C() {
   
     CoreIR::Module* m = nullptr;
     if (!loadFromFile(context, "design_top.json", &m)) {
-      cout << RED << "Could not Load from json!!" << RESET << endl;
+      cout << RED << "Could not load from json!!" << RESET << endl;
       context->die();
     }
     ASSERT(m, "Could not load top: design");
@@ -262,7 +267,6 @@ void CodeGen_CoreIR_Target::CodeGen_CoreIR_C::add_kernel(Stmt stmt,
 
     cout << "design has " << num_inputs << " inputs with bitwidth " << to_string(bitwidth) << " " <<endl;
     // FIXME: can't distinguish bw output/input easily (assuming single output first)
-    // FIXME: one bit arrays in coreir?
     // FIXME: more closely follow input/output types
 
     CoreIR::Type* out_type;
@@ -515,21 +519,47 @@ void CodeGen_CoreIR_Target::CodeGen_CoreIR_C::visit(const Allocate *op) {
 
 
 void CodeGen_CoreIR_Target::CodeGen_CoreIR_C::visit(const Call *op) {
+  // add bitand, bitor, bitxor, bitnot
     if (op->is_intrinsic(Call::bitwise_and)) {
         internal_assert(op->args.size() == 2);
         Expr a = op->args[0];
         Expr b = op->args[1];
-        visit_binop(op->type, a, b, "&", "and");
+        if (op->type.bits() == 1) {
+          // use a special op for bitwidth 1
+          visit_binop(op->type, a, b, "&&", "bitand");
+        } else {
+          visit_binop(op->type, a, b, "&", "and");
+        }
     } else if (op->is_intrinsic(Call::bitwise_or)) {
         internal_assert(op->args.size() == 2);
         Expr a = op->args[0];
         Expr b = op->args[1];
-        visit_binop(op->type, a, b, "|", "or");
+        if (op->type.bits() == 1) {
+          // use a special op for bitwidth 1
+          visit_binop(op->type, a, b, "||", "bitor");
+        } else {
+          visit_binop(op->type, a, b, "|", "or");
+        }
     } else if (op->is_intrinsic(Call::bitwise_xor)) {
         internal_assert(op->args.size() == 2);
         Expr a = op->args[0];
         Expr b = op->args[1];
-        visit_binop(op->type, a, b, "^", "xor");
+        if (op->type.bits() == 1) {
+          // use a special op for bitwidth 1
+          visit_binop(op->type, a, b, "^", "bitxor");
+        } else {
+          visit_binop(op->type, a, b, "^", "xor");
+        }
+    } else if (op->is_intrinsic(Call::bitwise_not)) {
+        internal_assert(op->args.size() == 2);
+        Expr a = op->args[0];
+        Expr b = op->args[1];
+        if (op->type.bits() == 1) {
+          // use a special op for bitwidth 1
+          visit_binop(op->type, a, b, "!", "bitnot");
+        } else {
+          visit_binop(op->type, a, b, "~", "not");
+        }
 
     } else if (op->is_intrinsic(Call::reinterpret)) {
         string in_var = print_expr(op->args[0]);
@@ -592,8 +622,8 @@ void CodeGen_CoreIR_Target::CodeGen_CoreIR_C::visit(const Call *op) {
 	stream << "// stencil size: " << stencil_width << " " << stencil_height << " and image width " << image_width << std::endl
                << "//  using fifo_depth " << fifo_depth << std::endl;
         
-
-	CoreIR::Wireable* coreir_lb = def->addInstance(lb_name, gens["Linebuffer"],
+        CoreIR::Generator* gen = static_cast<CoreIR::Generator*>(gens["Linebuffer"]);
+	CoreIR::Wireable* coreir_lb = def->addInstance(lb_name, gen,
   			         {{"bitwidth",context->argInt(bitwidth)}, {"stencil_width", context->argInt(stencil_width)},
 				  {"stencil_height", context->argInt(stencil_height)}, {"image_width", context->argInt(fifo_depth)}}
 						       );
@@ -773,7 +803,6 @@ void CodeGen_CoreIR_Target::CodeGen_CoreIR_C::visit(const Call *op) {
 
             } else {
               stream << "// couldn't find selectStr " << to_string(index) << endl;
-              cout << "couldn't find selectStr " << to_string(index) << endl;
               stencil_wire = orig_stencil_wire;
               break;
             }
@@ -785,7 +814,8 @@ void CodeGen_CoreIR_Target::CodeGen_CoreIR_C::visit(const Call *op) {
 	  stream << "// " << stencil_print_name << " not found so creating cnst" << endl;
 	  string cnst_name = "cnst" + out_var;
 	  int cnst_value = 999;
-	  CoreIR::Wireable* cnst = def->addInstance(cnst_name,  gens["const"], {{"width", context->argInt(bitwidth)}},
+          CoreIR::Generator* gen = static_cast<CoreIR::Generator*>(gens["const"]);
+	  CoreIR::Wireable* cnst = def->addInstance(cnst_name,  gen, {{"width", context->argInt(bitwidth)}},
 						    {{"value",context->argInt(cnst_value)}});
 	  hw_wire_set[out_var] = cnst->sel("out");;
 	}
@@ -959,7 +989,8 @@ void CodeGen_CoreIR_Target::CodeGen_CoreIR_C::visit(const Call *op) {
               stream << "// " << stencil_print_name << " not found so creating cnst" << endl;
               string cnst_name = "cnst" + out_var;
               int cnst_value = 1;//999
-              CoreIR::Wireable* cnst = def->addInstance(cnst_name,  gens["const"], {{"width", context->argInt(bitwidth)}},
+              CoreIR::Generator* gen = static_cast<CoreIR::Generator*>(gens["const"]);
+              CoreIR::Wireable* cnst = def->addInstance(cnst_name,  gen, {{"width", context->argInt(bitwidth)}},
                                                         {{"value",context->argInt(cnst_value)}});
               hw_wire_set[out_var] = cnst->sel("out");;
       	    }
@@ -996,6 +1027,20 @@ int CodeGen_CoreIR_Target::CodeGen_CoreIR_C::id_cnst_value(const Expr e) {
   }
 }
 
+  int get_const_bitwidth(const Expr e) {
+  const IntImm* e_int = e.as<IntImm>();
+  const UIntImm* e_uint = e.as<UIntImm>();
+  if (e_int) {
+    return e_int->type.bits();
+  } else if (e_uint) {
+    return e_uint->type.bits();
+  } else {
+    cout << "invalid constant expr" << endl;
+    return -1;
+  }
+
+  }
+
 bool CodeGen_CoreIR_Target::CodeGen_CoreIR_C::is_wire(string var_name) {
   bool wire_exists = hw_wire_set.count(var_name) > 0;
   return wire_exists;
@@ -1010,8 +1055,18 @@ CoreIR::Wireable* CodeGen_CoreIR_Target::CodeGen_CoreIR_C::get_wire(Expr e, stri
   if (is_cnst(e)) {
     int cnst_value = id_cnst_value(e);
     string cnst_name = "const" + name;
-    CoreIR::Wireable* cnst = def->addInstance(cnst_name,  gens["const"], {{"width", context->argInt(bitwidth)}},
+    CoreIR::Wireable* cnst;
+
+    // FIXME: set init value for bitconst
+    uint const_bitwidth = get_const_bitwidth(e);
+    if (const_bitwidth == 1) {
+      CoreIR::Module* module = static_cast<CoreIR::Module*>(gens["bitconst"]);
+      cnst = def->addInstance(cnst_name, module);
+    } else {
+      CoreIR::Generator* gen = static_cast<CoreIR::Generator*>(gens["const"]);
+      cnst = def->addInstance(cnst_name,  gen, {{"width", context->argInt(bitwidth)}},
 					      {{"value",context->argInt(cnst_value)}});
+    }
     stream << "// added cnst: " << name << "\n";
     return cnst->sel("out");
   } else if (is_inout(name)) {
@@ -1039,6 +1094,46 @@ CoreIR::Wireable* CodeGen_CoreIR_Target::CodeGen_CoreIR_C::get_wire(Expr e, stri
   }
 }
 
+void CodeGen_CoreIR_Target::CodeGen_CoreIR_C::visit_unaryop(Type t, Expr a, const char*  op_sym, string op_name) {
+  string a_name = print_expr(a);
+  CoreIR::Wireable* a_wire = get_wire(a, a_name);
+  string out_var;
+  string print_sym = op_sym;
+
+  if (a_wire != NULL) {
+    out_var = print_assignment(t, print_sym + "(" + a_name + ")");
+    string binop_name = op_name + a_name;
+    CoreIR::Wireable* coreir_inst;
+
+    // properly cast to generator or module
+    if (gens[op_name]->isKind(CoreIR::Instantiable::InstantiableKind::IK_Generator)) {
+      cout << "using a gen" << endl;
+      CoreIR::Generator* gen = static_cast<CoreIR::Generator*>(gens[op_name]);
+      internal_assert(gen);    
+      // FIXME: below improperly checks the output instead of the input bitwidth
+      //uint op_bitwidth = t.bits() > 1 ? bitwidth : 1;
+      uint op_bitwidth = bitwidth;
+      coreir_inst = def->addInstance(binop_name,gen, {{"width", context->argInt(op_bitwidth)}});
+    } else {
+      CoreIR::Module* mod = static_cast<CoreIR::Module*>(gens[op_name]);
+      internal_assert(mod);
+      coreir_inst = def->addInstance(binop_name, mod);
+    }
+
+    def->connect(a_wire, coreir_inst->sel("in"));
+    hw_wire_set[out_var] = coreir_inst->sel("out");
+  } else {
+    out_var = "";
+    print_assignment(t, print_sym + "(" + a_name + ")");
+    if (a_wire == NULL) { stream << "// input 'a' was invalid!!" << endl; }
+    //    stream << "tb-performed a << op_name<< :!!! " <<endl;//<< print_type(a.type()) << " " << print_type(b.type()) << endl;
+  }
+
+  if (is_inout(a_name)) { stream << "// " << op_name <<"a: self.in "; } else { stream << "// " << op_name << "a: " << a_name << " "; }
+  stream << "o: " << out_var << " with bitwidth:" << t.bits() << endl;
+}
+
+
 void CodeGen_CoreIR_Target::CodeGen_CoreIR_C::visit_binop(Type t, Expr a, Expr b, const char*  op_sym, string op_name) {
   string a_name = print_expr(a);
   string b_name = print_expr(b);
@@ -1049,7 +1144,19 @@ void CodeGen_CoreIR_Target::CodeGen_CoreIR_C::visit_binop(Type t, Expr a, Expr b
   if (a_wire != NULL && b_wire != NULL) {
     out_var = print_assignment(t, a_name + " " + op_sym + " " + b_name);
     string binop_name = op_name + a_name + b_name;
-    CoreIR::Wireable* coreir_inst = def->addInstance(binop_name,gens[op_name], {{"width", context->argInt(bitwidth)}});
+    CoreIR::Wireable* coreir_inst;
+
+    // properly cast to generator or module
+    if (gens[op_name]->isKind(CoreIR::Instantiable::InstantiableKind::IK_Generator)) {
+      CoreIR::Generator* gen = static_cast<CoreIR::Generator*>(gens[op_name]);
+      // FIXME: below improperly checks the output instead of the input bitwidth
+      //uint op_bitwidth = t.bits() > 1 ? bitwidth : 1;
+      uint op_bitwidth = bitwidth;
+      coreir_inst = def->addInstance(binop_name,gen, {{"width", context->argInt(op_bitwidth)}});
+    } else {
+      CoreIR::Module* mod = static_cast<CoreIR::Module*>(gens[op_name]);
+      coreir_inst = def->addInstance(binop_name, mod);
+    }
 
     def->connect(a_wire, coreir_inst->sel("in0"));
     def->connect(b_wire, coreir_inst->sel("in1"));
@@ -1065,7 +1172,7 @@ void CodeGen_CoreIR_Target::CodeGen_CoreIR_C::visit_binop(Type t, Expr a, Expr b
 
   if (is_inout(a_name)) { stream << "// " << op_name <<"a: self.in "; } else { stream << "// " << op_name << "a: " << a_name << " "; }
   if (is_inout(b_name)) { stream << "// " << op_name <<"b: self.in "; } else { stream << "// " << op_name << "b: " << b_name << " "; }
-  stream << "o: " << out_var << endl;
+  stream << "o: " << out_var << " with obitwidth:" << t.bits() << endl;//<< " and ibitwidth " << a.type.bits() << endl;
 }
 
 void CodeGen_CoreIR_Target::CodeGen_CoreIR_C::visit_ternop(Type t, Expr a, Expr b, Expr c, const char*  op_sym1, const char* op_sym2, string op_name) {
@@ -1080,8 +1187,20 @@ void CodeGen_CoreIR_Target::CodeGen_CoreIR_C::visit_ternop(Type t, Expr a, Expr 
   if (a_wire != NULL && b_wire != NULL && c_wire != NULL) {
     out_var = print_assignment(t, a_name + " " + op_sym1 + " " + b_name + " " + op_sym2 + " " + c_name);
     string ternop_name = op_name + a_name + b_name + c_name;
+    CoreIR::Wireable* coreir_inst;
 
-    CoreIR::Wireable* coreir_inst = def->addInstance(ternop_name,gens[op_name], {{"width", context->argInt(bitwidth)}});
+    // properly cast to generator or module
+    if (gens[op_name]->isKind(CoreIR::Instantiable::InstantiableKind::IK_Generator)) {
+      CoreIR::Generator* gen = static_cast<CoreIR::Generator*>(gens[op_name]);
+      // FIXME: below improperly checks the output instead of the input bitwidth
+      //uint op_bitwidth = t.bits() > 1 ? bitwidth : 1;
+      uint op_bitwidth = bitwidth;
+      coreir_inst = def->addInstance(ternop_name,gen, {{"width", context->argInt(op_bitwidth)}});
+    } else {
+      CoreIR::Module* mod = static_cast<CoreIR::Module*>(gens[op_name]);
+      coreir_inst = def->addInstance(ternop_name, mod);
+    }
+
     def->connect(a_wire, coreir_inst->sel("sel"));
     def->connect(b_wire, coreir_inst->sel("in0"));
     def->connect(c_wire, coreir_inst->sel("in1"));
@@ -1124,21 +1243,20 @@ void CodeGen_CoreIR_Target::CodeGen_CoreIR_C::visit(const GT *op) {
 void CodeGen_CoreIR_Target::CodeGen_CoreIR_C::visit(const GE *op) {
   visit_binop(op->type, op->a, op->b, ">=", "uge");
 }
+void CodeGen_CoreIR_Target::CodeGen_CoreIR_C::visit(const Not *op) {
+  // operator must have a one-bit/bool input
+  visit_unaryop(op->type, op->a, "!", "bitnot");
+}
   // FIXME: create signed or unsigned ops based on inputs
 
 void CodeGen_CoreIR_Target::CodeGen_CoreIR_C::visit(const Select *op) {
-  visit_ternop(op->type, op->condition, op->true_value, op->false_value, "?",":", "mux");
-  //CodeGen_C::visit(op);
+  if (op->type.bits() == 1) {
+    // use a special op for bitwidth 1
+    visit_ternop(op->type, op->condition, op->true_value, op->false_value, "?",":", "bitmux");
+  } else {
+    visit_ternop(op->type, op->condition, op->true_value, op->false_value, "?",":", "mux");
+  }
 }
-  /*
-void CodeGen_CoreIR_Target::CodeGen_CoreIR_C::visit(const GE *op) {
-  visit_binop(op->type, op->a, op->b, "^", "uge");
-}
-void CodeGen_CoreIR_Target::CodeGen_CoreIR_C::visit(const GE *op) {
-  visit_binop(op->type, op->a, op->b, "", "uge");
-}
-  */
-
 
 void CodeGen_CoreIR_Target::CodeGen_CoreIR_C::visit(const Cast *op) {
   stream << "[cast]";
