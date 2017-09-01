@@ -35,7 +35,7 @@ int main(int argc, char **argv) {
 	    }
         }
     }
-    save_image(in, "input_unique.pgm");
+    //save_image(in, "input_unique.pgm");
     in = load_image(argv[1]);
 
     for (int y = 0; y < weight.height(); y++)

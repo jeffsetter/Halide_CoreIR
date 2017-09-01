@@ -22,7 +22,7 @@
             ],
             [
               "ult_152_147.in0",
-              "const_152.out"
+              "const10_.out"
             ],
             [
               "ult_147_150.out",
@@ -34,7 +34,7 @@
             ],
             [
               "ult_147_150.in1",
-              "const_150.out"
+              "const20_.out"
             ],
             [
               "ule_148_147.out",
@@ -46,11 +46,7 @@
             ],
             [
               "ule_148_147.in0",
-              "const_148.out"
-            ],
-            [
-              "self.out",
-              "bitmux_157_157_149.out"
+              "const50_.out"
             ],
             [
               "bitxor_149_151.out",
@@ -89,16 +85,16 @@
             "bitxor_149_151": {
               "modref": "coreir.bitxor"
             },
-            "const_148": {
+            "const10_": {
               "configargs": {
-                "value": 50
+                "value": 10
               },
               "genargs": {
                 "width": 16
               },
               "genref": "coreir.const"
             },
-            "const_150": {
+            "const20_": {
               "configargs": {
                 "value": 20
               },
@@ -107,9 +103,9 @@
               },
               "genref": "coreir.const"
             },
-            "const_152": {
+            "const50_": {
               "configargs": {
-                "value": 10
+                "value": 50
               },
               "genargs": {
                 "width": 16
