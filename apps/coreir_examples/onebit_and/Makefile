@@ -47,6 +47,6 @@ clean:
 	rm -f pipeline_native.h pipeline_native.o
 	rm -f pipeline_hls.h pipeline_hls.cpp hls_target.h hls_target.cpp
 	rm -f pipeline_coreir.cpp pipeline_coreir.h
-	rm -f coreir_target.h coreir_target.cpp design_top.json design_target.json
+	rm -f coreir_target.h coreir_target.cpp design_top.json design_*.json
 	rm -f design_top.txt graph.png gen_testimage
 	rm -f input* out.png out.pgm
