@@ -145,7 +145,7 @@ public:
         hw_output.compute_at(output, xo);
 
         hw_output.tile(x, y, xo, yo, xi, yi, 480, 640);
-        hw_output.unroll(xi, 2);
+        //hw_output.unroll(xi, 2);
         hw_output.accelerate({padded}, xi, xo);
 
         grad_x.linebuffer().unroll(x);
@@ -183,7 +183,7 @@ public:
         hw_output.compute_at(output, xo);
 
         hw_output.tile(x, y, xo, yo, xi, yi, 480, 640);
-        hw_output.unroll(xi, 2);
+        //hw_output.unroll(xi, 2);
         hw_output.accelerate({padded}, xi, xo);
 
         grad_x.linebuffer().unroll(x);

@@ -49,6 +49,10 @@
               "const50_.out"
             ],
             [
+              "self.out",
+              "bitmux_157_157_149.out"
+            ],
+            [
               "bitxor_149_151.out",
               "bitor_154_155.in1"
             ],

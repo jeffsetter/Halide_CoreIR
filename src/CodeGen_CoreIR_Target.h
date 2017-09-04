@@ -99,7 +99,7 @@ protected:
         int input_idx = 0; // tracks how many inputs have been defined so far
         std::map<std::string,CoreIR::Wireable*> hw_wire_set;
         std::unordered_set<std::string> hw_input_set;
-        std::string hw_output_name;
+        std::unordered_set<std::string> hw_output_set;
 
         // coreir methods to wire things together
         bool is_cnst(const Expr e);
