@@ -1120,7 +1120,7 @@ CoreIR::Wireable* CodeGen_CoreIR_Target::CodeGen_CoreIR_C::get_wire(string name,
     internal_assert(gens["const"]);
     CoreIR::Wireable* cnst = def->addInstance(cnst_name,  gens["const"], {{"width", context->argInt(bitwidth)}},
 					      {{"value",context->argInt(cnst_value)}});
-    stream << "// added cnst: " << name << "\n";
+    stream << "// added cnst: " << cnst_name << "\n";
     return cnst->sel("out");
   } else if (is_input(name)) {
     CoreIR::Wireable* input_wire = self->sel("in")->sel(input_idx);
@@ -1349,7 +1349,10 @@ void CodeGen_CoreIR_Target::CodeGen_CoreIR_C::visit(const Cast *op) {
   stream << "[cast]";
   string in_var = print_expr(op->value);
   string out_var = print_assignment(op->type, "(" + print_type(op->type) + ")(" + in_var + ")");
-  add_wire(out_var, in_var, op->value);
+  if (!is_cnst(in_var)) {
+    // only add to list, don't duplicate constants
+    add_wire(out_var, in_var, op->value);
+  }
 }
 
 void CodeGen_CoreIR_Target::CodeGen_CoreIR_C::visit(const Load *op) {
