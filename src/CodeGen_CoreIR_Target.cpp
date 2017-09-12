@@ -84,7 +84,8 @@ CodeGen_CoreIR_Target::CodeGen_CoreIR_C::CodeGen_CoreIR_C(std::ostream &s, Outpu
 
     // add all generators from commonlib
     CoreIR::Namespace* commonlib = CoreIRLoadLibrary_commonlib(context);
-    std::vector<string> commonlib_gen_names = {"umin", "smin", "umax", "smax"};
+    std::vector<string> commonlib_gen_names = {"umin", "smin", "umax", "smax",
+                                               "Linebuffer"};
     for (auto gen_name : commonlib_gen_names) {
       gens[gen_name] = commonlib->getGenerator(gen_name);
       assert(gens[gen_name]);
@@ -92,7 +93,7 @@ CodeGen_CoreIR_Target::CodeGen_CoreIR_C::CodeGen_CoreIR_C(std::ostream &s, Outpu
 
     // add all generators from cgralib
     CoreIR::Namespace* cgralib = CoreIRLoadLibrary_cgralib(context);
-    std::vector<string> cgralib_gen_names = {"Linebuffer", "IO"};
+    std::vector<string> cgralib_gen_names = {};
     for (auto gen_name : cgralib_gen_names) {
       gens[gen_name] = cgralib->getGenerator(gen_name);
       assert(gens[gen_name]);
@@ -142,7 +143,7 @@ CodeGen_CoreIR_Target::CodeGen_CoreIR_C::~CodeGen_CoreIR_C() {
     //design->print();
     //context->runPasses({"flattentypes"});
     //design->print();
-    context->runPasses({"flatten"});
+    context->runPasses({"flatten","verifyfullyconnected-noclkrst"});
     //design->print();
 
 
@@ -804,7 +805,13 @@ void CodeGen_CoreIR_Target::CodeGen_CoreIR_C::visit(const Call *op) {
 	  CoreIR::Wireable* stencil_wire = hw_wire_set[print_name(op->name)];
 	  CoreIR::Wireable* orig_stencil_wire = stencil_wire;
           for (size_t i = op->args.size(); i-- > 0 ;) {
-	    uint index = stoi(args_indices[i]);
+            uint index;
+            if (is_cnst(op->args[i])) {
+              index = stoi(args_indices[i]);
+            } else {
+              index = 0;
+            }
+
             CoreIR::Type* wire_type = stencil_wire->getType();
             //cout << "type is " << wire_type->getKind() << " and has length " << static_cast<CoreIR::ArrayType*>(wire_type)->getLen() << endl;
 
