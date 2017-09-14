@@ -36,10 +36,20 @@ public:
         // Define a 3x3 Gaussian Blur with a repeat-edge boundary condition.
         float sigma = 1.5f;
 
-        kernel(x, y) = cast<uint16_t>(exp(-(x*x + y*y)/(2*sigma*sigma)) / (float)(2*M_PI*sigma*sigma));
+        //        kernel(x, y) = cast<uint16_t>(exp(-(x*x + y*y)/(2*sigma*sigma)) / (float)(2*M_PI*sigma*sigma));
+      kernel(x,y) = select(x==0&&y==0, 11,
+                           x==0&&y==1, 12,
+                           x==0&&y==2, 13,
+                           x==1&&y==0, 14,
+                           x==1&&y==1, 15,
+                           x==1&&y==2, 16,
+                           x==2&&y==0, 17,
+                           x==2&&y==1, 18,
+                           x==2&&y==2, 19, 0);
 
         // define the algorithm
-        clamped = BoundaryConditions::repeat_edge(input);
+        clamped(x,y) = input(x,y);
+        //clamped = BoundaryConditions::repeat_edge(input);
         //conv1 = clamped;
         conv1(x, y) += clamped(x+win.x, y+win.y) * kernel(win.x, win.y);
 	//conv1(x, y) += clamped(x+win.x, y+win.y) * gaussian2d[win.x+1][win.y+1];
@@ -108,7 +118,7 @@ public:
         // level
         hw_output.compute_root();
         //hw_output.tile(x, y, xo, yo, xi, yi, 1920, 1080).reorder(xi, yi, xo, yo);
-        hw_output.tile(x, y, xo, yo, xi, yi, 256, 256).reorder(xi, yi, xo, yo);
+        hw_output.tile(x, y, xo, yo, xi, yi, 64, 64).reorder(xi, yi, xo, yo);
         //hw_output.unroll(xi, 2);
         hw_output.accelerate({clamped}, xi, xo, {});  // define the inputs and the output
         conv1.linebuffer();
@@ -127,7 +137,7 @@ public:
 	clamped.compute_root();
      	hw_output.compute_root();
 	conv1.linebuffer();
-	hw_output.tile(x, y, xo, yo, xi, yi, 256,256).reorder(xi,yi,xo,yo);
+	hw_output.tile(x, y, xo, yo, xi, yi, 64,64).reorder(xi,yi,xo,yo);
 	hw_output.accelerate({clamped}, xi, xo, {});
 
 

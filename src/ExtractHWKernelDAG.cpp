@@ -678,13 +678,13 @@ public:
         dag.compute_level = compute_level;
         dag.store_level = store_level;
         calculate_input_streams(dag);
-        /*
+
         debug(0) << "after building producer pointers:" << "\n";
         for (const auto &p : dag.kernels)
             debug(0) << p.second << "\n";
         for (const auto &p : dag.taps)
             debug(0) << p.second << "\n";
-        */
+
         return dag;
     }
 };

@@ -243,14 +243,6 @@ void Pipeline::compile_to_hls(const string &filename,
     m.compile(Outputs().hls_source(output_name(filename, m, ".cpp")));
 }
 
-void Pipeline::compile_to_rigel(const string &filename,
-				const vector<Argument> &args,
-				const string &fn_name,
-				const Target &target) {
-    Module m = compile_to_module(args, fn_name, target);
-    m.compile(Outputs().rigel_source(output_name(filename, m, ".cpp")));
-}
-
 void Pipeline::compile_to_coreir(const string &filename,
 				const vector<Argument> &args,
 				const string &fn_name,

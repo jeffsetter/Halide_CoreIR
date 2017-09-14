@@ -6,23 +6,19 @@
           "connections": [
             [
               "self.in.0",
-              "ult_152_147.in1"
-            ],
-            [
-              "self.in.0",
-              "ult_147_150.in0"
-            ],
-            [
-              "self.in.0",
-              "ule_148_147.in1"
+              "_147_pt.in"
             ],
             [
               "ult_152_147.out",
               "bitand_153_151.in0"
             ],
             [
+              "ult_152_147.in1",
+              "_147_pt.out"
+            ],
+            [
               "ult_152_147.in0",
-              "const10_.out"
+              "_152const10_.out"
             ],
             [
               "ult_147_150.out",
@@ -34,7 +30,11 @@
             ],
             [
               "ult_147_150.in1",
-              "const20_.out"
+              "_150const20_.out"
+            ],
+            [
+              "ult_147_150.in0",
+              "_147_pt.out"
             ],
             [
               "ule_148_147.out",
@@ -45,8 +45,12 @@
               "bitmux_157_157_149.in1"
             ],
             [
+              "ule_148_147.in1",
+              "_147_pt.out"
+            ],
+            [
               "ule_148_147.in0",
-              "const50_.out"
+              "_148const50_.out"
             ],
             [
               "self.out",
@@ -74,6 +78,43 @@
             ]
           ],
           "instances": {
+            "_147_pt": {
+              "genargs": {
+                "type": [
+                  "Array",
+                  16,
+                  "Bit"
+                ]
+              },
+              "genref": "coreir.passthrough"
+            },
+            "_148const50_": {
+              "configargs": {
+                "value": 50
+              },
+              "genargs": {
+                "width": 16
+              },
+              "genref": "coreir.const"
+            },
+            "_150const20_": {
+              "configargs": {
+                "value": 20
+              },
+              "genargs": {
+                "width": 16
+              },
+              "genref": "coreir.const"
+            },
+            "_152const10_": {
+              "configargs": {
+                "value": 10
+              },
+              "genargs": {
+                "width": 16
+              },
+              "genref": "coreir.const"
+            },
             "bitand_153_151": {
               "modref": "coreir.bitand"
             },
@@ -88,33 +129,6 @@
             },
             "bitxor_149_151": {
               "modref": "coreir.bitxor"
-            },
-            "const10_": {
-              "configargs": {
-                "value": 10
-              },
-              "genargs": {
-                "width": 16
-              },
-              "genref": "coreir.const"
-            },
-            "const20_": {
-              "configargs": {
-                "value": 20
-              },
-              "genargs": {
-                "width": 16
-              },
-              "genref": "coreir.const"
-            },
-            "const50_": {
-              "configargs": {
-                "value": 50
-              },
-              "genargs": {
-                "width": 16
-              },
-              "genref": "coreir.const"
             },
             "ule_148_147": {
               "genargs": {

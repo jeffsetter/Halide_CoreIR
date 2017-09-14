@@ -7,7 +7,6 @@
 #include "CodeGen_C.h"
 #include "CodeGen_Internal.h"
 #include "CodeGen_HLS_Testbench.h"
-#include "CodeGen_Rigel_Testbench.h"
 #include "CodeGen_CoreIR_Testbench.h"
 #include "CodeGen_Zynq_C.h"
 #include "Debug.h"
@@ -249,12 +248,6 @@ void Module::compile(const Outputs &output_files) const {
         debug(1) << "Module.compile(): hls_source_name " << output_files.hls_source_name << "\n";
         std::ofstream file(output_files.hls_source_name);
         Internal::CodeGen_HLS_Testbench cg(file);
-        cg.compile(*this);
-    }
-    if (!output_files.rigel_source_name.empty()) {
-        debug(1) << "Module.compile(): rigel_source_name " << output_files.rigel_source_name << "\n";
-        std::ofstream file(output_files.rigel_source_name);
-        Internal::CodeGen_Rigel_Testbench cg(file);
         cg.compile(*this);
     }
     if (!output_files.coreir_source_name.empty()) {
