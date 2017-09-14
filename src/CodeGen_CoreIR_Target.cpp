@@ -1292,6 +1292,10 @@ void CodeGen_CoreIR_Target::CodeGen_CoreIR_C::visit_binop(Type t, Expr a, Expr b
   string a_name = print_expr(a);
   string b_name = print_expr(b);
   string out_var = print_assignment(t, a_name + " " + op_sym + " " + b_name);
+  for (auto s : cache) {
+    cout << s.second << endl;
+  }
+  cout << out_var << " is the output for unit " << op_name << a_name << b_name << endl;
   // return if this variable is cached
   if (hw_wire_set[out_var]) { return; }
 
@@ -1301,7 +1305,7 @@ void CodeGen_CoreIR_Target::CodeGen_CoreIR_C::visit_binop(Type t, Expr a, Expr b
   if (a_wire != NULL && b_wire != NULL) {
     internal_assert(a.type().bits() == b.type().bits()) << "function " << op_name << " with " << a_name << " and " << b_name;
     uint inst_bitwidth = a.type().bits() == 1 ? 1 : bitwidth;
-    string binop_name = op_name + a_name + b_name;
+    string binop_name = op_name + a_name + b_name + out_var;
     CoreIR::Wireable* coreir_inst;
 
     // properly cast to generator or module
