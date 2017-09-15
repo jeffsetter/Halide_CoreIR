@@ -79,9 +79,9 @@ protected:
         void visit(const Store *op);
 
         // coreir operators
-        void visit_unaryop(Type t, Expr a, const char* op_sym, string op_name);
+        void visit_unaryop(Type t, Expr a, const char* op_sym, std::string op_name);
 	void visit(const Not *op);
-	void visit_binop(Type t, Expr a, Expr b, const char* op_sym, string op_name);
+	void visit_binop(Type t, Expr a, Expr b, const char* op_sym, std::string op_name);
 	void visit(const Mul *op);
 	void visit(const Div *op);
 	void visit(const Add *op);
@@ -97,7 +97,7 @@ protected:
         void visit(const Max *op);
         void visit(const Min *op);
 	void visit(const Cast *op);
-        void visit_ternop(Type t, Expr a, Expr b, Expr c, const char*  op_sym1, const char* op_sym2, string op_name);
+        void visit_ternop(Type t, Expr a, Expr b, Expr c, const char*  op_sym1, const char* op_sym2, std::string op_name);
         void visit(const Select *op);
 
         // for coreir generation
@@ -119,14 +119,14 @@ protected:
 
         // coreir methods to wire things together
         bool is_cnst(const Expr e);
-        bool is_input(string var_name);
-        bool is_output(string var_name);
-        bool is_defined(string var_name);
-        bool is_wire(string var_name);
+        bool is_input(std::string var_name);
+        bool is_output(std::string var_name);
+        bool is_defined(std::string var_name);
+        bool is_wire(std::string var_name);
         int id_cnst_value(const Expr e);
         CoreIR::Wireable* get_wire(std::string name, Expr e);
-        void add_wire(string new_name, string in_name, Expr in_expr);
-        void add_wire(string new_name, CoreIR::Wireable* in_wire);
+        void add_wire(std::string new_name, std::string in_name, Expr in_expr);
+        void add_wire(std::string new_name, CoreIR::Wireable* in_wire);
 
     };
 

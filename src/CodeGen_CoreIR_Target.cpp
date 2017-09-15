@@ -14,8 +14,7 @@
 #include "Simplify.h"
 
 #include "coreir.h"
-#include "coreir-lib/commonlib.h"
-#include "coreir-lib/cgralib.h"
+#include "coreir/libs/commonlib.h"
 
 namespace Halide {
 namespace Internal {
@@ -26,6 +25,7 @@ using std::string;
 using std::vector;
 using std::ostringstream;
 using std::ofstream;
+using std::cout;
 
 namespace {
 
@@ -93,12 +93,12 @@ CodeGen_CoreIR_Target::CodeGen_CoreIR_C::CodeGen_CoreIR_C(std::ostream &s, Outpu
     }
 
     // add all generators from cgralib
-    CoreIR::Namespace* cgralib = CoreIRLoadLibrary_cgralib(context);
-    std::vector<string> cgralib_gen_names = {};
-    for (auto gen_name : cgralib_gen_names) {
-      gens[gen_name] = cgralib->getGenerator(gen_name);
-      assert(gens[gen_name]);
-    }
+//     CoreIR::Namespace* cgralib = CoreIRLoadLibrary_cgralib(context);
+//     std::vector<string> cgralib_gen_names = {};
+//     for (auto gen_name : cgralib_gen_names) {
+//       gens[gen_name] = cgralib->getGenerator(gen_name);
+//       assert(gens[gen_name]);
+//     }
 }
 
 
@@ -837,7 +837,7 @@ void CodeGen_CoreIR_Target::CodeGen_CoreIR_C::visit(const Call *op) {
 
           CoreIR::Generator* gen_pt = static_cast<CoreIR::Generator*>(gens["passthrough"]);
           CoreIR::Wireable* pt = def->addInstance(pt_name, gen_pt, {{"type",context->argType(ptype)}});
-          stencil_mux_pairs.push_back(make_pair(stencil_wire, pt->sel("in")));
+          stencil_mux_pairs.push_back(std::make_pair(stencil_wire, pt->sel("in")));
 
           // for every dim in the stencil, keep track of correct index and create muxes
           for (size_t i = op->args.size(); i-- > 0 ;) { // count down from args-1 to 0
@@ -855,23 +855,23 @@ void CodeGen_CoreIR_Target::CodeGen_CoreIR_C::visit(const Call *op) {
               //cout << "type is " << wire_type->getKind() << " and has length " << static_cast<CoreIR::ArrayType*>(wire_type)->getLen() << endl;
 
               if (index < array_len) {
-                stream << "// using constant index " << to_string(index) << endl;
+                stream << "// using constant index " << std::to_string(index) << endl;
                 stencil_wire = stencil_wire->sel(index);
 
                 // keep track of corresponding stencil and mux inputs
                 for (auto sm_pair : stencil_mux_pairs) {
                   CoreIR::Wireable* stencil_i = sm_pair.first;
                   CoreIR::Wireable* mux_i = sm_pair.second;
-                  new_pairs.push_back(make_pair(stencil_i->sel(index), mux_i));
+                  new_pairs.push_back(std::make_pair(stencil_i->sel(index), mux_i));
                 }
                 stencil_mux_pairs = new_pairs;
 
               } else {
-                stream << "// couldn't find selectStr " << to_string(index) << endl;
+                stream << "// couldn't find selectStr " << std::to_string(index) << endl;
                 //cout << "couldn't find selectStr " << to_string(index) << endl;
                 
                 stencil_mux_pairs.clear();
-                stencil_mux_pairs.push_back(make_pair(orig_stencil_wire, pt->sel("in")));
+                stencil_mux_pairs.push_back(std::make_pair(orig_stencil_wire, pt->sel("in")));
                 break;
               }
 
@@ -887,8 +887,8 @@ void CodeGen_CoreIR_Target::CodeGen_CoreIR_C::visit(const Call *op) {
                 CoreIR::Wireable* stencil_i = stencil_mux_pairs[j].first;
                 CoreIR::Wireable* mux_i = stencil_mux_pairs[j].second;
 
-                string mux_name = unique_name(print_name(op->name) + to_string(i) + 
-                                              "_mux" + to_string(array_len) + "_" + to_string(j));
+                string mux_name = unique_name(print_name(op->name) + std::to_string(i) + 
+                                              "_mux" + std::to_string(array_len) + "_" + std::to_string(j));
 
                 CoreIR::Generator* gen_muxn = static_cast<CoreIR::Generator*>(gens["muxn"]);
                 CoreIR::Wireable* mux_inst = def->addInstance(mux_name, gen_muxn, 
@@ -903,7 +903,7 @@ void CodeGen_CoreIR_Target::CodeGen_CoreIR_C::visit(const Call *op) {
                 for (uint mux_i = 0; mux_i < array_len; ++mux_i) {
                   CoreIR::Wireable* stencil_new = stencil_i->sel(mux_i);
                   CoreIR::Wireable* mux_new = mux_inst->sel("in")->sel("data")->sel(mux_i);
-                  new_pairs.push_back(make_pair(stencil_new, mux_new));
+                  new_pairs.push_back(std::make_pair(stencil_new, mux_new));
                 } // for every mux input
               } // for every mux
               
@@ -1033,7 +1033,7 @@ void CodeGen_CoreIR_Target::CodeGen_CoreIR_C::visit(const Call *op) {
 
         // emits for a loop for each dimensions (larger dimension number, outer the loop)
         for (int i = num_of_demensions - 1; i >= 0; i--) {
-            string dim_name = "_dim_" + to_string(i);
+            string dim_name = "_dim_" + std::to_string(i);
             do_indent();
             // HLS C: for(int dim = 0; dim <= store_extent - stencil.size; dim += stencil.step)
             stream << "for (int " << dim_name <<" = 0; "
@@ -1081,7 +1081,7 @@ void CodeGen_CoreIR_Target::CodeGen_CoreIR_C::visit(const Call *op) {
             do_indent();
             stream << "if (";
             for (size_t j = 0; j < num_of_demensions; j++) {
-                string dim_name = "_dim_" + to_string(j);
+                string dim_name = "_dim_" + std::to_string(j);
                 stream << dim_name << " >= " << consumer_offsets[i][j] << " && "
                        << dim_name << " <= " << consumer_offsets[i][j] + consumer_extents[i][j] - stencil_sizes[j];
                 if (j != num_of_demensions - 1)
@@ -1171,7 +1171,7 @@ bool CodeGen_CoreIR_Target::CodeGen_CoreIR_C::is_output(string var_name) {
 CoreIR::Wireable* CodeGen_CoreIR_Target::CodeGen_CoreIR_C::get_wire(string name, Expr e) {
   if (is_cnst(e)) {
     int cnst_value = id_cnst_value(e);
-    string cnst_name = unique_name(name + "const" + to_string(cnst_value) + "_");
+    string cnst_name = unique_name(name + "const" + std::to_string(cnst_value) + "_");
     CoreIR::Wireable* cnst;
 
     // FIXME: set init value for bitconst
