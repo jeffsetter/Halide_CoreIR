@@ -1174,11 +1174,10 @@ CoreIR::Wireable* CodeGen_CoreIR_Target::CodeGen_CoreIR_C::get_wire(string name,
     string cnst_name = unique_name(name + "const" + std::to_string(cnst_value) + "_");
     CoreIR::Wireable* cnst;
 
-    // FIXME: set init value for bitconst
     uint const_bitwidth = get_const_bitwidth(e);
     if (const_bitwidth == 1) {
       CoreIR::Module* module = static_cast<CoreIR::Module*>(gens["bitconst"]);
-      cnst = def->addInstance(cnst_name, module);
+      cnst = def->addInstance(cnst_name, module, {{"value",context->argInt(cnst_value)}});
     } else {
       CoreIR::Generator* gen = static_cast<CoreIR::Generator*>(gens["const"]);
       cnst = def->addInstance(cnst_name,  gen, {{"width", context->argInt(bitwidth)}},
@@ -1292,10 +1291,7 @@ void CodeGen_CoreIR_Target::CodeGen_CoreIR_C::visit_binop(Type t, Expr a, Expr b
   string a_name = print_expr(a);
   string b_name = print_expr(b);
   string out_var = print_assignment(t, a_name + " " + op_sym + " " + b_name);
-  for (auto s : cache) {
-    cout << s.second << endl;
-  }
-  cout << out_var << " is the output for unit " << op_name << a_name << b_name << endl;
+  //cout << out_var << " is the output for unit " << op_name << a_name << b_name << endl;
   // return if this variable is cached
   if (hw_wire_set[out_var]) { return; }
 
