@@ -406,7 +406,7 @@ void CodeGen_CoreIR_Target::CodeGen_CoreIR_C::visit(const Provide *op) {
         stream << ") = " << id_value << ";\n";
 
         // FIXME: can we avoid clearing the cache?
-        //cache.clear();
+        cache.clear();
         
 	// generate coreir: add to wire_set
 	string in_name = id_value;
