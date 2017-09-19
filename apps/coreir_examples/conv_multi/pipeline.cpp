@@ -39,10 +39,14 @@ public:
       //                     x==2&&y==0, 17,
       //                     x==2&&y==1, 18,
       //                     x==2&&y==2, 19, 0);
-      kernel(x,y) = select(x==0, select(y==0, 11, y==1, 12, y==2, 13, 0),
-                           x==1, select(y==0, 14, y==1, 15, y==2, 16, 0),
-                           x==2, select(y==0, 17, y==1, 18, y==2, 19, 0), 0);
+//      kernel(x,y) = select(x==0, select(y==0, 11, y==1, 12, y==2, 13, 0),
+//                           x==1, select(y==0, 14, y==1, 15, y==2, 16, 0),
+//                           x==2, select(y==0, 17, y==1, 18, y==2, 19, 0), 0);
 
+      kernel(x,y) = 0;
+      kernel(0,0) = 11;      kernel(0,1) = 12;      kernel(0,2) = 13;
+      kernel(1,0) = 14;      kernel(1,1) = 15;      kernel(1,2) = 16;
+      kernel(2,0) = 17;      kernel(2,1) = 18;      kernel(2,2) = 19;
 
         // define the algorithm
         clamped(x,y) = input(x,y);
@@ -50,8 +54,8 @@ public:
         conv1(x, y) += clamped(x+win.x, y+win.y) * kernel(win.x, win.y);
 	//conv1(x, y) += clamped(x+win.x, y+win.y) * constants[win.x][win.y];
 
-        // unroll the reduction only in x
-	conv1.update(0).unroll(win.x);
+        // unroll the reduction only in y
+	conv1.update(0).unroll(win.y);
 
 	hw_output(x,y) = cast<uint8_t>(conv1(x,y));
         output(x, y) = hw_output(x, y);

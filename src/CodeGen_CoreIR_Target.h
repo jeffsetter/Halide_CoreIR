@@ -28,15 +28,15 @@ struct CoreIR_Argument {
 
 struct CoreIR_Inst_Args {
   std::string name;
-  CoreIR::Generator* gen;
+  std::string gen;
   CoreIR::Args args;
   CoreIR::Args genargs;
   std::string wirename;
   std::string selname;
 
   CoreIR_Inst_Args(std::string name, std::string wirename, std::string selname,
-    CoreIR::Generator* gen, CoreIR::Args args, CoreIR::Args genargs) :
- name(name), gen(gen), args(args), genargs(genargs), wirename(wirename), selname(selname) {}
+                   std::string gen, CoreIR::Args args, CoreIR::Args genargs) :
+  name(name), gen(gen), args(args), genargs(genargs), wirename(wirename), selname(selname) {}
 
 };
 
@@ -113,7 +113,7 @@ protected:
         // keep track of coreir dag
         int input_idx = 0; // tracks how many inputs have been defined so far
         std::map<std::string,CoreIR::Wireable*> hw_wire_set;
-        std::map<std::string,CoreIR_Inst_Args*> def_hw_set;
+        std::map<std::string,std::shared_ptr<CoreIR_Inst_Args>> def_hw_set;
         std::unordered_set<std::string> hw_input_set;
         std::unordered_set<std::string> hw_output_set;
 
@@ -126,7 +126,7 @@ protected:
         int id_cnst_value(const Expr e);
         CoreIR::Wireable* get_wire(std::string name, Expr e);
         void add_wire(std::string new_name, std::string in_name, Expr in_expr);
-        void add_wire(std::string new_name, CoreIR::Wireable* in_wire);
+        //void add_wire(std::string new_name, CoreIR::Wireable* in_wire);
 
     };
 
