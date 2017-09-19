@@ -43,7 +43,7 @@ int main(int argc, char **argv) {
     }
 
     if (success) {
-        printf("Successed!\n");
+        printf("Succeeded!\n");
         return 0;
     } else {
         printf("Failed!\n");

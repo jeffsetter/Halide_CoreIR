@@ -91,14 +91,6 @@ CodeGen_CoreIR_Target::CodeGen_CoreIR_C::CodeGen_CoreIR_C(std::ostream &s, Outpu
       gens[gen_name] = commonlib->getGenerator(gen_name);
       assert(gens[gen_name]);
     }
-
-    // add all generators from cgralib
-//     CoreIR::Namespace* cgralib = CoreIRLoadLibrary_cgralib(context);
-//     std::vector<string> cgralib_gen_names = {};
-//     for (auto gen_name : cgralib_gen_names) {
-//       gens[gen_name] = cgralib->getGenerator(gen_name);
-//       assert(gens[gen_name]);
-//     }
 }
 
 
@@ -450,8 +442,6 @@ void CodeGen_CoreIR_Target::CodeGen_CoreIR_C::visit(const For *op) {
     open_scope();
     // add a 'PIPELINE' pragma if it is an innermost loop
     if (!contain_for_loop(op->body)) {
-        //stream << "#pragma CoreIR DEPENDENCE array inter false\n"
-        //       << "#pragma CoreIR LOOP_FLATTEN off\n";
         stream << "#pragma CoreIR PIPELINE II=1\n";
     }
 
@@ -462,22 +452,14 @@ void CodeGen_CoreIR_Target::CodeGen_CoreIR_C::visit(const For *op) {
     int max_value = min_value + id_cnst_value(op->extent);
     int inc_value = 1;
     string counter_name = "count_" + print_name(op->name);
-    /*
-    CoreIR::Wireable* counter_inst = def->addInstance(counter_name, gens["counter"], 
-                                                      {{"width",context->argInt(bitwidth)},
-                                                          {"min",context->argInt(min_value)},
-                                                            {"max",context->argInt(max_value)},
-                                                              {"inc",context->argInt(inc_value)}}
-                                                      );
-    hw_wire_set[print_name(op->name)] = counter_inst->sel("out");
-    */
+
     string wirename = print_name(op->name);
     string selname = "out";
     CoreIR::Args args = {{"width",context->argInt(bitwidth)},
                          {"min",context->argInt(min_value)},
                          {"max",context->argInt(max_value)},
                          {"inc",context->argInt(inc_value)}};
-    //CoreIR::Generator* gen_counter = static_cast<CoreIR::Generator*>(gens["counter"]);
+
     CoreIR_Inst_Args counter_args(counter_name, wirename, selname, "commonlib.counter", args, CoreIR::Args());
 
     def_hw_set[print_name(op->name)] = std::make_shared<CoreIR_Inst_Args>(counter_args);
@@ -826,17 +808,16 @@ void CodeGen_CoreIR_Target::CodeGen_CoreIR_C::visit(const Call *op) {
 	rhs << "[stencil]";
 
         string out_var = print_assignment(op->type, rhs.str());
+        if (hw_wire_set[out_var]) { return; }
 
 	// generate coreir
         if (is_wire(stencil_print_name) || is_defined(stencil_print_name)) {
-	  cout << "// added to set: " << out_var << " using stencil+idx\n";
-	  //hw_wire_set[out_var] = hw_wire_set[stencil_print_name];
+	  //cout << "// added to set: " << out_var << " using stencil+idx\n";
           add_wire(out_var, stencil_print_name, op);
 	  stream << "// added to set: " << out_var << " using stencil+idx\n";
-          cout << "done" << endl;
 	} else if (is_wire(print_name(op->name)) || is_defined(print_name(op->name))) {
           stream << "// trying to hook up " << print_name(op->name) << endl;
-          cout << "trying to hook up " << print_name(op->name) << endl;
+          //cout << "trying to hook up " << print_name(op->name) << endl;
 
 	  //CoreIR::Wireable* stencil_wire = hw_wire_set[print_name(op->name)]; // one example wire
           CoreIR::Wireable* stencil_wire = get_wire(print_name(op->name), op);
@@ -860,7 +841,7 @@ void CodeGen_CoreIR_Target::CodeGen_CoreIR_C::visit(const Call *op) {
 
             if (is_cnst(op->args[i])) {
               // constant index
-              cout << "  constant index" << endl;
+              //cout << "  constant index" << endl;
 
               uint index = stoi(args_indices[i]);
               //cout << "type is " << wire_type->getKind() << " and has length " << static_cast<CoreIR::ArrayType*>(wire_type)->getLen() << endl;
@@ -890,7 +871,7 @@ void CodeGen_CoreIR_Target::CodeGen_CoreIR_C::visit(const Call *op) {
               // non-constant, variable index
               // create muxes 
               uint num_muxes = stencil_mux_pairs.size();
-              cout << "  variable index creating " << num_muxes << " mux(es)" << endl;
+              //cout << "  variable index creating " << num_muxes << " mux(es)" << endl;
               stream << "// variable index creating " << num_muxes << " mux(es)" << endl;
 
               // create mux for every input from previous layer
@@ -935,7 +916,7 @@ void CodeGen_CoreIR_Target::CodeGen_CoreIR_C::visit(const Call *op) {
           }
 
 	  stream << "// added to wire_set: " << out_var << " using stencil\n";
-	  cout << "// added to wire_set: " << out_var << " using stencil\n";
+	  //cout << "// added to wire_set: " << out_var << " using stencil\n";
 	} else {
           stream << "// " << stencil_print_name << " not found so it's not going to work" << endl;
           cout << "// " << stencil_print_name << " not found so it's not going to work" << endl;
@@ -1164,44 +1145,28 @@ bool CodeGen_CoreIR_Target::CodeGen_CoreIR_C::is_defined(string var_name) {
 }
 
 bool CodeGen_CoreIR_Target::CodeGen_CoreIR_C::is_output(string var_name) {
-  //  bool output_name_matches = (var_name.compare(hw_output_name) == 0);
   bool output_name_matches = hw_output_set.count(var_name) > 0;
   return output_name_matches;
 }
 
-
+  // This function is used when the output is going to be connected to a useable wire
 CoreIR::Wireable* CodeGen_CoreIR_Target::CodeGen_CoreIR_C::get_wire(string name, Expr e) {
   if (is_cnst(e)) {
     int cnst_value = id_cnst_value(e);
     string cnst_name = unique_name(name + "const" + std::to_string(cnst_value) + "_");
     CoreIR::Wireable* cnst;
-    //string gen_const;
-    //CoreIR::Args args, genargs;
 
     uint const_bitwidth = get_const_bitwidth(e);
     if (const_bitwidth == 1) {
-      //gen_const = "coreir.bitconst";
-      //      args = {{"value",context->argInt(cnst_value)}};
-      //genargs = CoreIR::Args();
-
       CoreIR::Module* module = static_cast<CoreIR::Module*>(gens["bitconst"]);
       cnst = def->addInstance(cnst_name, module, {{"value",context->argInt(cnst_value)}});
     } else {
-      // gen_const = "coreir.const";
-      // args = {{"width", context->argInt(bitwidth)}};
-      // genargs = {{"value",context->argInt(cnst_value)}};
-
       CoreIR::Generator* gen = static_cast<CoreIR::Generator*>(gens["const"]);
       cnst = def->addInstance(cnst_name,  gen, {{"width", context->argInt(bitwidth)}},
                               {{"value",context->argInt(cnst_value)}});
     }
 
-    
-    //CoreIR_Inst_Args const_args(cnst_name, name, "out", gen_const, args, genargs);
-    //def_hw_set[name] = std::make_shared<CoreIR_Inst_Args>(const_args);
-
     stream << "// created cnst: " << cnst_name << " with name " << name << "\n";
-    cout << "// created cnst: " << cnst_name << " with name " << name << "\n";
     return cnst->sel("out");
 
   } else if (is_input(name)) {
@@ -1213,11 +1178,11 @@ CoreIR::Wireable* CodeGen_CoreIR_Target::CodeGen_CoreIR_C::get_wire(string name,
     return input_wire;
 
   } else if (is_wire(name)) {
-    cout << "creating a wire named " << name << endl;
+    //cout << "creating a wire named " << name << endl;
     CoreIR::Wireable* wire = hw_wire_set[name];
     if (wire==NULL) { return self->sel("in"); }
     internal_assert(wire);
-    stream << "// using wire " << name << endl;
+    //stream << "// using wire " << name << endl;
     return wire;
 
   } else if (is_defined(name)) {
@@ -1247,65 +1212,26 @@ CoreIR::Wireable* CodeGen_CoreIR_Target::CodeGen_CoreIR_C::get_wire(string name,
 }
 
 void CodeGen_CoreIR_Target::CodeGen_CoreIR_C::add_wire(string new_name, string in_name, Expr in_expr) {
-  //cout << "let's add a wire" << endl;
+  // if this is a definition, then just copy the pointer
   if (is_defined(in_name)) { 
     // wire is only defined but not created yet
     def_hw_set[new_name] = def_hw_set[in_name];
     stream << "// added/modified in def_hw_set: " << new_name << " = " << in_name << "\n";
-    cout << "// added/modified in def_hw_set: " << new_name << " = " << in_name << "\n";
+    //cout << "// added/modified in def_hw_set: " << new_name << " = " << in_name << "\n";
     return;
-  } else if (is_cnst(in_expr)) {
-    // add hardware definition, but don't create it yet
-    int cnst_value = id_cnst_value(in_expr);
-    string cnst_name = in_name + "const" + std::to_string(cnst_value) + "_";
-    string gen_const;
-    CoreIR::Args args, genargs;
-
-    uint const_bitwidth = get_const_bitwidth(in_expr);
-    if (const_bitwidth == 1) {
-      gen_const = "coreir.bitconst";
-      args = {{"value",context->argInt(cnst_value)}};
-      genargs = CoreIR::Args();
-    } else {
-      gen_const = "coreir.const";
-      args = {{"width", context->argInt(bitwidth)}};
-      genargs = {{"value",context->argInt(cnst_value)}};
-    }
-    
-    CoreIR_Inst_Args const_args(cnst_name, in_name, "out", gen_const, args, genargs);
-    def_hw_set[new_name] = std::make_shared<CoreIR_Inst_Args>(const_args);
-
-    stream << "// defined cnst: " << cnst_name << " with name " << new_name << "\n";
-    cout << "// defined cnst: " << cnst_name << " with name " << new_name << "\n";
   }
 
+  // the wire is defined, so store the pointer with its new name
   CoreIR::Wireable* in_wire = get_wire(in_name, in_expr);
   if (in_wire!=NULL && is_output(new_name)) {
     stream << "// " << new_name << " added as an output from " << in_name << "\n";
     def->connect(in_wire, self->sel("out"));
 
-  } else if (in_wire==NULL) {
-    //&& is_defined(in_name)) {
-    stream << "wire is null, but is " << in_name << " defined?" << endl;
-    //    cout << "wire is null, but is " << in_name << " defined?" << endl;
-
-    if (is_defined(in_name)) { stream << "// yay it's working!" << endl; }
-    else {
-      stream << "// " << in_name << " not found though " <<endl;
-      cout << "// " << in_name << " not found though " <<endl;
-      return;
-    }
-    
-    // wire is only defined but not created yet
-    def_hw_set[new_name] = def_hw_set[in_name];
-    stream << "// added/modified in def_hw_set: " << new_name << " = " << in_name << "\n";
-    cout << "// added/modified in def_hw_set: " << new_name << " = " << in_name << "\n";
-
-
   } else if (in_wire) {
     //cout << "added wire" << endl;
     hw_wire_set[new_name] = in_wire;
     stream << "// added/modified in wire_set: " << new_name << " = " << in_name << "\n";
+
   } else {
     cout << "not found" << endl;
     stream << "// " << in_name << " not found (perhaps it's a constant?)\n";
@@ -1463,16 +1389,16 @@ void CodeGen_CoreIR_Target::CodeGen_CoreIR_C::visit(const Div *op) {
     }
 }
 void CodeGen_CoreIR_Target::CodeGen_CoreIR_C::visit(const And *op) {
-  // should always be used with booleans
-  if (op->type.bits() == 1) {
+  if (op->a.type().bits() == 1) {
+    internal_assert(op->b.type().bits() == 1);
     visit_binop(op->type, op->a, op->b, "&&", "bitand");
   } else {
     visit_binop(op->type, op->a, op->b, "&&", "and");
   }
 }
 void CodeGen_CoreIR_Target::CodeGen_CoreIR_C::visit(const Or *op) {
-  // should always be used with booleans
-  if (op->type.bits() == 1) {
+  if (op->a.type().bits() == 1) {
+    internal_assert(op->b.type().bits() == 1);
     visit_binop(op->type, op->a, op->b, "||", "bitor");
   } else {
     visit_binop(op->type, op->a, op->b, "||", "or");
@@ -1531,9 +1457,9 @@ void CodeGen_CoreIR_Target::CodeGen_CoreIR_C::visit(const Min *op) {
 }
 void CodeGen_CoreIR_Target::CodeGen_CoreIR_C::visit(const Not *op) {
   // operator must have a one-bit/bool input
+  assert(op->a.type().bits() == 1);
   visit_unaryop(op->type, op->a, "!", "bitnot");
 }
-  // FIXME: create signed or unsigned ops based on inputs
 
 void CodeGen_CoreIR_Target::CodeGen_CoreIR_C::visit(const Select *op) {
   if (op->type.bits() == 1) {
