@@ -40,6 +40,9 @@ struct CoreIR_Inst_Args {
 
 };
 
+//typedef std::pair<const Variable*,int> VarValue;
+typedef std::map<std::string,int> VarValues;
+
 /** This class emits Xilinx Vivado HLS compatible C++ code.
  */
 class CodeGen_CoreIR_Target {
@@ -113,7 +116,7 @@ protected:
         // keep track of coreir dag
         int input_idx = 0; // tracks how many inputs have been defined so far
         std::map<std::string,CoreIR::Wireable*> hw_wire_set;
-        std::map<std::string,std::shared_ptr<CoreIR_Inst_Args>> def_hw_set;
+        std::map<std::string,std::shared_ptr<CoreIR_Inst_Args>> hw_def_set;
         std::unordered_set<std::string> hw_input_set;
         std::unordered_set<std::string> hw_output_set;
 
@@ -126,8 +129,10 @@ protected:
         int id_cnst_value(const Expr e);
         CoreIR::Wireable* get_wire(std::string name, Expr e);
         void add_wire(std::string new_name, std::string in_name, Expr in_expr);
-        //void add_wire(std::string new_name, CoreIR::Wireable* in_wire);
 
+        // analysis functions of Halide IR
+        std::vector<const Variable*> find_dep_vars(Expr e);
+        std::vector<int> eval_expr_with_vars(Expr e, std::vector<VarValues> pts);
     };
 
     /** A name for the CoreIR target */

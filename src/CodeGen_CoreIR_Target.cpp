@@ -405,7 +405,7 @@ void CodeGen_CoreIR_Target::CodeGen_CoreIR_C::visit(const Provide *op) {
         }
         stream << ") = " << id_value << ";\n";
 
-        // FIXME: can we avoid clearing the cache?
+        // FIXME: can we avoid clearing the cache? just if the end matches?
         cache.clear();
         
 	// generate coreir: add to wire_set
@@ -462,7 +462,7 @@ void CodeGen_CoreIR_Target::CodeGen_CoreIR_C::visit(const For *op) {
 
     CoreIR_Inst_Args counter_args(counter_name, wirename, selname, "commonlib.counter", args, CoreIR::Args());
 
-    def_hw_set[print_name(op->name)] = std::make_shared<CoreIR_Inst_Args>(counter_args);
+    hw_def_set[print_name(op->name)] = std::make_shared<CoreIR_Inst_Args>(counter_args);
     stream << "// counter defined with name " << print_name(op->name) << endl;
 
     op->body.accept(this);
@@ -528,12 +528,12 @@ void CodeGen_CoreIR_Target::CodeGen_CoreIR_C::visit(const Allocate *op) {
     }
 
     // rename allocation to avoid name conflict due to unrolling
-    string alloc_name = print_name(op->name);// + unique_name('a');
-
+    string alloc_name = print_name(op->name + unique_name('a'));
+    /*
     if (allocations.contains(alloc_name)) {
       return;
     } 
-    stream << "// couldn't find allocation " << alloc_name << endl;
+    stream << "// couldn't find allocation " << alloc_name << endl;*/
     Stmt new_body = RenameAllocation(op->name, alloc_name).mutate(op->body);
 
     Allocation alloc;
@@ -631,8 +631,8 @@ void CodeGen_CoreIR_Target::CodeGen_CoreIR_C::visit(const Call *op) {
         add_wire(in_var, in_var, op->args[0]);
 
     } else if (op->is_intrinsic(Call::address_of)) {
-      cout   << "ignoring address_of" << endl;
-      stream << "ignoring address_of" << endl;
+      user_warning << "ignoring address_of\n";
+      stream       << "ignoring address_of" << endl;
 
     } else if (op->name == "linebuffer") {
         //IR: linebuffer(buffered.stencil_update.stream, buffered.stencil.stream, extent_0[, extent_1, ...])
@@ -808,13 +808,14 @@ void CodeGen_CoreIR_Target::CodeGen_CoreIR_C::visit(const Call *op) {
 	rhs << "[stencil]";
 
         string out_var = print_assignment(op->type, rhs.str());
-        if (hw_wire_set[out_var]) { return; }
+        if (is_wire(out_var)) { return; }
 
 	// generate coreir
         if (is_wire(stencil_print_name) || is_defined(stencil_print_name)) {
 	  //cout << "// added to set: " << out_var << " using stencil+idx\n";
           add_wire(out_var, stencil_print_name, op);
 	  stream << "// added to set: " << out_var << " using stencil+idx\n";
+
 	} else if (is_wire(print_name(op->name)) || is_defined(print_name(op->name))) {
           stream << "// trying to hook up " << print_name(op->name) << endl;
           //cout << "trying to hook up " << print_name(op->name) << endl;
@@ -918,8 +919,8 @@ void CodeGen_CoreIR_Target::CodeGen_CoreIR_C::visit(const Call *op) {
 	  stream << "// added to wire_set: " << out_var << " using stencil\n";
 	  //cout << "// added to wire_set: " << out_var << " using stencil\n";
 	} else {
-          stream << "// " << stencil_print_name << " not found so it's not going to work" << endl;
-          cout << "// " << stencil_print_name << " not found so it's not going to work" << endl;
+          stream       << "// " << stencil_print_name << " not found so it's not going to work" << endl;
+          user_warning << "// " << stencil_print_name << " not found so it's not going to work\n";
 	}
 
         
@@ -1096,31 +1097,30 @@ bool CodeGen_CoreIR_Target::CodeGen_CoreIR_C::is_cnst(const Expr e) {
 }
 
 int CodeGen_CoreIR_Target::CodeGen_CoreIR_C::id_cnst_value(const Expr e) {
-  const IntImm* e_int = e.as<IntImm>();
-  const UIntImm* e_uint = e.as<UIntImm>();
-  if (e_int) {
+  if (const IntImm* e_int = e.as<IntImm>()) {
     return e_int->value;
-  } else if (e_uint) {
+
+  } else if (const UIntImm* e_uint = e.as<UIntImm>()) {
     return e_uint->value;
+
   } else {
-    cout << "invalid constant expr" << endl;
+    internal_error << "invalid constant expr\n";
     return -1;
   }
 }
 
-  int get_const_bitwidth(const Expr e) {
-  const IntImm* e_int = e.as<IntImm>();
-  const UIntImm* e_uint = e.as<UIntImm>();
-  if (e_int) {
+int get_const_bitwidth(const Expr e) {
+  if (const IntImm* e_int = e.as<IntImm>()) {
     return e_int->type.bits();
-  } else if (e_uint) {
+
+  } else if (const UIntImm* e_uint = e.as<UIntImm>()) {
     return e_uint->type.bits();
+
   } else {
-    cout << "invalid constant expr" << endl;
+    internal_error << "invalid constant expr\n";
     return -1;
   }
-
-  }
+}
 
 bool CodeGen_CoreIR_Target::CodeGen_CoreIR_C::is_wire(string var_name) {
   bool wire_exists = hw_wire_set.count(var_name) > 0;
@@ -1133,8 +1133,8 @@ bool CodeGen_CoreIR_Target::CodeGen_CoreIR_C::is_input(string var_name) {
 }
 
 bool CodeGen_CoreIR_Target::CodeGen_CoreIR_C::is_defined(string var_name) {
-  bool hardware_defined = def_hw_set.count(var_name) > 0;
-  for (auto ele : def_hw_set) {
+  bool hardware_defined = hw_def_set.count(var_name) > 0;
+  for (auto ele : hw_def_set) {
     assert(ele.second);
     //    cout << ele.first << ", ";
   }
@@ -1179,27 +1179,29 @@ CoreIR::Wireable* CodeGen_CoreIR_Target::CodeGen_CoreIR_C::get_wire(string name,
 
   } else if (is_wire(name)) {
     //cout << "creating a wire named " << name << endl;
+
     CoreIR::Wireable* wire = hw_wire_set[name];
-    if (wire==NULL) { return self->sel("in"); }
-    internal_assert(wire);
-    //stream << "// using wire " << name << endl;
+    if (wire==NULL) { 
+      user_warning << "wire was not defined: " << name << "\n";
+      stream       << "// wire was not defined: " << name << endl;
+      return self->sel("in"); 
+    }
+
     return wire;
 
   } else if (is_defined(name)) {
     // hardware element defined, but not added yet
-    cout << "trying to make element..." <<endl;
-    std::shared_ptr<CoreIR_Inst_Args> inst_args = def_hw_set[name];
-    cout << "found " << name << endl;
+    std::shared_ptr<CoreIR_Inst_Args> inst_args = hw_def_set[name];
     assert(inst_args);
+    stream << "// creating element called: " << name << endl;
     //cout << "named " << inst_args->gen <<endl;
     CoreIR::Wireable* inst = def->addInstance(unique_name(inst_args->name), inst_args->gen, inst_args->args, inst_args->genargs);
     hw_wire_set[name] = inst->sel(inst_args->selname);
-    def_hw_set.erase(name);
-    cout << "done creating ele" <<endl;
+    //hw_def_set.erase(name);
     return inst->sel(inst_args->selname);
 
   } else {
-    cout << "ERROR- invalid wire: " << name << endl; 
+    user_warning << "ERROR- invalid wire: " << name << "\n"; 
     stream << "// invalid wire: couldn't find " << name
            << "\n// hw_wire_set contains: ";
     for (auto x : hw_wire_set) {
@@ -1213,11 +1215,40 @@ CoreIR::Wireable* CodeGen_CoreIR_Target::CodeGen_CoreIR_C::get_wire(string name,
 
 void CodeGen_CoreIR_Target::CodeGen_CoreIR_C::add_wire(string new_name, string in_name, Expr in_expr) {
   // if this is a definition, then just copy the pointer
-  if (is_defined(in_name)) { 
+  if (is_defined(in_name) && !is_wire(in_name)) { 
     // wire is only defined but not created yet
-    def_hw_set[new_name] = def_hw_set[in_name];
-    stream << "// added/modified in def_hw_set: " << new_name << " = " << in_name << "\n";
-    //cout << "// added/modified in def_hw_set: " << new_name << " = " << in_name << "\n";
+
+    hw_def_set[new_name] = hw_def_set[in_name];
+    hw_def_set.erase(in_name);
+
+    assert(hw_def_set[new_name]);
+    stream << "// added/modified in hw_def_set: " << new_name << " = " << in_name << "\n";
+    stream << "//   for a module called: " << hw_def_set[new_name]->name << endl;
+    //cout << "// added/modified in hw_def_set: " << new_name << " = " << in_name << "\n";
+    return;
+  } else if (is_cnst(in_expr)) {
+    // add hardware definition, but don't create it yet
+    int cnst_value = id_cnst_value(in_expr);
+    string cnst_name = in_name + "const" + std::to_string(cnst_value) + "_";
+    string gen_const;
+    CoreIR::Args args, genargs;
+ 
+    uint const_bitwidth = get_const_bitwidth(in_expr);
+    if (const_bitwidth == 1) {
+      gen_const = "coreir.bitconst";
+      args = {{"value",context->argInt(cnst_value)}};
+      genargs = CoreIR::Args();
+    } else {
+      gen_const = "coreir.const";
+      args = {{"width", context->argInt(bitwidth)}};
+      genargs = {{"value",context->argInt(cnst_value)}};
+    }
+  
+    CoreIR_Inst_Args const_args(cnst_name, in_name, "out", gen_const, args, genargs);
+    hw_def_set[new_name] = std::make_shared<CoreIR_Inst_Args>(const_args);
+ 
+    stream << "// defined cnst: " << cnst_name << " with name " << new_name << "\n";
+    //cout << "// defined cnst: " << cnst_name << " with name " << new_name << "\n";
     return;
   }
 
@@ -1233,7 +1264,7 @@ void CodeGen_CoreIR_Target::CodeGen_CoreIR_C::add_wire(string new_name, string i
     stream << "// added/modified in wire_set: " << new_name << " = " << in_name << "\n";
 
   } else {
-    cout << "not found" << endl;
+    //cout << "not found" << endl;
     stream << "// " << in_name << " not found (perhaps it's a constant?)\n";
   }
 }
@@ -1481,7 +1512,6 @@ void CodeGen_CoreIR_Target::CodeGen_CoreIR_C::visit(const Cast *op) {
 }
 
 void CodeGen_CoreIR_Target::CodeGen_CoreIR_C::visit(const Load *op) {
-  
     Type t = op->type;
     bool type_cast_needed =
         !allocations.contains(op->name) ||
@@ -1508,8 +1538,101 @@ void CodeGen_CoreIR_Target::CodeGen_CoreIR_C::visit(const Load *op) {
     // generate coreir
     // FIXME: ugly way to create array of wireables
 
-    string in_var = name + "_" + id_index;
-    add_wire(out_var, in_var, Expr());
+    //const Variable* index_var = op->index.as<Variable>();
+    if (is_cnst(op->index)) {
+      string in_var = name + "_" + id_index;
+      add_wire(out_var, in_var, Expr());      
+
+    } else { //if (index_var) {
+      /*
+      stream << "// trying to find load index named " << id_index << endl;
+      stream << "// hw_def_set contains";
+      for (auto w: hw_def_set) {
+        stream << w.first << ", ";
+      }
+      stream << endl;
+      stream << "// hw_wire_set contains";
+      for (auto w: hw_wire_set) {
+        stream << w.first << ", ";
+      }
+      stream << endl;
+      */
+      std::vector<const Variable*> dep_vars = find_dep_vars(op->index);
+      stream << "// vars for " << name << ": ";
+      cout << "// vars for " << name << ": ";
+      for (auto v : dep_vars) {
+        stream << v->name << ", ";
+        cout << v->name << ", ";
+      }
+      stream << endl;
+      cout << endl;
+
+      std::vector<VarValues> pts;
+      for (const Variable* v : dep_vars) {
+        string id_var = print_name(v->name);
+        internal_assert(is_defined(id_var)) << " didn't work for " << id_var << "\n";
+
+        std::shared_ptr<CoreIR_Inst_Args> counter_args = hw_def_set[id_var];
+        uint counter_max = counter_args->args.at("max")->get<CoreIR::ArgInt>();
+        uint counter_min = counter_args->args.at("min")->get<CoreIR::ArgInt>();
+        uint counter_inc = counter_args->args.at("inc")->get<CoreIR::ArgInt>();
+        internal_assert(counter_min == 0);
+        internal_assert(counter_inc == 1);
+
+        stream << "// found counter named " << id_var << " with max " << counter_max << endl;
+        
+        std::vector<VarValues> old_pts = pts;
+        pts.clear();
+        if (old_pts.empty()) {
+          // add all points from counter
+          for (uint count=0; count<counter_max; ++count) {
+            VarValues vvv;
+            vvv[id_var] = count;
+            stream << "//     pushed var,count: " << id_var << "," << count << endl;
+            pts.push_back(vvv);
+          }
+
+          std::vector<int> indices = eval_expr_with_vars(op->index, pts);
+
+          stream << "// found " << indices.size() << " indices for pts size " << pts.size()
+                 <<endl << "// ";
+          for (auto idx : indices) {
+            stream << idx << ", ";
+          }
+          stream << endl;
+
+          uint mux_size = indices.size();
+          string mux_name = unique_name(name + "_mux" + std::to_string(mux_size));
+
+          CoreIR::Generator* gen_muxn = static_cast<CoreIR::Generator*>(gens["muxn"]);
+          CoreIR::Wireable* mux_inst = def->addInstance(mux_name, gen_muxn, 
+                                                        {{"width",context->argInt(bitwidth)},{"N",context->argInt(mux_size)}});
+
+          def->connect(mux_inst->sel("in")->sel("sel"), get_wire(id_var, Expr()));
+          for (uint i=0; i<mux_size; ++i) {
+            CoreIR::Wireable* wire_in = get_wire(name + "_" + std::to_string(indices[i]), Expr());
+            internal_assert(wire_in) << "Allocation " << name << " was not saved yet for index " << indices[i] << "\n";
+            def->connect(wire_in, mux_inst->sel("in")->sel("data")->sel(i));
+          }
+          hw_wire_set[out_var] = mux_inst->sel("out");
+
+
+        } else {
+          for (uint count=0; count<counter_max; ++count) {
+            //FIXME: implement this
+            internal_error << "Multiple variable indexing into loads isn't implemented yet!\n";
+          }
+        }
+      }
+
+
+
+      //hw_wire_set[out_var] = self->sel("in");
+
+//    } else {
+//      cout << "we cannot index " << name << " with an expr yet!" << endl;
+//      stream << "// we cannot index " << name << " with an expr yet!" << endl;
+    } 
 }
 
 void CodeGen_CoreIR_Target::CodeGen_CoreIR_C::visit(const Store *op) {
@@ -1548,6 +1671,134 @@ void CodeGen_CoreIR_Target::CodeGen_CoreIR_C::visit(const Store *op) {
 
 }
 
+// analysis passes structured in a similar fashion to those in Simplify.cpp const_int_bounds( )
+std::vector<const Variable*> CodeGen_CoreIR_Target::CodeGen_CoreIR_C::find_dep_vars(Expr e) {
+  std::vector<const Variable*> vars;
+  
+  if (is_const(e)) {
+    // no variable to add
+  } else if (const Variable *v = e.as<Variable>()) {
+    vars.push_back(v);
+  } else if (const Max* max = e.as<Max>()) {
+    auto vec_a = find_dep_vars(max->a);
+    auto vec_b = find_dep_vars(max->b);
+    vars.insert( vars.end(), vec_a.begin(), vec_a.end() );
+    vars.insert( vars.end(), vec_b.begin(), vec_b.end() );
+  } else if (const Min* min = e.as<Min>()) {
+    auto vec_a = find_dep_vars(min->a);
+    auto vec_b = find_dep_vars(min->b);
+    vars.insert( vars.end(), vec_a.begin(), vec_a.end() );
+    vars.insert( vars.end(), vec_b.begin(), vec_b.end() );
+  } else if (const Select* sel = e.as<Select>()) {
+    auto vec_true = find_dep_vars(sel->true_value);
+    auto vec_fals = find_dep_vars(sel->false_value);
+    auto vec_cond = find_dep_vars(sel->condition);
+    vars.insert( vars.end(), vec_true.begin(), vec_true.end() );
+    vars.insert( vars.end(), vec_fals.begin(), vec_fals.end() );
+    vars.insert( vars.end(), vec_cond.begin(), vec_cond.end() );
+  } else if (const Add* add = e.as<Add>()) {
+    auto vec_a = find_dep_vars(add->a);
+    auto vec_b = find_dep_vars(add->b);
+    vars.insert( vars.end(), vec_a.begin(), vec_a.end() );
+    vars.insert( vars.end(), vec_b.begin(), vec_b.end() );
+  } else if (const Sub* sub = e.as<Sub>()) {
+    auto vec_a = find_dep_vars(sub->a);
+    auto vec_b = find_dep_vars(sub->b);
+    vars.insert( vars.end(), vec_a.begin(), vec_a.end() );
+    vars.insert( vars.end(), vec_b.begin(), vec_b.end() );
+  } else if (const Mul* mul = e.as<Mul>()) {
+    auto vec_a = find_dep_vars(mul->a);
+    auto vec_b = find_dep_vars(mul->b);
+    vars.insert( vars.end(), vec_a.begin(), vec_a.end() );
+    vars.insert( vars.end(), vec_b.begin(), vec_b.end() );
+  } else if (const Mod* mod = e.as<Mod>()) {
+    auto vec_a = find_dep_vars(mod->a);
+    auto vec_b = find_dep_vars(mod->b);
+    vars.insert( vars.end(), vec_a.begin(), vec_a.end() );
+    vars.insert( vars.end(), vec_b.begin(), vec_b.end() );
+  } else if (const Div* div = e.as<Div>()) {
+    auto vec_a = find_dep_vars(div->a);
+    auto vec_b = find_dep_vars(div->b);
+    vars.insert( vars.end(), vec_a.begin(), vec_a.end() );
+    vars.insert( vars.end(), vec_b.begin(), vec_b.end() );
+  } else {
+    internal_error << "function not supported...";
+    stream << "// function not supported...";
+  }
+
+  // all functions return variable "vars"
+  return vars;
+}
+
+std::vector<int> CodeGen_CoreIR_Target::CodeGen_CoreIR_C::eval_expr_with_vars(Expr e, std::vector<VarValues> pts) {
+  std::vector<int> indices (pts.size());
+
+  if (is_const(e)) {
+    int value = id_cnst_value(e);
+    std::fill( indices.begin(), indices.end(), value );
+  } else if (const Variable *v = e.as<Variable>()) {
+    stream << "// evaling for var " << print_name(v->name) << endl;
+    for (uint i=0; i<indices.size(); ++i) {
+      indices[i] = pts[i][print_name(v->name)];
+      stream << "// pushing " << indices[i] << " for index " << i << endl;
+    }
+  } else if (const Max* max = e.as<Max>()) {
+    auto vec_a = eval_expr_with_vars(max->a, pts);
+    auto vec_b = eval_expr_with_vars(max->b, pts);
+    for (uint i=0; i<indices.size(); ++i) {
+      indices[i] = std::max(vec_a[i], vec_b[i]);
+    }
+  } else if (const Min* min = e.as<Min>()) {
+    auto vec_a = eval_expr_with_vars(min->a, pts);
+    auto vec_b = eval_expr_with_vars(min->b, pts);
+    for (uint i=0; i<indices.size(); ++i) {
+      indices[i] = std::min(vec_a[i], vec_b[i]);
+    }
+  } else if (const Select* sel = e.as<Select>()) {
+    auto vec_true = eval_expr_with_vars(sel->true_value, pts);
+    auto vec_fals = eval_expr_with_vars(sel->false_value, pts);
+    auto vec_cond = eval_expr_with_vars(sel->condition, pts);
+    for (uint i=0; i<indices.size(); ++i) {
+      indices[i] = vec_cond[i] ? vec_true[i] : vec_fals[i];
+    }
+  } else if (const Add* add = e.as<Add>()) {
+    auto vec_a = eval_expr_with_vars(add->a, pts);
+    auto vec_b = eval_expr_with_vars(add->b, pts);
+    for (uint i=0; i<indices.size(); ++i) {
+      indices[i] = vec_a[i] + vec_b[i];
+    }
+  } else if (const Sub* sub = e.as<Sub>()) {
+    auto vec_a = eval_expr_with_vars(sub->a, pts);
+    auto vec_b = eval_expr_with_vars(sub->b, pts);
+    for (uint i=0; i<indices.size(); ++i) {
+      indices[i] = vec_a[i] - vec_b[i];
+    }
+  } else if (const Mul* mul = e.as<Mul>()) {
+    auto vec_a = eval_expr_with_vars(mul->a, pts);
+    auto vec_b = eval_expr_with_vars(mul->b, pts);
+    for (uint i=0; i<indices.size(); ++i) {
+      indices[i] = vec_a[i] * vec_b[i];
+    }
+  } else if (const Mod* mod = e.as<Mod>()) {
+    auto vec_a = eval_expr_with_vars(mod->a, pts);
+    auto vec_b = eval_expr_with_vars(mod->b, pts);
+    for (uint i=0; i<indices.size(); ++i) {
+      indices[i] = vec_a[i] % vec_b[i];
+    }
+  } else if (const Div* div = e.as<Div>()) {
+    auto vec_a = eval_expr_with_vars(div->a, pts);
+    auto vec_b = eval_expr_with_vars(div->b, pts);
+    for (uint i=0; i<indices.size(); ++i) {
+      indices[i] = vec_a[i] / vec_b[i];
+    }
+  } else {
+    internal_error << "function not supported...";
+    stream << "// function not supported...";
+  }
+
+  // all cases return variable "indices"
+  return indices;
+}
 
 }
 }

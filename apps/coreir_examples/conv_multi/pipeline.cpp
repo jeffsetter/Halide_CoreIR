@@ -54,8 +54,8 @@ public:
         conv1(x, y) += clamped(x+win.x, y+win.y) * kernel(win.x, win.y);
 	//conv1(x, y) += clamped(x+win.x, y+win.y) * constants[win.x][win.y];
 
-        // unroll the reduction only in y
-	conv1.update(0).unroll(win.y);
+        // unroll the reduction only in x
+	conv1.update(0).unroll(win.x);
 
 	hw_output(x,y) = cast<uint8_t>(conv1(x,y));
         output(x, y) = hw_output(x, y);
