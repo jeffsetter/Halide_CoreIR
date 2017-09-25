@@ -32,27 +32,37 @@ public:
     MyPipeline() : input(UInt(8), 2, "input"), weight(UInt(8), 2, "weight"), bias("bias"),
                    kernel("kernel"), conv1("conv1"),
                    output("output"), hw_output("hw_output"),
-                   win(-1, 3, -1, 3) {
+                   win(0, 3, 0, 3) {
         // Define a 3x3 Gaussian Blur with a repeat-edge boundary condition.
-        float sigma = 1.5f;
+        //float sigma = 1.5f;
 
-        kernel(x, y) = cast<uint16_t>(exp(-(x*x + y*y)/(2*sigma*sigma)) / (float)(2*M_PI*sigma*sigma));
+        //kernel(x, y) = cast<uint16_t>(exp(-(x*x + y*y)/(2*sigma*sigma)) / (float)(2*M_PI*sigma*sigma));
+        //kernel(x, y) = cast<uint16_t>(3);
+      kernel(x,y) = select(x==0&&y==0, 11,
+                           x==0&&y==1, 12,
+                           x==0&&y==2, 13,
+                           x==1&&y==0, 14,
+                           x==1&&y==1, 15,
+                           x==1&&y==2, 16,
+                           x==2&&y==0, 17,
+                           x==2&&y==1, 18,
+                           x==2&&y==2, 19, 0);
 
         // define the algorithm
-        clamped = BoundaryConditions::repeat_edge(input);
-        //conv1 = clamped;
+        clamped(x,y) = input(x,y);
+
         conv1(x, y) += clamped(x+win.x, y+win.y) * kernel(win.x, win.y);
 	//conv1(x, y) += clamped(x+win.x, y+win.y) * gaussian2d[win.x+1][win.y+1];
 
         // unroll the reduction
 	conv1.update(0).unroll(win.x).unroll(win.y);
 
+        // cascade another kernel
         conv2(x, y) += conv1(x+win.x, y+win.y) * kernel(win.x, win.y);
 	conv2.update(0).unroll(win.x).unroll(win.y);
 
-
         //hw_output = convolve55_rd(conv1);
-	hw_output(x,y) = cast<uint8_t>(conv2(x,y));
+	hw_output(x,y) = cast<uint8_t>(conv1(x,y));
         output(x, y) = hw_output(x, y);
 
 	// constraints
@@ -65,13 +75,13 @@ public:
 	//args.push_back(weight);
         args.push_back(bias);
 
-        kernel.compute_root();
+
     }
 
     void compile_cpu() {
         std::cout << "\ncompiling cpu code..." << std::endl;
 
-        output.tile(x, y, xo, yo, xi, yi, 256, 256);
+        output.tile(x, y, xo, yo, xi, yi, 62,62);
         output.fuse(xo, yo, xo).parallel(xo);
 
         output.vectorize(xi, 8);
@@ -108,9 +118,9 @@ public:
         // level
         hw_output.compute_root();
         //hw_output.tile(x, y, xo, yo, xi, yi, 1920, 1080).reorder(xi, yi, xo, yo);
-        hw_output.tile(x, y, xo, yo, xi, yi, 256, 256).reorder(xi, yi, xo, yo);
+        hw_output.tile(x, y, xo, yo, xi, yi, 62,62).reorder(xi, yi, xo, yo);
         //hw_output.unroll(xi, 2);
-        hw_output.accelerate({clamped}, xi, xo, {kernel});  // define the inputs and the output
+        hw_output.accelerate({clamped}, xi, xo, {});  // define the inputs and the output
         conv1.linebuffer();
 	//        conv1.unroll(x).unroll(y);
 
@@ -127,8 +137,8 @@ public:
 	clamped.compute_root();
      	hw_output.compute_root();
 	conv1.linebuffer();
-	hw_output.tile(x, y, xo, yo, xi, yi, 256,256).reorder(xi,yi,xo,yo);
-	hw_output.accelerate({clamped}, xi, xo, {kernel});
+	hw_output.tile(x, y, xo, yo, xi, yi, 62,62).reorder(xi,yi,xo,yo);
+	hw_output.accelerate({clamped}, xi, xo, {});
 
 
         Target coreir_target = get_target_from_environment();
