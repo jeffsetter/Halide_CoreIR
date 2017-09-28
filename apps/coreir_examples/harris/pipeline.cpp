@@ -192,16 +192,16 @@ public:
         grad_yy.linebuffer().unroll(x);
         grad_xy.linebuffer().unroll(x);
         grad_gx.linebuffer().unroll(x);
-        grad_gx.update(0).unroll(x);
+        //      grad_gx.update(0).unroll(x);
         grad_gy.linebuffer().unroll(x);
-        grad_gy.update(0).unroll(x);
+        //        grad_gy.update(0).unroll(x);
         grad_gxy.linebuffer().unroll(x);
-        grad_gxy.update(0).unroll(x);
+        //        grad_gxy.update(0).unroll(x);
         cim.linebuffer().unroll(x);
 
-        grad_gx.update(0).unroll(box.x).unroll(box.y);
-        grad_gy.update(0).unroll(box.x).unroll(box.y);
-        grad_gxy.update(0).unroll(box.x).unroll(box.y);
+        grad_gx.update(0).unroll(box.x).unroll(box.y).unroll(x);
+        grad_gy.update(0).unroll(box.x).unroll(box.y).unroll(x);
+        grad_gxy.update(0).unroll(box.x).unroll(box.y).unroll(x);
 
         //output.print_loop_nest();
         Target coreir_target = get_target_from_environment();

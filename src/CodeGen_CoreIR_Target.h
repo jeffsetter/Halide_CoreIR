@@ -74,12 +74,13 @@ protected:
 
         using CodeGen_CoreIR_Base::visit;
 
-        void visit(const For *op);
+        void visit(const For *op); // create counter
         void visit(const Allocate *op);
 	void visit(const Call *op);
 	void visit(const Provide *op);
-        void visit(const Load *op);
+        void visit(const Load *op); // variable load -> mux
         void visit(const Store *op);
+        void visit(const IfThenElse *op); // wire up enable,reset
 
         // coreir operators
         void visit_unaryop(Type t, Expr a, const char* op_sym, std::string op_name);
@@ -112,27 +113,32 @@ protected:
         CoreIR::ModuleDef* def = NULL;
         CoreIR::Module* design = NULL;
         CoreIR::Wireable* self = NULL;
+        const IfThenElse* predicate  = NULL;
 
         // keep track of coreir dag
         int input_idx = 0; // tracks how many inputs have been defined so far
         std::map<std::string,CoreIR::Wireable*> hw_wire_set;
+        std::map<std::string,CoreIR::Wireable*> hw_reg_set;
         std::map<std::string,std::shared_ptr<CoreIR_Inst_Args>> hw_def_set;
         std::unordered_set<std::string> hw_input_set;
         std::unordered_set<std::string> hw_output_set;
 
         // coreir methods to wire things together
-        bool is_cnst(const Expr e);
+        bool is_const(const Expr e);
         bool is_input(std::string var_name);
         bool is_output(std::string var_name);
         bool is_defined(std::string var_name);
         bool is_wire(std::string var_name);
-        int id_cnst_value(const Expr e);
+        bool is_reg(std::string var_name);
+        int id_const_value(const Expr e);
         CoreIR::Wireable* get_wire(std::string name, Expr e);
-        void add_wire(std::string new_name, std::string in_name, Expr in_expr);
+        void rename_wire(std::string new_name, std::string in_name, Expr in_expr);
+        void add_wire(std::string name, CoreIR::Wireable* wire);
 
         // analysis functions of Halide IR
         std::vector<const Variable*> find_dep_vars(Expr e);
         std::vector<int> eval_expr_with_vars(Expr e, std::vector<VarValues> pts);
+
     };
 
     /** A name for the CoreIR target */

@@ -38,7 +38,7 @@ public:
 
         //kernel(x, y) = cast<uint16_t>(exp(-(x*x + y*y)/(2*sigma*sigma)) / (float)(2*M_PI*sigma*sigma));
         //kernel(x, y) = cast<uint16_t>(3);
-      kernel(x,y) = select(x==0&&y==0, 11,
+      /*      kernel(x,y) = select(x==0&&y==0, 11,
                            x==0&&y==1, 12,
                            x==0&&y==2, 13,
                            x==1&&y==0, 14,
@@ -47,11 +47,18 @@ public:
                            x==2&&y==0, 17,
                            x==2&&y==1, 18,
                            x==2&&y==2, 19, 0);
+      */
+      kernel(x,y) = 0;
+      kernel(0,0) = 11;      kernel(0,1) = 12;      kernel(0,2) = 13;
+      kernel(1,0) = 14;      kernel(1,1) = 15;      kernel(1,2) = 16;
+      kernel(2,0) = 17;      kernel(2,1) = 18;      kernel(2,2) = 19;
+
 
         // define the algorithm
         clamped(x,y) = input(x,y);
 
         conv1(x, y) += clamped(x+win.x, y+win.y) * kernel(win.x, win.y);
+        //        kernel.compute_root();
 	//conv1(x, y) += clamped(x+win.x, y+win.y) * gaussian2d[win.x+1][win.y+1];
 
         // unroll the reduction
