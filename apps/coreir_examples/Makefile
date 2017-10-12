@@ -1,9 +1,9 @@
 ALL_COREIR_APPS = pointwise \
 	conv_1_1 conv_1_2 conv_2_1 conv_3_1 conv_bw \
 	onebit_comp onebit_and onebit_mux onebit_bool \
-	conv_multi
+	cascade harris conv_multi
 
-NOT_WORKING_APPS = cascade conv_rgb harris
+NOT_WORKING_APPS = conv_rgb
 
 all: test_all
 cleanall:
@@ -24,3 +24,7 @@ test_conv: conv_1_2 conv_2_1 conv_3_1 conv_bw
 test_onebit: onebit_comp onebit_and onebit_mux onebit_bool
 
 test_all: $(ALL_COREIR_APPS)
+	@echo "Did not run: "
+	@for app in $(NOT_WORKING_APPS); do \
+	  echo $$app; \
+	done

@@ -29,13 +29,13 @@ struct CoreIR_Argument {
 struct CoreIR_Inst_Args {
   std::string name;
   CoreIR::Generator* gen;
-  CoreIR::Args args;
-  CoreIR::Args genargs;
+  CoreIR::Values args;
+  CoreIR::Values genargs;
   std::string wirename;
   std::string selname;
 
   CoreIR_Inst_Args(std::string name, std::string wirename, std::string selname,
-    CoreIR::Generator* gen, CoreIR::Args args, CoreIR::Args genargs) :
+    CoreIR::Generator* gen, CoreIR::Values args, CoreIR::Values genargs) :
  name(name), gen(gen), args(args), genargs(genargs), wirename(wirename), selname(selname) {}
 
 };
