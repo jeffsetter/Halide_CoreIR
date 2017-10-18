@@ -1,7 +1,7 @@
 ALL_COREIR_APPS = pointwise \
 	conv_1_1 conv_1_2 conv_2_1 conv_3_1 conv_bw \
 	onebit_comp onebit_and onebit_mux onebit_bool harris \
-	conv_multi
+	conv_nest conv_multi
 
 NOT_WORKING_APPS = cascade conv_rgb
 
@@ -19,7 +19,7 @@ cleanall:
 $(ALL_COREIR_APPS):
 	$(MAKE) -C $@ || exit 1
 
-test_conv: conv_1_2 conv_2_1 conv_3_1 conv_bw
+test_conv: conv_1_2 conv_2_1 conv_3_1 conv_bw conv_nest
 
 test_onebit: onebit_comp onebit_and onebit_mux onebit_bool
 

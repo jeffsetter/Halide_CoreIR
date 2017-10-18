@@ -27,6 +27,7 @@ struct CoreIR_Argument {
 };
 
 struct CoreIR_Inst_Args {
+  std::string ref_name = "";
   std::string name;
   std::string gen;
   CoreIR::Args args;
@@ -40,7 +41,17 @@ struct CoreIR_Inst_Args {
 
 };
 
-//typedef std::pair<const Variable*,int> VarValue;
+struct Storage_Def {
+  CoreIR::Type* ptype;
+  CoreIR::Wireable* wire;
+  bool was_written = false;
+  bool was_read = false;
+  bool is_reg;
+
+Storage_Def(CoreIR::Type* ptype, CoreIR::Wireable* wire, bool is_reg) :
+  ptype(ptype), wire(wire), is_reg(is_reg) {}
+};
+
 typedef std::map<std::string,int> VarValues;
 
 /** This class emits Xilinx Vivado HLS compatible C++ code.
@@ -75,12 +86,13 @@ protected:
         using CodeGen_CoreIR_Base::visit;
 
         void visit(const For *op); // create counter
+        void visit(const Realize *op); // create passthrough for indirection
         void visit(const Allocate *op);
-	void visit(const Call *op);
+	void visit(const Call *op); // bitwise, streams, etc
 	void visit(const Provide *op);
         void visit(const Load *op); // variable load -> mux
         void visit(const Store *op);
-        void visit(const IfThenElse *op); // wire up enable,reset
+        void visit(const IfThenElse *op); // wire up enable,reset for conditional
 
         // coreir operators
         void visit_unaryop(Type t, Expr a, const char* op_sym, std::string op_name);
@@ -88,6 +100,7 @@ protected:
 	void visit_binop(Type t, Expr a, Expr b, const char* op_sym, std::string op_name);
 	void visit(const Mul *op);
 	void visit(const Div *op);
+	void visit(const Mod *op);
 	void visit(const Add *op);
 	void visit(const Sub *op);
 	void visit(const And *op);
@@ -116,9 +129,8 @@ protected:
         const IfThenElse* predicate  = NULL;
 
         // keep track of coreir dag
-        int input_idx = 0; // tracks how many inputs have been defined so far
         std::map<std::string,CoreIR::Wireable*> hw_wire_set;
-        std::map<std::string,CoreIR::Wireable*> hw_reg_set;
+        std::map<std::string,std::shared_ptr<Storage_Def>> hw_store_set;
         std::map<std::string,std::shared_ptr<CoreIR_Inst_Args>> hw_def_set;
         std::unordered_set<std::string> hw_input_set;
         std::unordered_set<std::string> hw_output_set;
@@ -129,11 +141,12 @@ protected:
         bool is_output(std::string var_name);
         bool is_defined(std::string var_name);
         bool is_wire(std::string var_name);
-        bool is_reg(std::string var_name);
+        bool is_storage(std::string var_name);
+
         int id_const_value(const Expr e);
-        CoreIR::Wireable* get_wire(std::string name, Expr e);
-        void rename_wire(std::string new_name, std::string in_name, Expr in_expr);
-        void add_wire(std::string name, CoreIR::Wireable* wire);
+        CoreIR::Wireable* get_wire(std::string name, Expr e, std::vector<uint> indices={});
+        void rename_wire(std::string new_name, std::string in_name, Expr in_expr, std::vector<uint> indices={});
+        void add_wire(std::string name, CoreIR::Wireable* wire, std::vector<uint> indices={});
 
         // analysis functions of Halide IR
         std::vector<const Variable*> find_dep_vars(Expr e);
