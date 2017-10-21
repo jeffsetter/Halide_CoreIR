@@ -1180,7 +1180,7 @@ bool CodeGen_CoreIR_Target::CodeGen_CoreIR_C::is_output(string var_name) {
 CoreIR::Wireable* CodeGen_CoreIR_Target::CodeGen_CoreIR_C::get_wire(string name, Expr e) {
   if (is_cnst(e)) {
     int cnst_value = id_cnst_value(e);
-    string cnst_name = unique_name(name + "const" + std::to_string(cnst_value) + "_");
+    string cnst_name = unique_name("const" + std::to_string(cnst_value) + "_" + name);
     CoreIR::Wireable* cnst;
 
     uint const_bitwidth = get_const_bitwidth(e);
