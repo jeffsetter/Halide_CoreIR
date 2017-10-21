@@ -9423,10 +9423,6 @@ struct Outputs {
      * output is desired. */
     std::string hls_source_name;
 
-    /** The name of the emitted Rigel source file. Empty if no C source file
-     * output is desired. */
-    std::string rigel_source_name;
-
     /** The name of the emitted CoreIR source file. Empty if no C source file
      * output is desired. */
     std::string coreir_source_name;
@@ -9502,14 +9498,6 @@ struct Outputs {
         updated.hls_source_name = hls_source_name;
         return updated;
     }
-
-    /** Make a new Outputs struct that emits everything this one does
-     * and also a Rigel source file with the given name. */
-    Outputs rigel_source(const std::string &rigel_source_name) {
-        Outputs updated = *this;
-        updated.rigel_source_name = rigel_source_name;
-        return updated;
-    }  
 
     /** Make a new Outputs struct that emits everything this one does
      * and also a CoreIR source file with the given name. */
@@ -9810,15 +9798,6 @@ public:
                                const std::vector<Argument> &,
                                const std::string &fn_name = "",
                                const Target &target = get_target_from_environment());
-
-    /** Statically compile a pipeline to Rigel source code.
-     * Both hardware accelerator designs and testbench wrapper will generated.
-     * Vectorization will fail, and parallelization will
-     * produce serial code. */
-    EXPORT void compile_to_rigel(const std::string &filename,
-				 const std::vector<Argument> &,
-				 const std::string &fn_name = "",
-				 const Target &target = get_target_from_environment());
 
     /** Statically compile a pipeline to CoreIR source code.
      * Both hardware accelerator designs and testbench wrapper will generated.
@@ -10693,15 +10672,6 @@ public:
      * Vectorization will fail, and parallelization will
      * produce serial code. */
     EXPORT void compile_to_hls(const std::string &filename,
-                               const std::vector<Argument> &,
-                               const std::string &fn_name = "",
-                               const Target &target = get_target_from_environment());
-
-    /** Statically compile a pipeline to Rigel source code.
-     * Both hardware accelerator designs and testbench wrapper will generated.
-     * Vectorization will fail, and parallelization will
-     * produce serial code. */
-    EXPORT void compile_to_rigel(const std::string &filename,
                                const std::vector<Argument> &,
                                const std::string &fn_name = "",
                                const Target &target = get_target_from_environment());

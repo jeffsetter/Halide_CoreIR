@@ -17,8 +17,13 @@ pipeline: pipeline.cpp
 pipeline_hls.cpp pipeline_native.o pipeline_zynq.o pipeline_cuda.o: pipeline
 	HL_DEBUG_CODEGEN=0 ./pipeline
 
-run: run.cpp pipeline_hls.cpp hls_target.cpp pipeline_native.o
+run: run.cpp pipeline_hls.cpp pipeline_native.o
 	$(CXX) $(CXXFLAGS) -O1 -DNDEBUG $(HLS_CXXFLAGS) -g -Wall -Werror $^ -lpthread -ldl $(PNGFLAGS) -o $@
+
+design_top.json: pipeline
+	HL_DEBUG_CODEGEN=0 ./pipeline
+graph.png: design_top.json
+	dot -Tpng design_top.txt > graph.png
 
 run_cuda: pipeline_native.o pipeline_cuda.o run_cuda.cpp
 	$(CXX) -O3 $(CXXFLAGS) -Wall -Werror $^ -lpthread -ldl -o $@  $(PNGFLAGS)
@@ -28,9 +33,6 @@ out.png: run
 
 out_cuda.png: run_cuda
 	CUDA_LAUNCH_BLOCKING=1 HL_NUM_THREADS=4 ./run_cuda ../../images/benchmark_8mp_gray.png
-
-design_top.json: pipeline
-	HL_DEBUG_CODEGEN=0 ./pipeline
 
 $(HLS_LOG): ../hls_support/run_hls.tcl pipeline_hls.cpp run.cpp
 	RUN_PATH=$(realpath ./) \
@@ -61,4 +63,4 @@ clean:
 	rm -f pipeline_cuda.h pipeline_cuda.o
 	rm -f pipeline_zynq.h pipeline_zynq.c pipeline_zynq.o run_zynq.o
 	rm -f rigel_target.h rigel_target.t coreir_target.h coreir_target.t
-	rm -f *.html *.json
+	rm -f *.html *.json design_top.txt graph.png

@@ -273,7 +273,7 @@ TMP_DIR     = $(BUILD_DIR)/tmp
 # Compiling for CoreIR requires some extra links
 COREIR_DIR ?= $(ROOT_DIR)/../coreir
 COREIR_INCLUDES = -I$(COREIR_DIR)/include -fexceptions
-COREIR_LIBS = -L$(COREIR_DIR)/lib -Wl,-rpath,$(COREIR_DIR)/lib -lcoreir-cgralib -lcoreir
+COREIR_LIBS = -L$(COREIR_DIR)/lib -Wl,-rpath,$(COREIR_DIR)/lib -lcoreir-cgralib -lcoreir-commonlib -lcoreir
 TEST_LD_FLAGS += $(COREIR_LIBS)
 
 SOURCE_FILES = \
@@ -310,9 +310,6 @@ SOURCE_FILES = \
   CodeGen_PowerPC.cpp \
   CodeGen_PTX_Dev.cpp \
   CodeGen_Renderscript_Dev.cpp \
-  CodeGen_Rigel_Base.cpp \
-  CodeGen_Rigel_Target.cpp \
-  CodeGen_Rigel_Testbench.cpp \
   CodeGen_X86.cpp \
   CodeGen_Zynq_C.cpp \
   CodeGen_Zynq_LLVM.cpp \
@@ -1211,25 +1208,13 @@ test_hls_apps: $(LIB_DIR)/libHalide.a $(BIN_DIR)/libHalide.$(SHARED_EXT) $(INCLU
 	  make -C apps/hls_examples/$$app clean all HALIDE_BIN_PATH=$(CURDIR) HALIDE_SRC_PATH=$(ROOT_DIR) || exit; \
 	done
 
-ALL_COREIR_APPS = pointwise conv_bw cascade
-ALL_COREIR_TESTS = conv_1_2 conv_2_1 conv_3_1
 # $(BIN_DIR)/libHalide.$(SHARED_EXT)
 test_coreir:  $(LIB_DIR)/libHalide.a $(INCLUDE_DIR)/Halide.h $(INCLUDE_DIR)/HalideRuntime.h
-	for app in $(ALL_COREIR_APPS); do \
-	  $(MAKE) -C apps/coreir_examples/$$app clean all HALIDE_BIN_PATH=$(CURDIR) HALIDE_SRC_PATH=$(ROOT_DIR) || exit; \
-	done
-	for app in $(ALL_COREIR_TESTS); do \
-	  $(MAKE) -C apps/coreir_examples/$$app clean all HALIDE_BIN_PATH=$(CURDIR) HALIDE_SRC_PATH=$(ROOT_DIR) || exit; \
-	done
+	$(MAKE) -C apps/coreir_examples cleanall test_all HALIDE_BIN_PATH=$(CURDIR) HALIDE_SRC_PATH=$(ROOT_DIR) || exit; \
 
-# Test that does not built anything first
+# Test that does not build anything first
 test_coreir_prebuilt:
-	for app in $(ALL_COREIR_APPS); do \
-	  $(MAKE) -C apps/coreir_examples/$$app clean all HALIDE_BIN_PATH=$(CURDIR) HALIDE_SRC_PATH=$(ROOT_DIR) || exit; \
-	done
-	for app in $(ALL_COREIR_APPS); do \
-	  $(MAKE) -C apps/coreir_examples/$$app clean all HALIDE_BIN_PATH=$(CURDIR) HALIDE_SRC_PATH=$(ROOT_DIR) || exit; \
-	done
+	$(MAKE) -C apps/coreir_examples cleanall test_all HALIDE_BIN_PATH=$(CURDIR) HALIDE_SRC_PATH=$(ROOT_DIR) || exit; \
 
 fulltest_coreir:
 	$(MAKE) test_coreir test_correctness test_generators

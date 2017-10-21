@@ -15,10 +15,10 @@ run_hls: $(HLS_LOG)
 pipeline: pipeline.cpp
 	$(CXX) $(CXXFLAGS) -Wall -g $^ $(LIB_HALIDE) -o $@ $(LDFLAGS) -ltinfo
 
-pipeline_hls.cpp pipeline_native.o pipeline_cuda.o: pipeline
+pipeline_hls.cpp pipeline_native.o pipeline_cuda.o hls_target.cpp: pipeline
 	HL_DEBUG_CODEGEN=0 ./pipeline
 
-run: run.cpp pipeline_hls.cpp hls_target.cpp pipeline_native.o
+run: run.cpp pipeline_hls.cpp pipeline_native.o hls_target.cpp
 	$(CXX) $(CXXFLAGS) -O1 -DNDEBUG $(HLS_CXXFLAGS) -g -Wall -Werror $^ -lpthread -ldl -o $@ $(PNGFLAGS)
 
 
@@ -52,6 +52,6 @@ clean:
 	rm -f pipeline_native.h pipeline_native.o
 	rm -f pipeline_hls.h pipeline_hls.cpp hls_target.h hls_target.cpp
 	rm -f pipeline_coreir.cpp pipeline_coreir.h
-	rm -f coreir_target.h coreir_target.cpp design_top.json design_target.json
+	rm -f coreir_target.h coreir_target.cpp design_top.json design_*.json
 	rm -f design_top.txt graph.png gen_testimage
 	rm -f input* out.png out.pgm

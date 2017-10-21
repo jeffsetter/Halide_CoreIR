@@ -26,6 +26,20 @@ struct CoreIR_Argument {
     CodeGen_CoreIR_Base::Stencil_Type stencil_type;
 };
 
+struct CoreIR_Inst_Args {
+  std::string name;
+  CoreIR::Generator* gen;
+  CoreIR::Values args;
+  CoreIR::Values genargs;
+  std::string wirename;
+  std::string selname;
+
+  CoreIR_Inst_Args(std::string name, std::string wirename, std::string selname,
+    CoreIR::Generator* gen, CoreIR::Values args, CoreIR::Values genargs) :
+ name(name), gen(gen), args(args), genargs(genargs), wirename(wirename), selname(selname) {}
+
+};
+
 /** This class emits Xilinx Vivado HLS compatible C++ code.
  */
 class CodeGen_CoreIR_Target {
@@ -65,17 +79,25 @@ protected:
         void visit(const Store *op);
 
         // coreir operators
-	void visit_binop(Type t, Expr a, Expr b, const char* op_sym, string op_name);
+        void visit_unaryop(Type t, Expr a, const char* op_sym, std::string op_name);
+	void visit(const Not *op);
+	void visit_binop(Type t, Expr a, Expr b, const char* op_sym, std::string op_name);
 	void visit(const Mul *op);
+	void visit(const Div *op);
 	void visit(const Add *op);
 	void visit(const Sub *op);
+	void visit(const And *op);
+	void visit(const Or *op);
 	void visit(const EQ *op);
+	void visit(const NE *op);
 	void visit(const LT *op);
 	void visit(const LE *op);
 	void visit(const GT *op);
 	void visit(const GE *op);
+        void visit(const Max *op);
+        void visit(const Min *op);
 	void visit(const Cast *op);
-        void visit_ternop(Type t, Expr a, Expr b, Expr c, const char*  op_sym1, const char* op_sym2, string op_name);
+        void visit_ternop(Type t, Expr a, Expr b, Expr c, const char*  op_sym1, const char* op_sym2, std::string op_name);
         void visit(const Select *op);
 
         // for coreir generation
@@ -83,7 +105,7 @@ protected:
         uint8_t bitwidth;
         CoreIR::Context* context = NULL;
         CoreIR::Namespace* global_ns = NULL;
-        std::map<std::string,CoreIR::Generator*> gens;
+        std::map<std::string,CoreIR::Instantiable*> gens;
         CoreIR::ModuleDef* def = NULL;
         CoreIR::Module* design = NULL;
         CoreIR::Wireable* self = NULL;
@@ -91,14 +113,20 @@ protected:
         // keep track of coreir dag
         int input_idx = 0; // tracks how many inputs have been defined so far
         std::map<std::string,CoreIR::Wireable*> hw_wire_set;
-        std::unordered_set<std::string> hw_inout_set;
+        std::map<std::string,CoreIR_Inst_Args*> def_hw_set;
+        std::unordered_set<std::string> hw_input_set;
+        std::unordered_set<std::string> hw_output_set;
 
         // coreir methods to wire things together
         bool is_cnst(const Expr e);
-        bool is_inout(string var_name);
-        bool is_wire(string var_name);
+        bool is_input(std::string var_name);
+        bool is_output(std::string var_name);
+        bool is_defined(std::string var_name);
+        bool is_wire(std::string var_name);
         int id_cnst_value(const Expr e);
-        CoreIR::Wireable* get_wire(Expr e, std::string name);
+        CoreIR::Wireable* get_wire(std::string name, Expr e);
+        void add_wire(std::string new_name, std::string in_name, Expr in_expr);
+        void add_wire(std::string new_name, CoreIR::Wireable* in_wire);
 
     };
 

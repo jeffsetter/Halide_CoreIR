@@ -12,8 +12,6 @@
 #include "Module.h"
 #include "Scope.h"
 
-#include "coreir.h"
-
 namespace Halide {
 
 namespace Internal {
@@ -32,14 +30,6 @@ protected:
     void visit(const Call *);
     void visit(const Realize *);
     void visit(const Block *);
-
-//     void visit(const Store *);
-//     bool id_hw_input(const Expr e);
-//     void visit_binop(Type t, Expr a, Expr b, char op_sym, std::string coreir_name, std::string op_name);
-//     void visit(const Mul *);
-//     void visit(const Add *);
-//     void visit(const Sub *);
-
 
 private:
     CodeGen_CoreIR_Target cg_target;

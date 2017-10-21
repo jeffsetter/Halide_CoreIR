@@ -16,6 +16,7 @@ HLS_CXXFLAGS = $(HLS_IFLAG) -DC_TEST
 HLS_CXXFLAGS += -Wno-unknown-pragmas -Wno-unused-label -Wno-uninitialized -Wno-literal-suffix
 
 LDFLAGS ?= 
-LDFLAGS += -lcoreir-cgralib -lcoreir
+LDFLAGS += -lcoreir-cgralib -lcoreir-commonlib -lcoreir
+
 COREIR_DIR ?= ../../../../coreir
 LIB_HALIDE += -L$(COREIR_DIR)/lib -Wl,-rpath,$(COREIR_DIR)/lib

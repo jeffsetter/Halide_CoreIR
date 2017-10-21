@@ -119,6 +119,7 @@ public:
         hw_output.compute_root();
         //hw_output.tile(x, y, xo, yo, xi, yi, 1920, 1080).reorder(xi, yi, xo, yo);
         hw_output.tile(x, y, xo, yo, xi, yi, 62,62).reorder(xi, yi, xo, yo);
+
         //hw_output.unroll(xi, 2);
         hw_output.accelerate({clamped}, xi, xo, {});  // define the inputs and the output
         conv1.linebuffer();
@@ -137,7 +138,9 @@ public:
 	clamped.compute_root();
      	hw_output.compute_root();
 	conv1.linebuffer();
+
 	hw_output.tile(x, y, xo, yo, xi, yi, 62,62).reorder(xi,yi,xo,yo);
+
 	hw_output.accelerate({clamped}, xi, xo, {});
 
 

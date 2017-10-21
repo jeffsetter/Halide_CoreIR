@@ -1,9 +1,11 @@
 ALL_COREIR_APPS = pointwise \
-	conv_1_1 conv_1_2 conv_2_1 conv_3_1 conv_bw cascade \
-	onebit_comp onebit_and onebit_mux
+	conv_1_1 conv_1_2 conv_2_1 conv_3_1 conv_bw \
+	onebit_comp onebit_and onebit_mux onebit_bool \
+	cascade harris conv_multi
 
 NOT_WORKING_APPS = conv_rgb
 
+all: test_all
 cleanall:
 	for app in $(ALL_COREIR_APPS); do \
 	  $(MAKE) -C $$app clean > /dev/null; \
@@ -13,17 +15,16 @@ cleanall:
 	done
 	$(MAKE) -C tools cleanall > /dev/null
 
-test_conv:
-	for app in conv_1_2 conv_2_1 conv_3_1 conv_bw; do \
-	  $(MAKE) -C $$app || exit 1; \
-	done
+.PHONY: $(ALL_COREIR_APPS)
+$(ALL_COREIR_APPS):
+	$(MAKE) -C $@ || exit 1
 
-test_onebit:
-	for app in onebit_comp onebit_and onebit_mux; do \
-	  $(MAKE) -C $$app || exit 1; \
-	done
+test_conv: conv_1_2 conv_2_1 conv_3_1 conv_bw
 
-test_all:
-	for app in $(ALL_COREIR_APPS); do \
-	  $(MAKE) -C $$app || exit 1; \
+test_onebit: onebit_comp onebit_and onebit_mux onebit_bool
+
+test_all: $(ALL_COREIR_APPS)
+	@echo "Did not run: "
+	@for app in $(NOT_WORKING_APPS); do \
+	  echo $$app; \
 	done
