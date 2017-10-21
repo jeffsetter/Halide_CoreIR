@@ -24,3 +24,4 @@ test_conv: conv_1_2 conv_2_1 conv_3_1 conv_bw conv_nest
 test_onebit: onebit_comp onebit_and onebit_mux onebit_bool
 
 test_all: $(ALL_COREIR_APPS)
+	@echo -e "\033[0;32m ALL APPS PASSED!!!! \033[0m"

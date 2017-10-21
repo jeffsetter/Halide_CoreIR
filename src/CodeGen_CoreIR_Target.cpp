@@ -366,7 +366,7 @@ void CodeGen_CoreIR_Target::CodeGen_CoreIR_C::add_kernel(Stmt stmt,
 		  //hw_input_set.insert(print_name(args[i].name));
 		}
 		if (hw_output_set.count(arg_name) > 0) {
-                  //FIXME output
+                  //FIXME output ?
 		  hw_output_set.insert(print_name(args[i].name));
 		}                
 		
@@ -421,13 +421,11 @@ void CodeGen_CoreIR_Target::CodeGen_CoreIR_C::visit(const Provide *op) {
         do_indent();
 
 	stream << "[provide]" << " ";
-        // FIXME: ugly array method of wireables
         stream << print_name(op->name) << "(";
 	string new_name = print_name(op->name);
 
         for(size_t i = 0; i < op->args.size(); i++) {
             stream << args_indices[i];
-	    //new_name += "_" + args_indices[i];
             if (i != op->args.size() - 1)
                 stream << ", ";
         }
@@ -440,44 +438,38 @@ void CodeGen_CoreIR_Target::CodeGen_CoreIR_C::visit(const Provide *op) {
         if (predicate) {
           // produce a register for accumulation
           stream << "// provide with a predicate\n";
-          assert(is_const(op->values[0]));
-          /* FIXME: predicate
+          internal_assert(is_const(op->values[0]));
           int const_value = id_const_value(op->values[0]);
+          internal_assert(const_value == 0) << "FIXME: we only supported arrays init at 0\n";
+          /*
           string reg_name = "reg" + new_name;
-          
           CoreIR::Wireable* reg = def->addInstance(reg_name, "commonlib.reg_array", {{"width", context->argInt(bitwidth)}, {"rst", context->argBool(true)}},
                                                    {{"init",context->argInt(const_value)}});
           hw_reg_set[new_name] = reg->sel("in");
           add_wire(new_name, reg->sel("out"));
+          */
 
           // hook up reset
           // FIXME: shouldn't print out again
           string cond_id = print_expr(predicate->condition);
-          def->connect(get_wire(cond_id, predicate->condition), reg->sel("rst"));
+          auto pt_struct = hw_store_set[new_name];
+          if (is_storage(new_name) && !pt_struct->is_reg()) {
+            // add reg_array
+            CoreIR::Type* ptype = pt_struct->ptype;
+            CoreIR::Generator* gen_regs = static_cast<CoreIR::Generator*>(gens["reg_array"]);
+            string regs_name = "regs" + new_name;
+            CoreIR::Wireable* regs = def->addInstance(regs_name, gen_regs, {{"type",context->argType(ptype)}, {"has_rst", context->argBool(true)}});
+            pt_struct->reg = regs;
+          }
+          internal_assert(is_storage(new_name) && hw_store_set[new_name]->is_reg());
+          auto reg_struct = hw_store_set[new_name];
+          def->connect(get_wire(cond_id, predicate->condition), reg_struct->reg->sel("rst"));
 
-          stream << "// reg added with name: " << new_name << endl;
-          */
+          stream << "// reg rst added to: " << new_name << endl;
         } else {
           string in_name = id_value;
           CoreIR::Wireable* wire = get_wire(in_name, op->values[0]);
-          cout << "where " << new_name << " = " << in_name << " with " << indices.size() << " indices" << endl;
-          /*
-          // create passthrough
-          CoreIR::Type* ptype = context->Bit();
-          for (uint i=0; i<indices.size(); ++i) {
-            ptype = ptype->Arr(indices[i]);
-          }
-          if (indices.size() > 4) {
-            internal_error << "provide stencil is too large=" << indices.size()
-                           << ". Sizes up to 4 are supported.\n";
-          }
-          stream << "// created a provide passthrough for " << print_name(op->name) << endl;
-          string pt_name = unique_name("pt" + in_name);
-
-          CoreIR::Generator* gen_pt = static_cast<CoreIR::Generator*>(gens["passthrough"]);
-          CoreIR::Wireable* pt = def->addInstance(pt_name, gen_pt, {{"type",context->argType(ptype)}});
-          hw_store_set[new_name] = std::make_shared<Storage_Def>(Storage_Def(ptype, pt, false));
-          */
+          //cout << "where " << new_name << " = " << in_name << " with " << indices.size() << " indices" << endl;
           add_wire(new_name, wire, indices);
         }
 
@@ -761,9 +753,9 @@ void CodeGen_CoreIR_Target::CodeGen_CoreIR_C::visit(const Call *op) {
           coreir_lb = def->addInstance(lb_name, gen, lb_args);
         } else if (num_dims == 3) {
           cout << "created a 3d linebuffer!" << endl;
-          int stencil_depth = lb_dims[0];
+          int stencil_depth = lb_dims[2];
           int stencil_width = lb_dims[1];
-          int stencil_height = lb_dims[2];
+          int stencil_height = lb_dims[0];
           int image_depth = id_const_value(op->args[2]);
           int image_width = id_const_value(op->args[3]);
           internal_assert(image_width > 0);
@@ -776,11 +768,10 @@ void CodeGen_CoreIR_Target::CodeGen_CoreIR_C::visit(const Call *op) {
                  << " and image size " << image_depth << "x" << image_width << std::endl;
 
           CoreIR::Generator* gen = static_cast<CoreIR::Generator*>(gens["Linebuffer_3d"]);
-          //FIXME: are these args right?
           CoreIR::Args lb3_args = {{"bitwidth",context->argInt(bitwidth)},
-                           {"stencil_d2", context->argInt(stencil_depth)},
+                           {"stencil_d0", context->argInt(stencil_depth)},
                            {"stencil_d1", context->argInt(stencil_width)},
-                           {"stencil_d0", context->argInt(stencil_height)},
+                           {"stencil_d2", context->argInt(stencil_height)},
                            {"image_d0", context->argInt(image_depth)}, 
                            {"image_d1", context->argInt(image_width)}};
 
@@ -875,18 +866,11 @@ void CodeGen_CoreIR_Target::CodeGen_CoreIR_C::visit(const Call *op) {
 
 	// generate coreir: wire with indices maybe
         if (predicate) {
+          // FIXME: implement predicate
           stream << "// writing stream with a predicate\n";
         }
 
-	if (true) {//is_wire(input_name)) {
-          rename_wire(printed_stream_name, input_name, op->args[1]);
-	} else {
-	  // FIXME: remove this temp fix for stencils
-	  input_name += "_0_0";
-          //cout << "using this hack!!! HACKK!!!!!!!" << endl;
-          //stream << "using this hack!!! HACKK!!!!!!!" << endl;
-          rename_wire(printed_stream_name, input_name, op->args[1]);
-	}
+        rename_wire(printed_stream_name, input_name, op->args[1]);
 
     } else if (op->name == "read_stream") {
         internal_assert(op->args.size() == 2 || op->args.size() == 3);
@@ -1278,7 +1262,7 @@ void CodeGen_CoreIR_Target::CodeGen_CoreIR_C::visit(const Realize *op) {
 
         CoreIR::Generator* gen_pt = static_cast<CoreIR::Generator*>(gens["passthrough"]);
         CoreIR::Wireable* pt = def->addInstance(pt_name, gen_pt, {{"type",context->argType(ptype)}});
-        hw_store_set[print_name(op->name)] = std::make_shared<Storage_Def>(Storage_Def(ptype, pt, false));
+        hw_store_set[print_name(op->name)] = std::make_shared<Storage_Def>(Storage_Def(ptype, pt));
         stream << "created storage called " << op->name << endl;
         cout << "created storage called " << op->name << endl;
 
@@ -1330,7 +1314,7 @@ void CodeGen_CoreIR_Target::CodeGen_CoreIR_C::visit(const Realize *op) {
 
         CoreIR::Generator* gen_pt = static_cast<CoreIR::Generator*>(gens["passthrough"]);
         CoreIR::Wireable* pt = def->addInstance(pt_name, gen_pt, {{"type",context->argType(ptype)}});
-        hw_store_set[print_name(op->name)] = std::make_shared<Storage_Def>(Storage_Def(ptype, pt, false));
+        hw_store_set[print_name(op->name)] = std::make_shared<Storage_Def>(Storage_Def(ptype, pt));
         stream << "created storage called " << print_name(op->name) << endl;
         cout << "created storage called " << print_name(op->name) << endl;
         
@@ -1440,12 +1424,35 @@ CoreIR::Wireable* CodeGen_CoreIR_Target::CodeGen_CoreIR_C::get_wire(string name,
     return input_wire;
 
   } else if (is_storage(name)) {
-    CoreIR::Wireable* current_wire = hw_store_set[name]->wire->sel("out");
+    auto pt_struct = hw_store_set[name];
+    CoreIR::Wireable* current_wire;
+    if (!pt_struct->was_written) {
+      internal_assert(pt_struct->is_reg());
+      current_wire = pt_struct->reg->sel("out");
+    } else {
+      current_wire = pt_struct->wire->sel("out");
+    }
+      /*
+      // create a new passthrough and disconnect
+      auto pt = addPassthrough(pt_struct->wire->sel("in"), unique_name("pt"+name));
+      def->disconnect(pt_struct->wire->sel("in"));
+      pt_struct->was_written = false;
+      pt_struct->was_read = false;
+
+      // return the disconnected passthrough output (labeled "in")
+      CoreIR::Wireable* current_wire = pt->sel("in");
+      for (uint i=0; i < indices.size(); ++i) {
+        current_wire = current_wire->sel(indices[i]);
+        cout << "selecting storage in get_wire" << endl;
+      }
+      return current_wire;
+      */
+
     for (uint i=0; i < indices.size(); ++i) {
       current_wire = current_wire->sel(indices[i]);
       cout << "selecting storage in get_wire" << endl;
     }
-    hw_store_set[name]->was_read = true;
+    pt_struct->was_read = true;
     cout << "finished with get_wire" << endl;
     return current_wire;
 
@@ -1510,40 +1517,57 @@ CoreIR::Wireable* CodeGen_CoreIR_Target::CodeGen_CoreIR_C::get_wire(string name,
     if (is_storage(out_name)) {
       auto pt_struct = hw_store_set[out_name];
 
-      if (pt_struct->was_written && pt_struct->was_read) {
-        // create a new passthrough, since this one is already connected
-        string pt_name = unique_name("pt" + out_name);
-        CoreIR::Type* ptype = pt_struct->ptype;
-        stream << "// created passthrough with name " << pt_name << endl;
-
-        CoreIR::Generator* gen_pt = static_cast<CoreIR::Generator*>(gens["passthrough"]);
-        CoreIR::Wireable* pt = def->addInstance(pt_name, gen_pt, {{"type",context->argType(ptype)}});
-        // FIXME: copy over all stores (since wire might not encompass entire passthrough)
-        pt_struct->wire = pt;
+      if (!pt_struct->was_read && !pt_struct->was_written && out_indices.empty() && !pt_struct->is_reg()) {
+        // this passthrough hasn't been used, so remove it
+        auto pt_wire = hw_store_set[out_name]->wire;
+        internal_assert(CoreIR::Instance::classof(pt_wire));
+        CoreIR::Instance* pt_inst = &(cast<CoreIR::Instance>(*pt_wire));
+        def->removeInstance(pt_inst);
+        hw_store_set.erase(out_name);
         
-        pt_struct->was_read = false;
-      }
-      pt_struct->was_written = true;
+        hw_wire_set[out_name] = in_wire;
 
-      stream << "// added passthrough wire to " << out_name << endl;
-      cout << "// added passthrough wire to " << out_name << endl;
-      // connect wire to passthrough
-      CoreIR::Wireable* current_wire = pt_struct->wire->sel("in");
-      for (uint i=0; i < out_indices.size(); ++i) {
-        current_wire = current_wire->sel(out_indices[i]);
-        cout << "selecting in add_wire" << endl;
+      } else {
+        // use the found passthrough
+        if (pt_struct->was_written && pt_struct->was_read) {
+          // create a new passthrough, since this one is already connected
+          string pt_name = unique_name("pt" + out_name);
+          CoreIR::Type* ptype = pt_struct->ptype;
+          stream << "// created passthrough with name " << pt_name << endl;
+
+          CoreIR::Generator* gen_pt = static_cast<CoreIR::Generator*>(gens["passthrough"]);
+          CoreIR::Wireable* pt = def->addInstance(pt_name, gen_pt, {{"type",context->argType(ptype)}});
+          // FIXME: copy over all stores (since wire might not encompass entire passthrough)
+          pt_struct->wire = pt;
+        
+          pt_struct->was_read = false;
+        }
+
+        // disconnect associated wire in reg, and connect new wire
+        if (pt_struct->is_reg()) {
+          CoreIR::Wireable* d_wire = pt_struct->reg->sel("in");
+          for (uint i=0; i < out_indices.size(); ++i) {
+            d_wire = d_wire->sel(out_indices[i]);
+            cout << "selecting in add_wire" << endl;
+          }
+          def->disconnect(d_wire);
+          def->connect(in_wire, d_wire);
+        }
+
+        pt_struct->was_written = true;
+        stream << "// added passthrough wire to " << out_name << endl;
+        cout << "// added passthrough wire to " << out_name << endl;
+
+        // connect wire to passthrough
+        CoreIR::Wireable* current_wire = pt_struct->wire->sel("in");
+        for (uint i=0; i < out_indices.size(); ++i) {
+          current_wire = current_wire->sel(out_indices[i]);
+          cout << "selecting in add_wire" << endl;
+        }
+        def->connect(in_wire, current_wire);
+
       }
-      def->connect(in_wire, current_wire);
       
-      
-    } else if (is_storage(out_name) && false) {
-      /* FIXME: predicate
-      // disconnect any older connections (overwritten) and add the new one
-      def->disconnect(hw_storage_set[out_name]);
-      def->connect(in_wire, hw_storage_set[out_name]);
-      stream << "// connected to reg: " << out_name << endl;
-      hw_wire_set[out_name] = in_wire;
-      */
     } else {
       internal_assert(out_indices.empty());
       // wire is being stored for use as an input
@@ -1596,8 +1620,16 @@ CoreIR::Wireable* CodeGen_CoreIR_Target::CodeGen_CoreIR_C::get_wire(string name,
     if (indices.empty()) {
 
       if (is_storage(new_name)) {
-        stream << "// connecting to another passthrough: " << new_name << " <= " << in_name << endl;
-        def->connect(hw_store_set[in_name]->wire->sel("out"), hw_store_set[new_name]->wire->sel("in"));
+        stream << "// removing another passthrough: " << new_name << " = " << in_name << endl;
+        //def->connect(hw_store_set[in_name]->wire->sel("out"), hw_store_set[new_name]->wire->sel("in"));
+
+        auto pt_wire = hw_store_set[new_name]->wire;
+        internal_assert(CoreIR::Instance::classof(pt_wire));
+        CoreIR::Instance* pt_inst = &(cast<CoreIR::Instance>(*pt_wire));
+        def->removeInstance(pt_inst);
+        hw_store_set[new_name] = hw_store_set[in_name];
+        
+
         hw_store_set[in_name]->was_read = true;
       } else {
         stream << "// creating another passthrough reference: " << new_name << " = " << in_name << endl;

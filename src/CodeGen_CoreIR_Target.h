@@ -44,12 +44,14 @@ struct CoreIR_Inst_Args {
 struct Storage_Def {
   CoreIR::Type* ptype;
   CoreIR::Wireable* wire;
+  CoreIR::Wireable* reg = NULL;
   bool was_written = false;
   bool was_read = false;
-  bool is_reg;
 
-Storage_Def(CoreIR::Type* ptype, CoreIR::Wireable* wire, bool is_reg) :
-  ptype(ptype), wire(wire), is_reg(is_reg) {}
+Storage_Def(CoreIR::Type* ptype, CoreIR::Wireable* wire) :
+  ptype(ptype), wire(wire) {}
+
+  bool is_reg() {return (reg != NULL); };
 };
 
 typedef std::map<std::string,int> VarValues;
