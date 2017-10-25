@@ -61,7 +61,7 @@ CodeGen_CoreIR_Target::CodeGen_CoreIR_C::CodeGen_CoreIR_C(std::ostream &s, Outpu
     context = CoreIR::newContext();
     global_ns = context->getGlobal();
 
-    // add all generators and modules from coreirprims
+    // add all generators from coreirprims
     CoreIR::Namespace* coreir  = context->getNamespace("coreir");
     std::vector<string> corelib_gen_names = {"mul", "add", "sub", 
                                             "and", "or", "xor",
@@ -69,16 +69,19 @@ CodeGen_CoreIR_Target::CodeGen_CoreIR_C::CodeGen_CoreIR_C(std::ostream &s, Outpu
                                             "ult", "ugt", "ule", "uge",
                                             "slt", "sgt", "sle", "sge", 
                                             "shl", "ashr",
-                                            "mux", "const", "passthrough"};
+                                            "mux", "const", "wire"};
 
-    std::vector<string> corelib_mod_names = {"bitand", "bitor", "bitxor", "bitnot",
-                                             "bitmux", "bitconst"};
     for (auto gen_name : corelib_gen_names) {
       gens[gen_name] = coreir->getGenerator(gen_name);
       assert(gens[gen_name]);
     }
-    for (auto mod_name : corelib_mod_names) {
-      gens[mod_name] = coreir->getModule(mod_name);
+
+    // add all modules from corebit
+    CoreIR::Namespace* corebit  = context->getNamespace("corebit");
+    std::vector<string> corebitlib_mod_names = {"bitand", "bitor", "bitxor", "bitnot",
+                                                "bitmux", "bitconst"};
+    for (auto mod_name : corebitlib_mod_names) {
+      gens[mod_name] = corebit->getModule(mod_name.substr(3));
       assert(gens[mod_name]);
     }
 
@@ -91,6 +94,8 @@ CodeGen_CoreIR_Target::CodeGen_CoreIR_C::CodeGen_CoreIR_C(std::ostream &s, Outpu
       gens[gen_name] = commonlib->getGenerator(gen_name);
       assert(gens[gen_name]);
     }
+
+    gens["passthrough"] = context->getGenerator("_.passthrough");
 
     // add all generators from cgralib
 //     CoreIR::Namespace* cgralib = CoreIRLoadLibrary_cgralib(context);
@@ -135,7 +140,7 @@ CodeGen_CoreIR_Target::CodeGen_CoreIR_C::~CodeGen_CoreIR_C() {
       cout << RED << "Could not save to json!!" << RESET << endl;
       context->die();
     }
-    //context->runPasses({"rungenerators"});
+    context->runPasses({"rungenerators","removepassthroughs"});
     //design->print();
     //context->runPasses({"flattentypes"});
     //design->print();
@@ -164,7 +169,8 @@ CodeGen_CoreIR_Target::CodeGen_CoreIR_C::~CodeGen_CoreIR_C() {
       context->die();
     }
     ASSERT(m, "Could not load top: design");
-    m->print();
+    //m->print();
+    cout << GREEN << "Created CoreIR design!!!" << RESET << endl;
     
     CoreIR::deleteContext(context);
   } else {
@@ -692,7 +698,7 @@ void CodeGen_CoreIR_Target::CodeGen_CoreIR_C::visit(const Call *op) {
 
         // connect linebuffer
         CoreIR::Module* bc_gen = static_cast<CoreIR::Module*>(gens["bitconst"]);
-        CoreIR::Wireable* lb_wen = def->addInstance(lb_name+"_wen", bc_gen, {{"value",CoreIR::Const::make(context,1)}});
+        CoreIR::Wireable* lb_wen = def->addInstance(lb_name+"_wen", bc_gen, {{"value",CoreIR::Const::make(context,true)}});
         CoreIR::Wireable* lb_in_wire = get_wire(lb_in_name, op->args[0]);
 	def->connect(lb_in_wire, coreir_lb->sel("in"));
         def->connect(lb_wen->sel("out"), coreir_lb->sel("wen"));
@@ -1186,7 +1192,7 @@ CoreIR::Wireable* CodeGen_CoreIR_Target::CodeGen_CoreIR_C::get_wire(string name,
     uint const_bitwidth = get_const_bitwidth(e);
     if (const_bitwidth == 1) {
       CoreIR::Module* module = static_cast<CoreIR::Module*>(gens["bitconst"]);
-      cnst = def->addInstance(cnst_name, module, {{"value",CoreIR::Const::make(context,BitVector(bitwidth,cnst_value))}});
+      cnst = def->addInstance(cnst_name, module, {{"value",CoreIR::Const::make(context,(bool)cnst_value)}});
     } else {
       CoreIR::Generator* gen = static_cast<CoreIR::Generator*>(gens["const"]);
       cnst = def->addInstance(cnst_name,  gen, {{"width", CoreIR::Const::make(context,bitwidth)}},

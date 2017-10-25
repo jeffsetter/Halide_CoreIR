@@ -9,38 +9,38 @@
         }],
         "instances":{
           "_147_pt":{
-            "genref":"coreir.passthrough",
+            "genref":"_.passthrough",
             "genargs":{"type":["CoreIRType",["Array",16,"Bit"]]}
           },
-          "_148const50_":{
-            "genref":"coreir.const",
-            "genargs":{"width":["Int",16]},
-            "modargs":{"value":[["BitVector",16],1491992626]}
-          },
-          "_150const20_":{
-            "genref":"coreir.const",
-            "genargs":{"width":["Int",16]},
-            "modargs":{"value":[["BitVector",16],1491992596]}
-          },
-          "_152const10_":{
-            "genref":"coreir.const",
-            "genargs":{"width":["Int",16]},
-            "modargs":{"value":[["BitVector",16],1491992586]}
-          },
           "bitand_153_151_154":{
-            "modref":"coreir.bitand"
+            "modref":"corebit.and"
           },
           "bitmux_157_157_149":{
-            "modref":"coreir.bitmux"
+            "modref":"corebit.mux"
           },
           "bitnot_156":{
-            "modref":"coreir.bitnot"
+            "modref":"corebit.not"
           },
           "bitor_154_155_156":{
-            "modref":"coreir.bitor"
+            "modref":"corebit.or"
           },
           "bitxor_149_151_155":{
-            "modref":"coreir.bitxor"
+            "modref":"corebit.xor"
+          },
+          "const10__152":{
+            "genref":"coreir.const",
+            "genargs":{"width":["Int",16]},
+            "modargs":{"value":[["BitVector",16],10]}
+          },
+          "const20__150":{
+            "genref":"coreir.const",
+            "genargs":{"width":["Int",16]},
+            "modargs":{"value":[["BitVector",16],20]}
+          },
+          "const50__148":{
+            "genref":"coreir.const",
+            "genargs":{"width":["Int",16]},
+            "modargs":{"value":[["BitVector",16],50]}
           },
           "ule_148_147_149":{
             "genref":"coreir.ule",
@@ -60,9 +60,6 @@
           ["_147_pt.out","ule_148_147_149.in1"],
           ["_147_pt.out","ult_147_150_151.in0"],
           ["_147_pt.out","ult_152_147_153.in1"],
-          ["_148const50_.out","ule_148_147_149.in0"],
-          ["_150const20_.out","ult_147_150_151.in1"],
-          ["_152const10_.out","ult_152_147_153.in0"],
           ["bitand_153_151_154.in0","ult_152_147_153.out"],
           ["bitand_153_151_154.in1","ult_147_150_151.out"],
           ["bitand_153_151_154.out","bitor_154_155_156.in0"],
@@ -73,7 +70,10 @@
           ["bitnot_156.in","bitor_154_155_156.out"],
           ["bitor_154_155_156.in1","bitxor_149_151_155.out"],
           ["bitxor_149_151_155.in0","ule_148_147_149.out"],
-          ["bitxor_149_151_155.in1","ult_147_150_151.out"]
+          ["bitxor_149_151_155.in1","ult_147_150_151.out"],
+          ["const10__152.out","ult_152_147_153.in0"],
+          ["const20__150.out","ult_147_150_151.in1"],
+          ["const50__148.out","ule_148_147_149.in0"]
         ]
       }
     }
