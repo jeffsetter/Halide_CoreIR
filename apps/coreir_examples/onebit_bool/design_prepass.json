@@ -9,7 +9,7 @@
         }],
         "instances":{
           "_147_pt":{
-            "genref":"_.passthrough",
+            "genref":"mantle.wire",
             "genargs":{"type":["CoreIRType",["Array",16,"Bit"]]}
           },
           "bitand_153_151_154":{

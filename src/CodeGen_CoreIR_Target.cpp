@@ -64,12 +64,12 @@ CodeGen_CoreIR_Target::CodeGen_CoreIR_C::CodeGen_CoreIR_C(std::ostream &s, Outpu
     // add all generators from coreirprims
     CoreIR::Namespace* coreir  = context->getNamespace("coreir");
     std::vector<string> corelib_gen_names = {"mul", "add", "sub", 
-                                            "and", "or", "xor",
-                                            "eq",
-                                            "ult", "ugt", "ule", "uge",
-                                            "slt", "sgt", "sle", "sge", 
-                                            "shl", "ashr",
-                                            "mux", "const", "wire"};
+                                             "and", "or", "xor",
+                                             "eq", "neq",
+                                             "ult", "ugt", "ule", "uge",
+                                             "slt", "sgt", "sle", "sge", 
+                                             "shl", "ashr",
+                                             "mux", "const", "wire"};
 
     for (auto gen_name : corelib_gen_names) {
       gens[gen_name] = coreir->getGenerator(gen_name);
@@ -89,13 +89,13 @@ CodeGen_CoreIR_Target::CodeGen_CoreIR_C::CodeGen_CoreIR_C(std::ostream &s, Outpu
     CoreIR::Namespace* commonlib = CoreIRLoadLibrary_commonlib(context);
     std::vector<string> commonlib_gen_names = {"umin", "smin", "umax", "smax",
                                                "Linebuffer", "counter",
-                                               "neq", "muxn"};
+                                               "muxn"};
     for (auto gen_name : commonlib_gen_names) {
       gens[gen_name] = commonlib->getGenerator(gen_name);
       assert(gens[gen_name]);
     }
 
-    gens["passthrough"] = context->getGenerator("_.passthrough");
+    gens["passthrough"] = context->getGenerator("mantle.wire");
 
     // add all generators from cgralib
 //     CoreIR::Namespace* cgralib = CoreIRLoadLibrary_cgralib(context);
@@ -140,7 +140,7 @@ CodeGen_CoreIR_Target::CodeGen_CoreIR_C::~CodeGen_CoreIR_C() {
       cout << RED << "Could not save to json!!" << RESET << endl;
       context->die();
     }
-    context->runPasses({"rungenerators","removepassthroughs"});
+    context->runPasses({"rungenerators","removepassthroughs","verifyconnectivity-onlyinputs-noclkrst"});
     //design->print();
     //context->runPasses({"flattentypes"});
     //design->print();
