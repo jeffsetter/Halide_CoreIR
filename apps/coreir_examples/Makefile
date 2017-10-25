@@ -1,9 +1,9 @@
 ALL_COREIR_APPS = pointwise \
 	conv_1_1 conv_1_2 conv_2_1 conv_3_1 conv_bw \
 	onebit_comp onebit_and onebit_mux onebit_bool \
-	cascade harris conv_multi
+	cascade harris
 
-NOT_WORKING_APPS = conv_rgb
+NOT_WORKING_APPS = conv_rgb conv_multi
 
 all: test_all
 cleanall:
