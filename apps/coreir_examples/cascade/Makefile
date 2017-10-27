@@ -17,7 +17,8 @@ pipeline: pipeline.cpp
 pipeline_hls.cpp pipeline_native.o pipeline_cuda.o: pipeline
 	HL_DEBUG_CODEGEN=0 ./pipeline
 
-run: run.cpp pipeline_hls.cpp pipeline_native.o
+#run: run.cpp pipeline_hls.cpp pipeline_native.o
+run: run.cpp pipeline_native.o
 	$(CXX) $(CXXFLAGS) -O1 -DNDEBUG $(HLS_CXXFLAGS) -g -Wall -Werror $^ -lpthread -ldl -o $@ $(PNGFLAGS)
 
 
@@ -27,8 +28,10 @@ run_cuda: pipeline_native.o pipeline_cuda.o run_cuda.cpp
 out.png: run
 	./run input.png
 
-design_top.json: pipeline
+design_top.json design_top.txt: pipeline
 	HL_DEBUG_CODEGEN=0 ./pipeline
+graph.png: design_top.txt
+	dot -Tpng design_top.txt > graph.png
 
 $(HLS_LOG): ../hls_support/run_hls.tcl pipeline_hls.cpp run.cpp
 	RUN_PATH=$(realpath ./) \

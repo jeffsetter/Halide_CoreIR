@@ -32,7 +32,7 @@ public:
     MyPipeline() : input(UInt(8), 2, "input"), weight(UInt(8), 2, "weight"), bias("bias"),
                    kernel("kernel"), conv1("conv1"),
                    output("output"), hw_output("hw_output"),
-                   win(-1, 3, -1, 3) {
+                   win(0, 3, 0, 3) {
         // Define a 3x3 Gaussian Blur with a repeat-edge boundary condition.
         float sigma = 1.5f;
 
