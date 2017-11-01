@@ -62,7 +62,7 @@ CodeGen_CoreIR_Target::CodeGen_CoreIR_C::CodeGen_CoreIR_C(std::ostream &s, Outpu
     global_ns = context->getGlobal();
 
     // add all generators from coreirprims
-    //CoreIR::Namespace* coreir = context->getNamespace("coreir");
+    context->getNamespace("coreir");
     std::vector<string> corelib_gen_names = {"mul", "add", "sub", 
                                              "and", "or", "xor",
                                              "eq", "neq",
@@ -73,30 +73,31 @@ CodeGen_CoreIR_Target::CodeGen_CoreIR_C::CodeGen_CoreIR_C(std::ostream &s, Outpu
 
     for (auto gen_name : corelib_gen_names) {
       gens[gen_name] = "coreir." + gen_name;
-      assert(context->getGenerator(gens[gen_name]));
+      cout << "added " + gens[gen_name] << endl;
+      assert(context->hasGenerator(gens[gen_name]));
     }
 
     // add all modules from corebit
-    //CoreIR::Namespace* corebit  = context->getNamespace("corebit");
+    context->getNamespace("corebit");
     std::vector<string> corebitlib_mod_names = {"bitand", "bitor", "bitxor", "bitnot",
                                                 "bitmux", "bitconst"};
     for (auto mod_name : corebitlib_mod_names) {
       gens[mod_name] = "corebit." + mod_name.substr(3);
-      assert(context->getModule(gens[mod_name]));
+      assert(context->hasModule(gens[mod_name]));
     }
 
     // add all generators from commonlib
-    //CoreIR::Namespace* commonlib = CoreIRLoadLibrary_commonlib(context);
+    CoreIRLoadLibrary_commonlib(context);
     std::vector<string> commonlib_gen_names = {"umin", "smin", "umax", "smax",
                                                "Linebuffer", "counter",
                                                "muxn"};
     for (auto gen_name : commonlib_gen_names) {
       gens[gen_name] = "commonlib." + gen_name;
-      assert(context->getGenerator(gens[gen_name]));
+      assert(context->hasGenerator(gens[gen_name]));
     }
 
     gens["passthrough"] = "mantle.wire";
-    assert(context->getGenerator(gens["passthrough"]));
+    assert(context->hasGenerator(gens["passthrough"]));
 
     // add all generators from cgralib
 //     CoreIR::Namespace* cgralib = CoreIRLoadLibrary_cgralib(context);
@@ -1271,7 +1272,7 @@ void CodeGen_CoreIR_Target::CodeGen_CoreIR_C::visit_unaryop(Type t, Expr a, cons
     CoreIR::Wireable* coreir_inst;
 
     // properly cast to generator or module
-    if (context->hasGenerator(op_name)) {
+    if (context->hasGenerator(gens[op_name])) {
       internal_assert(context->getGenerator(gens[op_name]));    
       uint inst_bitwidth = a.type().bits() == 1 ? 1 : bitwidth;
       coreir_inst = def->addInstance(unaryop_name, gens[op_name], {{"width", CoreIR::Const::make(context,inst_bitwidth)}});
@@ -1312,11 +1313,16 @@ void CodeGen_CoreIR_Target::CodeGen_CoreIR_C::visit_binop(Type t, Expr a, Expr b
     CoreIR::Wireable* coreir_inst;
 
     // properly cast to generator or module
-    if (context->hasGenerator(op_name)) {
+    cout << "using gen " << gens[op_name] << endl;
+    //context->runPasses({"printer"},{"global","coreir"});
+
+    if (context->hasGenerator(gens[op_name])) {
       coreir_inst = def->addInstance(binop_name, gens[op_name], {{"width", CoreIR::Const::make(context,inst_bitwidth)}});
     } else {
       coreir_inst = def->addInstance(binop_name, gens[op_name]);
     }
+
+    cout << "finished making " << gens[op_name] << endl;
 
     def->connect(a_wire, coreir_inst->sel("in0"));
     def->connect(b_wire, coreir_inst->sel("in1"));
@@ -1355,7 +1361,7 @@ void CodeGen_CoreIR_Target::CodeGen_CoreIR_C::visit_ternop(Type t, Expr a, Expr 
     CoreIR::Wireable* coreir_inst;
 
     // properly cast to generator or module
-    if (context->hasGenerator(op_name)) {
+    if (context->hasGenerator(gens[op_name])) {
       coreir_inst = def->addInstance(ternop_name, gens[op_name], {{"width", CoreIR::Const::make(context,inst_bitwidth)}});
     } else {
       coreir_inst = def->addInstance(ternop_name, gens[op_name]);
