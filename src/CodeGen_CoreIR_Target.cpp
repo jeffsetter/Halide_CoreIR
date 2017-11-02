@@ -62,7 +62,7 @@ CodeGen_CoreIR_Target::CodeGen_CoreIR_C::CodeGen_CoreIR_C(std::ostream &s, Outpu
     global_ns = context->getGlobal();
 
     // add all generators from coreirprims
-    CoreIR::Namespace* coreir  = context->getNamespace("coreir");
+    context->getNamespace("coreir");
     std::vector<string> corelib_gen_names = {"mul", "add", "sub", 
                                              "and", "or", "xor",
                                              "eq", "neq",
@@ -72,30 +72,31 @@ CodeGen_CoreIR_Target::CodeGen_CoreIR_C::CodeGen_CoreIR_C(std::ostream &s, Outpu
                                              "mux", "const", "wire"};
 
     for (auto gen_name : corelib_gen_names) {
-      gens[gen_name] = coreir->getGenerator(gen_name);
-      assert(gens[gen_name]);
+      gens[gen_name] = "coreir." + gen_name;
+      assert(context->hasGenerator(gens[gen_name]));
     }
 
     // add all modules from corebit
-    CoreIR::Namespace* corebit  = context->getNamespace("corebit");
+    context->getNamespace("corebit");
     std::vector<string> corebitlib_mod_names = {"bitand", "bitor", "bitxor", "bitnot",
                                                 "bitmux", "bitconst"};
     for (auto mod_name : corebitlib_mod_names) {
-      gens[mod_name] = corebit->getModule(mod_name.substr(3));
-      assert(gens[mod_name]);
+      gens[mod_name] = "corebit." + mod_name.substr(3);
+      assert(context->hasModule(gens[mod_name]));
     }
 
     // add all generators from commonlib
-    CoreIR::Namespace* commonlib = CoreIRLoadLibrary_commonlib(context);
-    std::vector<string> commonlib_gen_names = {"umin", "smin", "umax", "smax",
+    CoreIRLoadLibrary_commonlib(context);
+    std::vector<string> commonlib_gen_names = {"umin", "smin", "umax", "smax", "absd",
                                                "Linebuffer", "counter",
                                                "muxn"};
     for (auto gen_name : commonlib_gen_names) {
-      gens[gen_name] = commonlib->getGenerator(gen_name);
-      assert(gens[gen_name]);
+      gens[gen_name] = "commonlib." + gen_name;
+      assert(context->hasGenerator(gens[gen_name]));
     }
 
-    gens["passthrough"] = context->getGenerator("mantle.wire");
+    gens["passthrough"] = "mantle.wire";
+    assert(context->hasGenerator(gens["passthrough"]));
 
     // add all generators from cgralib
 //     CoreIR::Namespace* cgralib = CoreIRLoadLibrary_cgralib(context);
@@ -484,8 +485,7 @@ void CodeGen_CoreIR_Target::CodeGen_CoreIR_C::visit(const For *op) {
                          {"min",CoreIR::Const::make(context,min_value)},
                          {"max",CoreIR::Const::make(context,max_value)},
                          {"inc",CoreIR::Const::make(context,inc_value)}};
-    CoreIR::Generator* gen_counter = static_cast<CoreIR::Generator*>(gens["counter"]);
-    CoreIR_Inst_Args counter_args(counter_name, wirename, selname, gen_counter, args, CoreIR::Values()
+    CoreIR_Inst_Args counter_args(counter_name, wirename, selname, gens["counter"], args, CoreIR::Values()
                                   );
     def_hw_set[print_name(op->name)] = &counter_args;
     cout << "// counter created with name " << print_name(op->name) << endl;
@@ -639,6 +639,12 @@ void CodeGen_CoreIR_Target::CodeGen_CoreIR_C::visit(const Call *op) {
         Expr b = op->args[1];
         stream << "[shift right] ";
         visit_binop(op->type, a, b, ">>", "ashr");
+    } else if (op->is_intrinsic(Call::absd)) {
+        internal_assert(op->args.size() == 2);
+        Expr a = op->args[0];
+        Expr b = op->args[1];
+        stream << "[absd] ";
+        visit_binop(op->type, a, b, "|-|", "absd");
 
     } else if (op->is_intrinsic(Call::reinterpret)) {
         string in_var = print_expr(op->args[0]);
@@ -690,15 +696,14 @@ void CodeGen_CoreIR_Target::CodeGen_CoreIR_C::visit(const Call *op) {
 	stream << "// stencil size: " << stencil_width << " " << stencil_height << " and image width " << image_width << std::endl
                << "//  using fifo_depth " << fifo_depth << std::endl;
         
-        CoreIR::Generator* gen = static_cast<CoreIR::Generator*>(gens["Linebuffer"]);
-	CoreIR::Wireable* coreir_lb = def->addInstance(lb_name, gen,
+	CoreIR::Wireable* coreir_lb = def->addInstance(lb_name, gens["Linebuffer"],
   			         {{"bitwidth",CoreIR::Const::make(context,bitwidth)}, {"stencil_width", CoreIR::Const::make(context,stencil_width)},
 				  {"stencil_height", CoreIR::Const::make(context,stencil_height)}, {"image_width", CoreIR::Const::make(context,fifo_depth)}}
 						       );
 
         // connect linebuffer
-        CoreIR::Module* bc_gen = static_cast<CoreIR::Module*>(gens["bitconst"]);
-        CoreIR::Wireable* lb_wen = def->addInstance(lb_name+"_wen", bc_gen, {{"value",CoreIR::Const::make(context,true)}});
+        //CoreIR::Module* bc_gen = static_cast<CoreIR::Module*>(gens["bitconst"]);
+        CoreIR::Wireable* lb_wen = def->addInstance(lb_name+"_wen", gens["bitconst"], {{"value",CoreIR::Const::make(context,true)}});
         CoreIR::Wireable* lb_in_wire = get_wire(lb_in_name, op->args[0]);
 	def->connect(lb_in_wire, coreir_lb->sel("in"));
         def->connect(lb_wen->sel("out"), coreir_lb->sel("wen"));
@@ -836,8 +841,7 @@ void CodeGen_CoreIR_Target::CodeGen_CoreIR_C::visit(const Call *op) {
 	  hw_wire_set[out_var] = hw_wire_set[stencil_print_name];
 	  stream << "// added to wire_set: " << out_var << " using stencil+idx\n";
 	} else if (hw_wire_set.count(print_name(op->name)) > 0) {
-          stream << "// trying to hook up " << print_name(op->name) << endl;
-          cout << "trying to hook up " << print_name(op->name) << endl;
+          //stream << "// trying to hook up " << print_name(op->name) << endl;
 
 	  CoreIR::Wireable* stencil_wire = hw_wire_set[print_name(op->name)]; // one example wire
           CoreIR::Wireable* orig_stencil_wire = stencil_wire;
@@ -846,8 +850,7 @@ void CodeGen_CoreIR_Target::CodeGen_CoreIR_C::visit(const Call *op) {
           CoreIR::Type* ptype = context->Bit()->Arr(bitwidth);
           string pt_name = unique_name(out_var + "_pt");
 
-          CoreIR::Generator* gen_pt = static_cast<CoreIR::Generator*>(gens["passthrough"]);
-          CoreIR::Wireable* pt = def->addInstance(pt_name, gen_pt, {{"type",CoreIR::Const::make(context,ptype)}});
+          CoreIR::Wireable* pt = def->addInstance(pt_name, gens["passthrough"], {{"type",CoreIR::Const::make(context,ptype)}});
           stencil_mux_pairs.push_back(std::make_pair(stencil_wire, pt->sel("in")));
 
           // for every dim in the stencil, keep track of correct index and create muxes
@@ -864,7 +867,6 @@ void CodeGen_CoreIR_Target::CodeGen_CoreIR_C::visit(const Call *op) {
 
             if (is_cnst(op->args[i])) {
               // constant index
-              cout << "  constant index" << endl;
 
               uint index = stoi(args_indices[i]);
               //cout << "type is " << wire_type->getKind() << " and has length " << static_cast<CoreIR::ArrayType*>(wire_type)->getLen() << endl;
@@ -894,8 +896,8 @@ void CodeGen_CoreIR_Target::CodeGen_CoreIR_C::visit(const Call *op) {
               // non-constant, variable index
               // create muxes 
               uint num_muxes = stencil_mux_pairs.size();
-              cout << "  variable index creating " << num_muxes << " mux(es)" << endl;
-              stream << "// variable index creating " << num_muxes << " mux(es)" << endl;
+              //cout << "  variable index creating " << num_muxes << " mux(es)" << endl;
+              //stream << "// variable index creating " << num_muxes << " mux(es)" << endl;
 
               // create mux for every input from previous layer
               for (uint j = 0; j < num_muxes; j++) {
@@ -905,8 +907,7 @@ void CodeGen_CoreIR_Target::CodeGen_CoreIR_C::visit(const Call *op) {
                 string mux_name = unique_name(print_name(op->name) + std::to_string(i) + 
                                               "_mux" + std::to_string(array_len) + "_" + std::to_string(j));
 
-                CoreIR::Generator* gen_muxn = static_cast<CoreIR::Generator*>(gens["muxn"]);
-                CoreIR::Wireable* mux_inst = def->addInstance(mux_name, gen_muxn, 
+                CoreIR::Wireable* mux_inst = def->addInstance(mux_name, gens["muxn"], 
                                                               {{"width",CoreIR::Const::make(context,bitwidth)},{"N",CoreIR::Const::make(context,array_len)}});
                 def->connect(mux_inst->sel("out"), mux_i);
                 stream << "// created mux called " << mux_name << endl;
@@ -938,8 +939,8 @@ void CodeGen_CoreIR_Target::CodeGen_CoreIR_C::visit(const Call *op) {
             def->connect(stencil_i, mux_i);
           }
 
-	  stream << "// added to wire_set: " << out_var << " using stencil\n";
-	  cout << "// added to wire_set: " << out_var << " using stencil\n";
+	  //stream << "// added to wire_set: " << out_var << " using stencil\n";
+	  //cout << "// added to wire_set: " << out_var << " using stencil\n";
 	} else {
           cout << "// " << stencil_print_name << " not found so it's not going to work" << endl;
 	}
@@ -1191,11 +1192,9 @@ CoreIR::Wireable* CodeGen_CoreIR_Target::CodeGen_CoreIR_C::get_wire(string name,
 
     uint const_bitwidth = get_const_bitwidth(e);
     if (const_bitwidth == 1) {
-      CoreIR::Module* module = static_cast<CoreIR::Module*>(gens["bitconst"]);
-      cnst = def->addInstance(cnst_name, module, {{"value",CoreIR::Const::make(context,(bool)cnst_value)}});
+      cnst = def->addInstance(cnst_name, gens["bitconst"], {{"value",CoreIR::Const::make(context,(bool)cnst_value)}});
     } else {
-      CoreIR::Generator* gen = static_cast<CoreIR::Generator*>(gens["const"]);
-      cnst = def->addInstance(cnst_name,  gen, {{"width", CoreIR::Const::make(context,bitwidth)}},
+      cnst = def->addInstance(cnst_name, gens["const"], {{"width", CoreIR::Const::make(context,bitwidth)}},
                               {{"value",CoreIR::Const::make(context,BitVector(bitwidth,cnst_value))}});
     }
 
@@ -1276,16 +1275,13 @@ void CodeGen_CoreIR_Target::CodeGen_CoreIR_C::visit_unaryop(Type t, Expr a, cons
     CoreIR::Wireable* coreir_inst;
 
     // properly cast to generator or module
-    if (gens[op_name]->getKind() == CoreIR::Instantiable::InstantiableKind::IK_Generator) {
-      CoreIR::Generator* gen = static_cast<CoreIR::Generator*>(gens[op_name]);
-      internal_assert(gen);    
-
+    if (context->hasGenerator(gens[op_name])) {
+      internal_assert(context->getGenerator(gens[op_name]));    
       uint inst_bitwidth = a.type().bits() == 1 ? 1 : bitwidth;
-      coreir_inst = def->addInstance(unaryop_name,gen, {{"width", CoreIR::Const::make(context,inst_bitwidth)}});
+      coreir_inst = def->addInstance(unaryop_name, gens[op_name], {{"width", CoreIR::Const::make(context,inst_bitwidth)}});
     } else {
-      CoreIR::Module* mod = static_cast<CoreIR::Module*>(gens[op_name]);
-      internal_assert(mod);
-      coreir_inst = def->addInstance(unaryop_name, mod);
+      internal_assert(context->getModule(gens[op_name]));
+      coreir_inst = def->addInstance(unaryop_name, gens[op_name]);
     }
 
     def->connect(a_wire, coreir_inst->sel("in"));
@@ -1320,12 +1316,12 @@ void CodeGen_CoreIR_Target::CodeGen_CoreIR_C::visit_binop(Type t, Expr a, Expr b
     CoreIR::Wireable* coreir_inst;
 
     // properly cast to generator or module
-    if (gens[op_name]->getKind() == CoreIR::Instantiable::InstantiableKind::IK_Generator) {
-      CoreIR::Generator* gen = static_cast<CoreIR::Generator*>(gens[op_name]);
-      coreir_inst = def->addInstance(binop_name,gen, {{"width", CoreIR::Const::make(context,inst_bitwidth)}});
+    //context->runPasses({"printer"},{"global","coreir"});
+
+    if (context->hasGenerator(gens[op_name])) {
+      coreir_inst = def->addInstance(binop_name, gens[op_name], {{"width", CoreIR::Const::make(context,inst_bitwidth)}});
     } else {
-      CoreIR::Module* mod = static_cast<CoreIR::Module*>(gens[op_name]);
-      coreir_inst = def->addInstance(binop_name, mod);
+      coreir_inst = def->addInstance(binop_name, gens[op_name]);
     }
 
     def->connect(a_wire, coreir_inst->sel("in0"));
@@ -1365,12 +1361,10 @@ void CodeGen_CoreIR_Target::CodeGen_CoreIR_C::visit_ternop(Type t, Expr a, Expr 
     CoreIR::Wireable* coreir_inst;
 
     // properly cast to generator or module
-    if (gens[op_name]->getKind() == CoreIR::Instantiable::InstantiableKind::IK_Generator) {
-      CoreIR::Generator* gen = static_cast<CoreIR::Generator*>(gens[op_name]);
-      coreir_inst = def->addInstance(ternop_name,gen, {{"width", CoreIR::Const::make(context,inst_bitwidth)}});
+    if (context->hasGenerator(gens[op_name])) {
+      coreir_inst = def->addInstance(ternop_name, gens[op_name], {{"width", CoreIR::Const::make(context,inst_bitwidth)}});
     } else {
-      CoreIR::Module* mod = static_cast<CoreIR::Module*>(gens[op_name]);
-      coreir_inst = def->addInstance(ternop_name, mod);
+      coreir_inst = def->addInstance(ternop_name, gens[op_name]);
     }
 
     def->connect(a_wire, coreir_inst->sel("sel"));
@@ -1412,6 +1406,27 @@ void CodeGen_CoreIR_Target::CodeGen_CoreIR_C::visit(const Div *op) {
       stream << "divide is not fully supported" << endl;
     }
 }
+  void CodeGen_CoreIR_Target::CodeGen_CoreIR_C::visit(const Mod *op) {
+    int num_bits;
+    if (is_const_power_of_two_integer(op->b, &num_bits)) {
+      // equivalent to masking the bottom bits
+      uint param_bitwidth = op->a.type().bits();
+      uint mask = (1<<num_bits) - 1;
+      Expr mask_expr = UIntImm::make(UInt(param_bitwidth), mask);
+      visit_binop(op->type, op->a, mask_expr, "&", "and");
+
+//        ostringstream oss;
+//        oss << print_expr(op->a) << " & " << ((1 << bits)-1);
+//        print_assignment(op->type, oss.str());
+    } else if (op->type.is_int()) {
+      stream << "// mod is not fully supported" << endl;
+      //print_expr(lower_euclidean_mod(op->a, op->b));
+    } else {
+      stream << "// mod is not fully supported" << endl;
+      //visit_binop(op->type, op->a, op->b, "%", "mod");
+    }
+
+  }
 void CodeGen_CoreIR_Target::CodeGen_CoreIR_C::visit(const And *op) {
   // should always be used with booleans
   if (op->type.bits() == 1) {

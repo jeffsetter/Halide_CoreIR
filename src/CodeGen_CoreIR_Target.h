@@ -28,14 +28,14 @@ struct CoreIR_Argument {
 
 struct CoreIR_Inst_Args {
   std::string name;
-  CoreIR::Generator* gen;
+  std::string gen;
   CoreIR::Values args;
   CoreIR::Values genargs;
   std::string wirename;
   std::string selname;
 
   CoreIR_Inst_Args(std::string name, std::string wirename, std::string selname,
-    CoreIR::Generator* gen, CoreIR::Values args, CoreIR::Values genargs) :
+                   std::string gen, CoreIR::Values args, CoreIR::Values genargs) :
  name(name), gen(gen), args(args), genargs(genargs), wirename(wirename), selname(selname) {}
 
 };
@@ -84,6 +84,7 @@ protected:
 	void visit_binop(Type t, Expr a, Expr b, const char* op_sym, std::string op_name);
 	void visit(const Mul *op);
 	void visit(const Div *op);
+	void visit(const Mod *op);
 	void visit(const Add *op);
 	void visit(const Sub *op);
 	void visit(const And *op);
@@ -105,7 +106,7 @@ protected:
         uint8_t bitwidth;
         CoreIR::Context* context = NULL;
         CoreIR::Namespace* global_ns = NULL;
-        std::map<std::string,CoreIR::Instantiable*> gens;
+        std::map<std::string,std::string> gens;
         CoreIR::ModuleDef* def = NULL;
         CoreIR::Module* design = NULL;
         CoreIR::Wireable* self = NULL;
