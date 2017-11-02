@@ -84,6 +84,7 @@ protected:
 	void visit_binop(Type t, Expr a, Expr b, const char* op_sym, std::string op_name);
 	void visit(const Mul *op);
 	void visit(const Div *op);
+	void visit(const Mod *op);
 	void visit(const Add *op);
 	void visit(const Sub *op);
 	void visit(const And *op);

@@ -73,7 +73,6 @@ CodeGen_CoreIR_Target::CodeGen_CoreIR_C::CodeGen_CoreIR_C(std::ostream &s, Outpu
 
     for (auto gen_name : corelib_gen_names) {
       gens[gen_name] = "coreir." + gen_name;
-      cout << "added " + gens[gen_name] << endl;
       assert(context->hasGenerator(gens[gen_name]));
     }
 
@@ -88,7 +87,7 @@ CodeGen_CoreIR_Target::CodeGen_CoreIR_C::CodeGen_CoreIR_C(std::ostream &s, Outpu
 
     // add all generators from commonlib
     CoreIRLoadLibrary_commonlib(context);
-    std::vector<string> commonlib_gen_names = {"umin", "smin", "umax", "smax",
+    std::vector<string> commonlib_gen_names = {"umin", "smin", "umax", "smax", "absd",
                                                "Linebuffer", "counter",
                                                "muxn"};
     for (auto gen_name : commonlib_gen_names) {
@@ -640,6 +639,12 @@ void CodeGen_CoreIR_Target::CodeGen_CoreIR_C::visit(const Call *op) {
         Expr b = op->args[1];
         stream << "[shift right] ";
         visit_binop(op->type, a, b, ">>", "ashr");
+    } else if (op->is_intrinsic(Call::absd)) {
+        internal_assert(op->args.size() == 2);
+        Expr a = op->args[0];
+        Expr b = op->args[1];
+        stream << "[absd] ";
+        visit_binop(op->type, a, b, "|-|", "absd");
 
     } else if (op->is_intrinsic(Call::reinterpret)) {
         string in_var = print_expr(op->args[0]);
@@ -836,8 +841,7 @@ void CodeGen_CoreIR_Target::CodeGen_CoreIR_C::visit(const Call *op) {
 	  hw_wire_set[out_var] = hw_wire_set[stencil_print_name];
 	  stream << "// added to wire_set: " << out_var << " using stencil+idx\n";
 	} else if (hw_wire_set.count(print_name(op->name)) > 0) {
-          stream << "// trying to hook up " << print_name(op->name) << endl;
-          cout << "trying to hook up " << print_name(op->name) << endl;
+          //stream << "// trying to hook up " << print_name(op->name) << endl;
 
 	  CoreIR::Wireable* stencil_wire = hw_wire_set[print_name(op->name)]; // one example wire
           CoreIR::Wireable* orig_stencil_wire = stencil_wire;
@@ -863,7 +867,6 @@ void CodeGen_CoreIR_Target::CodeGen_CoreIR_C::visit(const Call *op) {
 
             if (is_cnst(op->args[i])) {
               // constant index
-              cout << "  constant index" << endl;
 
               uint index = stoi(args_indices[i]);
               //cout << "type is " << wire_type->getKind() << " and has length " << static_cast<CoreIR::ArrayType*>(wire_type)->getLen() << endl;
@@ -893,8 +896,8 @@ void CodeGen_CoreIR_Target::CodeGen_CoreIR_C::visit(const Call *op) {
               // non-constant, variable index
               // create muxes 
               uint num_muxes = stencil_mux_pairs.size();
-              cout << "  variable index creating " << num_muxes << " mux(es)" << endl;
-              stream << "// variable index creating " << num_muxes << " mux(es)" << endl;
+              //cout << "  variable index creating " << num_muxes << " mux(es)" << endl;
+              //stream << "// variable index creating " << num_muxes << " mux(es)" << endl;
 
               // create mux for every input from previous layer
               for (uint j = 0; j < num_muxes; j++) {
@@ -936,8 +939,8 @@ void CodeGen_CoreIR_Target::CodeGen_CoreIR_C::visit(const Call *op) {
             def->connect(stencil_i, mux_i);
           }
 
-	  stream << "// added to wire_set: " << out_var << " using stencil\n";
-	  cout << "// added to wire_set: " << out_var << " using stencil\n";
+	  //stream << "// added to wire_set: " << out_var << " using stencil\n";
+	  //cout << "// added to wire_set: " << out_var << " using stencil\n";
 	} else {
           cout << "// " << stencil_print_name << " not found so it's not going to work" << endl;
 	}
@@ -1313,7 +1316,6 @@ void CodeGen_CoreIR_Target::CodeGen_CoreIR_C::visit_binop(Type t, Expr a, Expr b
     CoreIR::Wireable* coreir_inst;
 
     // properly cast to generator or module
-    cout << "using gen " << gens[op_name] << endl;
     //context->runPasses({"printer"},{"global","coreir"});
 
     if (context->hasGenerator(gens[op_name])) {
@@ -1321,8 +1323,6 @@ void CodeGen_CoreIR_Target::CodeGen_CoreIR_C::visit_binop(Type t, Expr a, Expr b
     } else {
       coreir_inst = def->addInstance(binop_name, gens[op_name]);
     }
-
-    cout << "finished making " << gens[op_name] << endl;
 
     def->connect(a_wire, coreir_inst->sel("in0"));
     def->connect(b_wire, coreir_inst->sel("in1"));
@@ -1406,6 +1406,27 @@ void CodeGen_CoreIR_Target::CodeGen_CoreIR_C::visit(const Div *op) {
       stream << "divide is not fully supported" << endl;
     }
 }
+  void CodeGen_CoreIR_Target::CodeGen_CoreIR_C::visit(const Mod *op) {
+    int num_bits;
+    if (is_const_power_of_two_integer(op->b, &num_bits)) {
+      // equivalent to masking the bottom bits
+      uint param_bitwidth = op->a.type().bits();
+      uint mask = (1<<num_bits) - 1;
+      Expr mask_expr = UIntImm::make(UInt(param_bitwidth), mask);
+      visit_binop(op->type, op->a, mask_expr, "&", "and");
+
+//        ostringstream oss;
+//        oss << print_expr(op->a) << " & " << ((1 << bits)-1);
+//        print_assignment(op->type, oss.str());
+    } else if (op->type.is_int()) {
+      stream << "// mod is not fully supported" << endl;
+      //print_expr(lower_euclidean_mod(op->a, op->b));
+    } else {
+      stream << "// mod is not fully supported" << endl;
+      //visit_binop(op->type, op->a, op->b, "%", "mod");
+    }
+
+  }
 void CodeGen_CoreIR_Target::CodeGen_CoreIR_C::visit(const And *op) {
   // should always be used with booleans
   if (op->type.bits() == 1) {
