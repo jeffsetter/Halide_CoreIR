@@ -37,14 +37,15 @@ public:
     // unroll the reduction
     conv.update(0).unroll(win.x);
 
-    // normalize and clamp the output to 15 bits
+    // normalize and clamp the output to 8 bits
     blur(x,y) = conv(x,y) / 16;
-    pixel(x,y) = select(blur(x,y) > (2^15)-1, (2^15)-1, blur(x,y));
+    pixel(x,y) = select(blur(x,y) > (2^8)-1, (2^8)-1, blur(x,y));
 
     // set top bit if leftmost blur pixel is the maximum
     Expr is_max = blur(x,y)>blur(x+1,y) && blur(x,y)>blur(x+2,y) && blur(x,y)>blur(x+3,y);
 
-    hw_output(x,y) = select(is_max, cast<uint8_t>(blur(x,y)), 0);
+    //hw_output(x,y) = select(is_max, cast<uint8_t>(blur(x,y)), 0);
+    hw_output(x,y) = cast<uint8_t>(pixel(x,y));
 
     output(x, y) = hw_output(x, y);
 

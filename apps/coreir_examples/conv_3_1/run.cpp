@@ -83,18 +83,25 @@ int main(int argc, char **argv) {
       for (int y = 0; y < in.height(); y++) {
         for (int x = 0; x < in.width(); x++) {
           for (int c = 0; c < in.channels(); c++) {
+            // set input value
             state.setValue("self.in_0", BitVector(16, in(x,y,c)));
             instream << state.getBitVec("self.in_0") << endl;
-            state.execute();
+
+            // propogate to all wires
+            state.exeComb();
             
+            // read output wire
             outstream << state.getBitVec("self.out") << endl;
             out_coreir(x,y,c) = state.getBitVec("self.out").to_type<uint16_t>();
-            if (out_native(x, y, c) != out_coreir(x, y, c)) {
+            if (y>=2 && out_native(x, y-2, c) != out_coreir(x, y, c)) {
               printf("out_native(%d, %d, %d) = %d, but out_coreir(%d, %d, %d) = %d\n",
                      x, y, c, out_native(x, y, c),
                      x, y, c, out_coreir(x, y, c));
               success = false;
             }
+
+            // give another rising edge (execute seq)
+            state.exeSeq();
 
           }
         }
