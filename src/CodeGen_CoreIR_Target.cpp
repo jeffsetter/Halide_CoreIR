@@ -268,7 +268,8 @@ void CodeGen_CoreIR_Target::CodeGen_CoreIR_C::add_kernel(Stmt stmt,
             allocations.push(args[i].name, {args[i].stencil_type.elemType, "null"});
             stencils.push(args[i].name, args[i].stencil_type);
 	    if (args[i].stencil_type.type == Stencil_Type::StencilContainerType::AxiStream) {
-              if (num_inouts == 0) {
+
+              if (args[i].is_output) {
                 //cout << "output: " << arg_name << " added with type " << CodeGen_C::print_type(stype.elemType) << " and bitwidth " << stype.elemType.bits() << endl;
                 //stream << "\n// output: " << arg_name << " added with type " << CodeGen_C::print_type(stype.elemType) << " and bitwidth " << stype.elemType.bits() << endl;
                 stype_first = stype;
@@ -280,8 +281,9 @@ void CodeGen_CoreIR_Target::CodeGen_CoreIR_C::add_kernel(Stmt stmt,
               }
               num_inouts++;
 	    }
+
         } else {
-            stream << print_type(args[i].scalar_type) << " " << arg_name;
+          stream << print_type(args[i].scalar_type) << " " << arg_name;
         }
 
         if (i < args.size()-1) stream << ",\n";
@@ -366,6 +368,28 @@ void CodeGen_CoreIR_Target::CodeGen_CoreIR_C::add_kernel(Stmt stmt,
             } else {
                 stream << print_type(args[i].scalar_type) << " &"
                        << print_name(args[i].name) << " = " << arg_name << ";\n";
+                
+                // configurable taps are generated as constant registers
+                string const_name = print_name(args[i].name);
+                string tap_name = "tap" + const_name;
+                int const_bitwidth = args[i].scalar_type.bits();
+                int const_value = 0;
+                CoreIR::Wireable* const_inst;
+
+                if (const_bitwidth == 1) {
+                  //cout << "bitwidth 1 args are not supported yet" << endl;
+                  CoreIR::Values mod_args = {{"value",CoreIR::Const::make(context,(bool)const_value)}};
+                  //CoreIR_Inst_Args tap_args(const_name, arg_name, "out", gens["bitconst"], gen_args, CoreIR::Values());
+                  const_inst = def->addInstance(tap_name, gens["bitconst"], mod_args);
+                } else {
+                  CoreIR::Values gen_args = {{"width", CoreIR::Const::make(context,bitwidth)}};
+                  CoreIR::Values mod_args = {{"value",CoreIR::Const::make(context,BitVector(bitwidth,const_value))}};
+                  //CoreIR_Inst_Args tap_args(const_name, arg_name, "out", gens["const"], gen_args, mod_params);
+                  const_inst = def->addInstance(tap_name, gens["const"], gen_args, mod_args);
+                }
+                const_inst->getMetaData()["tap"] = "This constant is expected to be changed as a tap value.";
+                add_wire(const_name, const_inst->sel("out"));
+          
             }
         }
 	stream << "\n// hw_input_set contains: ";
