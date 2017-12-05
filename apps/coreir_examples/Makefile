@@ -31,4 +31,3 @@ test_all: $(ALL_COREIR_APPS)
 	@for app in $(NOT_WORKING_APPS); do \
 	  echo $$app; \
 	done
-

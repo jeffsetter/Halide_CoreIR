@@ -30,14 +30,14 @@ struct CoreIR_Inst_Args {
   std::string ref_name = "";
   std::string name;
   std::string gen;
-  CoreIR::Args args;
-  CoreIR::Args genargs;
+  CoreIR::Values args;
+  CoreIR::Values genargs;
   std::string wirename;
   std::string selname;
 
   CoreIR_Inst_Args(std::string name, std::string wirename, std::string selname,
-                   std::string gen, CoreIR::Args args, CoreIR::Args genargs) :
-  name(name), gen(gen), args(args), genargs(genargs), wirename(wirename), selname(selname) {}
+                   std::string gen, CoreIR::Values args, CoreIR::Values genargs) :
+ name(name), gen(gen), args(args), genargs(genargs), wirename(wirename), selname(selname) {}
 
 };
 
@@ -124,7 +124,7 @@ protected:
         uint8_t bitwidth;
         CoreIR::Context* context = NULL;
         CoreIR::Namespace* global_ns = NULL;
-        std::map<std::string,CoreIR::Instantiable*> gens;
+        std::map<std::string,std::string> gens;
         CoreIR::ModuleDef* def = NULL;
         CoreIR::Module* design = NULL;
         CoreIR::Wireable* self = NULL;

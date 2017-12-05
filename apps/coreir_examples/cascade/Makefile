@@ -14,7 +14,7 @@ run_hls: $(HLS_LOG)
 pipeline: pipeline.cpp
 	$(CXX) $(CXXFLAGS) -Wall -g $^ $(LIB_HALIDE) -o $@ $(LDFLAGS) -ltinfo
 
-pipeline_hls.cpp pipeline_native.o pipeline_cuda.o: pipeline
+pipeline_hls.cpp pipeline_native.o pipeline_cuda.o hls_target.cpp: pipeline
 	HL_DEBUG_CODEGEN=0 ./pipeline
 
 #run: run.cpp pipeline_hls.cpp pipeline_native.o
@@ -30,6 +30,7 @@ out.png: run
 
 design_top.json design_top.txt: pipeline
 	HL_DEBUG_CODEGEN=0 ./pipeline
+
 graph.png: design_top.txt
 	dot -Tpng design_top.txt > graph.png
 
@@ -47,5 +48,5 @@ clean:
 	rm -f pipeline_native.h pipeline_native.o
 	rm -f pipeline_hls.h pipeline_hls.cpp hls_target.h hls_target.cpp
 	rm -f pipeline_coreir.cpp pipeline_coreir.h
-	rm -f coreir_target.h coreir_target.cpp design_top.json design_*.json
+	rm -f coreir_target.h coreir_target.cpp *.json
 	rm -f design_top.txt out.png graph.png
