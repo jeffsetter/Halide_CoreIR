@@ -13,7 +13,7 @@ endif
 set input = $1
 set output = $2
 
-# You so stoopid
+# set up temp dir
 set tmpdir = /tmp/myconvert.$$; mkdir $tmpdir
 set tmp = $tmpdir/tmp.pgm
 
