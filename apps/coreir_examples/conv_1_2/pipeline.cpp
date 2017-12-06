@@ -25,7 +25,7 @@ public:
                    win(0, 2, 0, 1) {
         // Define a 1x2 Box Blur
 
-        kernel(x, y) = cast<uint16_t>(5);
+        kernel(x, y) = cast<uint16_t>(1);
 
         // define the algorithm
         //clamped = BoundaryConditions::repeat_edge(input);

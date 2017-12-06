@@ -7,6 +7,8 @@ include ../../support/Makefile.inc
 include ../hls_support/Makefile.inc
 HLS_LOG = vivado_hls.log
 
+COREIR_DIR ?= ../../../../coreir
+
 .PHONY: all run_hls
 all: out.png
 run_hls: $(HLS_LOG)
@@ -19,7 +21,7 @@ pipeline_hls.cpp pipeline_native.o pipeline_cuda.o hls_target.cpp: pipeline
 	HL_DEBUG_CODEGEN=0 ./pipeline
 
 run: run.cpp pipeline_hls.cpp pipeline_native.o hls_target.cpp
-	$(CXX) $(CXXFLAGS) -O1 -DNDEBUG $(HLS_CXXFLAGS) -g -Wall -Werror $^ -lpthread -ldl -o $@ $(PNGFLAGS)
+	$(CXX) $(CXXFLAGS) -O1 -DNDEBUG $(HLS_CXXFLAGS) -g -Wall -Werror $^ -lpthread -ldl -I ../../../../coreir/include $(LIB_HALIDE) -o $@ $(PNGFLAGS) $(LDFLAGS)
 
 
 out.png: run input_unique.pgm
