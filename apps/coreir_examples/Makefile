@@ -1,8 +1,7 @@
-ALL_COREIR_APPS = pointwise \
-	blur_1_4 conv_1_1 conv_1_2 conv_2_1 conv_3_1 conv_bw \
+ALL_COREIR_APPS = pointwise param \
+	blur_1_4 conv_1_1 conv_1_2 conv_2_1 conv_3_1 conv_bw gaussian \
 	conv_nest cascade conv_multi \
-	onebit_comp onebit_and onebit_mux onebit_bool harris \
-	gaussian
+	onebit_comp onebit_and onebit_mux onebit_bool harris 
 
 NOT_WORKING_APPS = conv_rgb demosaic stereo camera_pipe simpleCNN unsharp \
 	demosaic_flow demosaic_harris

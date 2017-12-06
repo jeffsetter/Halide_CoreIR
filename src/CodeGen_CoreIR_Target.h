@@ -18,8 +18,8 @@ namespace Internal {
 
 struct CoreIR_Argument {
     std::string name;
-
     bool is_stencil;
+    bool is_output;
 
     Type scalar_type;
 
