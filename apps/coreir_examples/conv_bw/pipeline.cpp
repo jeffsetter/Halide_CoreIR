@@ -53,7 +53,6 @@ public:
       kernel(1,0) = 14;      kernel(1,1) = 0;      kernel(1,2) = 16;
       kernel(2,0) = 17;      kernel(2,1) = 18;      kernel(2,2) = 19;
 
-
         // define the algorithm
         clamped(x,y) = input(x,y);
 
@@ -65,7 +64,7 @@ public:
 	conv1.update(0).unroll(win.x).unroll(win.y);
 
         //hw_output = convolve55_rd(conv1);
-	hw_output(x,y) = cast<uint8_t>(conv1(x,y));
+	hw_output(x,y) = cast<uint8_t>(conv1(x,y) / 16); // sum(weights) == 16
         output(x, y) = hw_output(x, y);
 
 	// constraints
