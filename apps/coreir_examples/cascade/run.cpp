@@ -34,6 +34,7 @@ int main(int argc, char **argv) {
 //    }
 
     in = load_image(argv[1]);
+    save_image(in, "input_crop.png");
 
     for (int y = 0; y < weight.height(); y++)
       for (int x = 0; x < weight.width(); x++)

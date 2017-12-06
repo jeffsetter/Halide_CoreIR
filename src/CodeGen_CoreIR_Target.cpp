@@ -89,7 +89,7 @@ CodeGen_CoreIR_Target::CodeGen_CoreIR_C::CodeGen_CoreIR_C(std::ostream &s, Outpu
     CoreIRLoadLibrary_commonlib(context);
     std::vector<string> commonlib_gen_names = {"umin", "smin", "umax", "smax",
                                                "Linebuffer", "Linebuffer_3d", "counter",
-                                               "neq", "muxn", "MAD", "reg_array"};
+                                               "muxn", "MAD", "absd", "reg_array"}; // neq
     for (auto gen_name : commonlib_gen_names) {
       gens[gen_name] = "commonlib." + gen_name;
       assert(context->hasGenerator(gens[gen_name]));
@@ -141,8 +141,9 @@ CodeGen_CoreIR_Target::CodeGen_CoreIR_C::~CodeGen_CoreIR_C() {
       cout << RED << "Could not save to json!!" << RESET << endl;
       context->die();
     }
-    //context->runPasses({"rungenerators", "removepassthroughs"});
-    context->runPasses({"rungenerators","removepassthroughs","verifyconnectivity-onlyinputs-noclkrst"});
+    context->runPasses({"rungenerators", "removepassthroughs"});
+    //FIXME: we should have everything connected
+    //    context->runPasses({"rungenerators","removepassthroughs","verifyconnectivity-onlyinputs-noclkrst"});
 
     //design->print();
     //context->runPasses({"flattentypes"});
@@ -250,6 +251,18 @@ string CodeGen_CoreIR_Target::CodeGen_CoreIR_C::print_stencil_pragma(const strin
         internal_error;
     }
     return oss.str();
+}
+
+uint num_bits(uint N) {
+  if (N==0) { return 1; }
+
+  uint num_shifts = 0;
+  uint temp_value = N;
+  while (temp_value > 0) {
+    temp_value  = temp_value >> 1;
+    num_shifts++;
+  }
+  return num_shifts;
 }
 
 
@@ -467,7 +480,7 @@ void CodeGen_CoreIR_Target::CodeGen_CoreIR_C::visit(const Provide *op) {
           // produce a register for accumulation
           stream << "// provide with a predicate\n";
           // FIXME: support value that is not constant
-          internal_assert(is_const(op->values[0])) << "FIXME: Only constant inits are suppported";
+          //internal_assert(is_const(op->values[0])) << "FIXME: Only constant inits are suppported";
           int const_value;
           if (is_const(op->values[0])) {
             const_value = id_const_value(op->values[0]);
@@ -486,12 +499,13 @@ void CodeGen_CoreIR_Target::CodeGen_CoreIR_C::visit(const Provide *op) {
             // add reg_array
             CoreIR::Type* ptype = pt_struct->ptype;
             string regs_name = "regs" + new_name;
-            CoreIR::Wireable* regs = def->addInstance(regs_name, gens["reg_array"], {{"type",CoreIR::Const::make(context,ptype)}, {"has_rst", CoreIR::Const::make(context,true)}});
+            //FIXME: clr or rst?
+            CoreIR::Wireable* regs = def->addInstance(regs_name, gens["reg_array"], {{"type",CoreIR::Const::make(context,ptype)}, {"has_clr", CoreIR::Const::make(context,true)}});
             pt_struct->reg = regs;
           }
           internal_assert(is_storage(new_name) && hw_store_set[new_name]->is_reg());
           auto reg_struct = hw_store_set[new_name];
-          def->connect(get_wire(cond_id, predicate->condition), reg_struct->reg->sel("rst"));
+          def->connect(get_wire(cond_id, predicate->condition), reg_struct->reg->sel("clr"));
 
           stream << "// reg rst added to: " << new_name << endl;
         } else {
@@ -963,6 +977,7 @@ void CodeGen_CoreIR_Target::CodeGen_CoreIR_C::visit(const Call *op) {
           // FIXME: assert that this is a linebuffer
           // FIXME: shouldn't print out again
           string cond_id = print_expr(predicate->condition);
+          def->disconnect(lb_wire->sel("wen"));
           def->connect(lb_wire->sel("wen"), get_wire(cond_id, predicate->condition));
         }
 
@@ -1088,13 +1103,21 @@ void CodeGen_CoreIR_Target::CodeGen_CoreIR_C::visit(const Call *op) {
                 string mux_name = unique_name(print_name(op->name) + std::to_string(i) + 
                                               "_mux" + std::to_string(array_len) + "_" + std::to_string(j));
 
+                CoreIR::Values sliceArgs = {{"width", CoreIR::Const::make(context,bitwidth)},
+                                            {"lo", CoreIR::Const::make(context,0)},
+                                            {"hi", CoreIR::Const::make(context,num_bits(array_len-1))}};
+                CoreIR::Wireable* slice_inst = def->addInstance("selslice" + mux_name, "coreir.slice", sliceArgs); 
+
+
                 CoreIR::Wireable* mux_inst = def->addInstance(mux_name, gens["muxn"], 
                                                               {{"width",CoreIR::Const::make(context,bitwidth)},{"N",CoreIR::Const::make(context,array_len)}});
+                
                 def->connect(mux_inst->sel("out"), mux_i);
                 stream << "// created mux called " << mux_name << endl;
 
                 // wire up select
-                def->connect(get_wire(args_indices[i], op->args[i]), mux_inst->sel("in")->sel("sel"));
+                def->connect(get_wire(args_indices[i], op->args[i]), slice_inst->sel("in"));
+                def->connect(slice_inst->sel("out"), mux_inst->sel("in")->sel("sel"));
 
                 // add each corresponding stencil and mux input to list
                 for (uint mux_i = 0; mux_i < array_len; ++mux_i) {
@@ -1642,7 +1665,7 @@ bool CodeGen_CoreIR_Target::CodeGen_CoreIR_C::is_output(string var_name) {
 
   void CodeGen_CoreIR_Target::CodeGen_CoreIR_C::rename_wire(string new_name, string in_name, Expr in_expr, vector<uint> indices) {
   // if this is a definition, then just copy the pointer
-    cout << "trying to add/modify: " << new_name << " = " << in_name << "\n";
+    //cout << "trying to add/modify: " << new_name << " = " << in_name << "\n";
   if (is_defined(in_name) && !is_wire(in_name)) { 
     assert(indices.empty());
     // wire is only defined but not created yet
@@ -1794,6 +1817,7 @@ void CodeGen_CoreIR_Target::CodeGen_CoreIR_C::visit_binop(Type t, Expr a, Expr b
     // properly cast to generator or module
     //context->runPasses({"printer"},{"global","coreir"});
 
+    //cout << "creating a hardware binop: " << op_name << endl;
     if (context->hasGenerator(gens[op_name])) {
       coreir_inst = def->addInstance(binop_name, gens[op_name], {{"width", CoreIR::Const::make(context,inst_bitwidth)}});
     } else {
@@ -2091,10 +2115,17 @@ void CodeGen_CoreIR_Target::CodeGen_CoreIR_C::visit(const Load *op) {
           uint mux_size = indices.size();
           string mux_name = unique_name(name + "_mux" + std::to_string(mux_size));
 
+          CoreIR::Values sliceArgs = {{"width", CoreIR::Const::make(context,bitwidth)},
+                                      {"lo", CoreIR::Const::make(context,0)},
+                                      {"hi", CoreIR::Const::make(context,num_bits(mux_size-1))}};
+          CoreIR::Wireable* slice_inst = def->addInstance("selslice" + mux_name, "coreir.slice", sliceArgs); 
+
+          
           CoreIR::Wireable* mux_inst = def->addInstance(mux_name, gens["muxn"], 
                                                         {{"width",CoreIR::Const::make(context,bitwidth)},{"N",CoreIR::Const::make(context,mux_size)}});
 
-          def->connect(mux_inst->sel("in")->sel("sel"), get_wire(id_var, Expr()));
+          def->connect(get_wire(id_var, Expr()), slice_inst->sel("in"));
+          def->connect(mux_inst->sel("in")->sel("sel"), slice_inst->sel("out"));
           for (uint i=0; i<mux_size; ++i) {
             CoreIR::Wireable* wire_in = get_wire(name + "_" + std::to_string(indices[i]), Expr());
             internal_assert(wire_in) << "Allocation " << name << " was not saved yet for index " << indices[i] << "\n";
