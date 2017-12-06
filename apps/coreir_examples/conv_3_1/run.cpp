@@ -63,7 +63,7 @@ int main(int argc, char **argv) {
     	c->die();
       }
 
-      c->runPasses({"rungenerators", "flattentypes", "flatten", "liftclockports-coreir", "wireclocks-coreir"});
+      c->runPasses({"rungenerators", "flattentypes", "flatten", "wireclocks-coreir"});
 
 
       Module* m = g->getModule("DesignTop");
@@ -88,7 +88,7 @@ int main(int argc, char **argv) {
             instream << state.getBitVec("self.in_0") << endl;
 
             // propogate to all wires
-            state.exeComb();
+            state.exeCombinational();
             
             // read output wire
             outstream << state.getBitVec("self.out") << endl;
@@ -101,7 +101,7 @@ int main(int argc, char **argv) {
             }
 
             // give another rising edge (execute seq)
-            state.exeSeq();
+            state.exeSequential();
 
           }
         }
