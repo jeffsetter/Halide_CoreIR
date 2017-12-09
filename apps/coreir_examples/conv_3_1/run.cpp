@@ -58,7 +58,7 @@ int main(int argc, char **argv) {
     Namespace* g = c->getGlobal();
 
     CoreIRLoadLibrary_commonlib(c);
-      if (!loadFromFile(c,"./conv_3_1.json")) {
+      if (!loadFromFile(c,"./design_prepass.json")) {
     	cout << "Could not Load from json!!" << endl;
     	c->die();
       }
@@ -67,7 +67,6 @@ int main(int argc, char **argv) {
 
 
       Module* m = g->getModule("DesignTop");
-
       assert(m != nullptr);
       SimulatorState state(m);
 

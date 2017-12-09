@@ -22,7 +22,7 @@ public:
     Param<uint16_t> bias;
     Func kernel;
     Func clamped;
-    Func conv1, conv2;
+    Func conv1, conv1_shift, conv2;
     Func output;
     Func hw_output;
     std::vector<Argument> args;
@@ -38,15 +38,15 @@ public:
 
         //kernel(x, y) = cast<uint16_t>(exp(-(x*x + y*y)/(2*sigma*sigma)) / (float)(2*M_PI*sigma*sigma));
         //kernel(x, y) = cast<uint16_t>(3);
-      kernel(x,y) = select(x==0&&y==0, 11,
-                           x==0&&y==1, 12,
-                           x==0&&y==2, 13,
-                           x==1&&y==0, 14,
-                           x==1&&y==1, 15,
-                           x==1&&y==2, 16,
-                           x==2&&y==0, 17,
-                           x==2&&y==1, 18,
-                           x==2&&y==2, 19, 0);
+      kernel(x,y) = select(x==0&&y==0, 1,
+                           x==0&&y==1, 2,
+                           x==0&&y==2, 1,
+                           x==1&&y==0, 2,
+                           x==1&&y==1, 4,
+                           x==1&&y==2, 2,
+                           x==2&&y==0, 1,
+                           x==2&&y==1, 12,
+                           x==2&&y==2, 1, 0);
 
         // define the algorithm
         clamped(x,y) = input(x,y);
@@ -56,13 +56,14 @@ public:
 
         // unroll the reduction
 	conv1.update(0).unroll(win.x).unroll(win.y);
+        conv1_shift(x,y) = conv1(x,y) >> 4;
 
         // cascade another kernel
-        conv2(x, y) += conv1(x+win.x, y+win.y) * kernel(win.x, win.y);
+        conv2(x, y) += conv1_shift(x+win.x, y+win.y) * kernel(win.x, win.y);
 	conv2.update(0).unroll(win.x).unroll(win.y);
 
         //hw_output = convolve55_rd(conv1);
-	hw_output(x,y) = cast<uint8_t>(conv1(x,y));
+	hw_output(x,y) = cast<uint8_t>(conv2(x,y) >> 4);
         output(x, y) = hw_output(x, y);
 
 	// constraints
@@ -81,7 +82,7 @@ public:
     void compile_cpu() {
         std::cout << "\ncompiling cpu code..." << std::endl;
 
-        output.tile(x, y, xo, yo, xi, yi, 62,62);
+        output.tile(x, y, xo, yo, xi, yi, 60,60);
         output.fuse(xo, yo, xo).parallel(xo);
 
         output.vectorize(xi, 8);

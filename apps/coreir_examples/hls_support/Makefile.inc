@@ -19,4 +19,4 @@ LDFLAGS ?=
 LDFLAGS += -lcoreir-cgralib -lcoreir-commonlib -lcoreir
 
 COREIR_DIR ?= ../../../../coreir
-LIB_HALIDE += -L$(COREIR_DIR)/lib -Wl,-rpath,$(COREIR_DIR)/lib
+LIB_HALIDE += -I $(COREIR_DIR)/include -L$(COREIR_DIR)/lib -Wl,-rpath,$(COREIR_DIR)/lib 
