@@ -13,6 +13,7 @@
 #include "coreir/libs/commonlib.h"
 
 using namespace Halide::Tools;
+using namespace CoreIR;
 
 int main(int argc, char **argv) {
     Image<uint8_t> in(10,9 , 1);

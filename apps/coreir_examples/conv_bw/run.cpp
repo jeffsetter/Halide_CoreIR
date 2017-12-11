@@ -13,6 +13,7 @@
 #include "coreir/libs/commonlib.h"
 
 using namespace Halide::Tools;
+using namespace CoreIR;
 
 const unsigned char gaussian2d[5][5] = {
     {1,     3,     6,     3,     1},

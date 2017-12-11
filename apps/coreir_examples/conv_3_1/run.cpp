@@ -16,6 +16,7 @@
 #include <fstream>
 
 using namespace Halide::Tools;
+using namespace CoreIR;
 using namespace std;
 
 int main(int argc, char **argv) {
