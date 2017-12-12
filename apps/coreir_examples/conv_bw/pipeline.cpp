@@ -58,7 +58,8 @@ public:
 	conv1.update(0).unroll(win.x).unroll(win.y);
 
         //hw_output = convolve55_rd(conv1);
-	hw_output(x,y) = cast<uint8_t>(conv1(x,y) / 16); // sum(weights) == 16
+	//hw_output(x,y) = cast<uint8_t>(conv1(x,y) / 16); // sum(weights) == 16
+        hw_output(x,y) = cast<uint8_t>(conv1(x,y));
         output(x, y) = hw_output(x, y);
 
 	// constraints

@@ -8,12 +8,12 @@
 #include "pipeline_hls.h"
 
 #include "coreir.h"
-#include "coreir/passes/analysis/pass_sim.h"
 #include "coreir/passes/transform/rungenerators.h"
 #include "coreir/simulator/interpreter.h"
 #include "coreir/libs/commonlib.h"
 
 using namespace Halide::Tools;
+using namespace CoreIR;
 
 const unsigned char gaussian2d[5][5] = {
     {1,     3,     6,     3,     1},
