@@ -89,7 +89,7 @@ CodeGen_CoreIR_Target::CodeGen_CoreIR_C::CodeGen_CoreIR_C(std::ostream &s, Outpu
     CoreIRLoadLibrary_commonlib(context);
     std::vector<string> commonlib_gen_names = {"umin", "smin", "umax", "smax",
                                                "Linebuffer", "Linebuffer_3d", "counter",
-                                               "muxn", "MAD", "absd", "reg_array"}; // neq
+                                               "muxn", "absd", "reg_array"}; // neq
     for (auto gen_name : commonlib_gen_names) {
       gens[gen_name] = "commonlib." + gen_name;
       assert(context->hasGenerator(gens[gen_name]));
@@ -1923,7 +1923,9 @@ void CodeGen_CoreIR_Target::CodeGen_CoreIR_C::visit(const Mul *op) {
   visit_binop(op->type, op->a, op->b, "*", "mul");
 }
 void CodeGen_CoreIR_Target::CodeGen_CoreIR_C::visit(const Add *op) {
+  visit_binop(op->type, op->a, op->b, "+", "add");
   // check if we can instantiate a MAD instead
+  /*
   if (const Mul* mul = op->a.as<Mul>()) {
     visit_ternop(op->type, mul->a, mul->b, op->b, "*", "+", "MAD");
   } else if (const Mul* mul = op->b.as<Mul>()) {
@@ -1931,6 +1933,8 @@ void CodeGen_CoreIR_Target::CodeGen_CoreIR_C::visit(const Add *op) {
   } else {
     visit_binop(op->type, op->a, op->b, "+", "add");
   }
+  */
+
 }
 void CodeGen_CoreIR_Target::CodeGen_CoreIR_C::visit(const Sub *op) {
   visit_binop(op->type, op->a, op->b, "-", "sub");
