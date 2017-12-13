@@ -312,7 +312,7 @@ void CodeGen_CoreIR_Target::CodeGen_CoreIR_C::add_kernel(Stmt stmt,
 
                 hw_output_set.insert(arg_name);
               } else {
-                cout << "input: " << arg_name << " added with type " << CodeGen_C::print_type(stype.elemType) << " and bitwidth " << stype.elemType.bits() << endl;
+                //cout << "input: " << arg_name << " added with type " << CodeGen_C::print_type(stype.elemType) << " and bitwidth " << stype.elemType.bits() << endl;
                 //stream << "\n// input: " << arg_name << " added with type " << CodeGen_C::print_type(stype.elemType) << " and bitwidth " << stype.elemType.bits() << endl;
 
                 uint in_bitwidth = stype.elemType.bits() > 1 ? bitwidth : 1;
@@ -322,7 +322,7 @@ void CodeGen_CoreIR_Target::CodeGen_CoreIR_C::add_kernel(Stmt stmt,
                 }
                 //input_types.appendField(arg_name, input_type);
                 input_types.push_back({arg_name, input_type});
-                cout << "  and its type is " << input_type->toString() << endl;
+                //cout << "  and its type is " << input_type->toString() << endl;
 
                 hw_input_set.insert(arg_name);
               }
@@ -485,18 +485,15 @@ void CodeGen_CoreIR_Target::CodeGen_CoreIR_C::visit(const Provide *op) {
 
 	stream << "[provide]" << " ";
         stream << print_name(op->name) << "(";
-        cout << print_name(op->name) << "(";
 	string new_name = print_name(op->name);
 
         for(size_t i = 0; i < op->args.size(); i++) {
             stream << args_indices[i];
-            cout << args_indices[i];
             if (i != op->args.size() - 1)
-              {stream << ", "; cout << ", ";}
+              {stream << ", "; }
         }
         stream << ") = " << id_value << ";\n";
-        cout << ") = " << id_value << ";\n";
-        cout << "doing a provide\n ";
+        //cout << "doing a provide\n ";
         // FIXME: can we avoid clearing the cache? just ones where the end matches (for regs used multiple times)?
         cache.clear();
         
@@ -598,7 +595,7 @@ void CodeGen_CoreIR_Target::CodeGen_CoreIR_C::visit(const For *op) {
     CoreIR_Inst_Args counter_args(counter_name, wirename, selname, gens["counter"], args, CoreIR::Values()
                                   );
     hw_def_set[print_name(op->name)] = std::make_shared<CoreIR_Inst_Args>(counter_args);
-    cout << "// counter created with name " << print_name(op->name) << endl;
+    //cout << "// counter created with name " << print_name(op->name) << endl;
     stream << "// counter created with name " << print_name(op->name) << endl;
 
 
@@ -827,7 +824,7 @@ void CodeGen_CoreIR_Target::CodeGen_CoreIR_C::visit(const Call *op) {
                           {"image_width", CoreIR::Const::make(context,fifo_depth)}};
           coreir_lb = def->addInstance(lb_name, gens["Linebuffer"], lb_args);
         } else if (num_dims == 3) {
-          cout << "created a 3d linebuffer!" << endl;
+          //cout << "created a 3d linebuffer!" << endl;
           int stencil_depth = lb_dims[0];
           int stencil_width = lb_dims[1];
           int stencil_height = lb_dims[2];
@@ -839,8 +836,8 @@ void CodeGen_CoreIR_Target::CodeGen_CoreIR_C::visit(const Call *op) {
           
           stream << "// stencil size: " << stencil_depth << " " << stencil_width << " " << stencil_height
                  << " and image size " << image_depth << "x" << image_width << std::endl;
-          cout << "// stencil size: " << stencil_depth << " " << stencil_width << " " << stencil_height
-                 << " and image size " << image_depth << "x" << image_width << std::endl;
+          //cout << "// stencil size: " << stencil_depth << " " << stencil_width << " " << stencil_height
+          //<< " and image size " << image_depth << "x" << image_width << std::endl;
 
           CoreIR::Values lb3_args = {{"bitwidth",CoreIR::Const::make(context,bitwidth)},
                            {"stencil_d0", CoreIR::Const::make(context,stencil_depth)},
@@ -1402,7 +1399,7 @@ void CodeGen_CoreIR_Target::CodeGen_CoreIR_C::visit(const Realize *op) {
         CoreIR::Wireable* pt = def->addInstance(pt_name, gens["passthrough"], {{"type",CoreIR::Const::make(context,ptype)}});
         hw_store_set[print_name(op->name)] = std::make_shared<Storage_Def>(Storage_Def(ptype, pt));
         stream << "created storage called " << op->name << endl;
-        cout << "created storage called " << op->name << endl;
+        //cout << "created storage called " << op->name << endl;
 
         // traverse down
         op->body.accept(this);
@@ -1453,7 +1450,7 @@ void CodeGen_CoreIR_Target::CodeGen_CoreIR_C::visit(const Realize *op) {
         CoreIR::Wireable* pt = def->addInstance(pt_name, gens["passthrough"], {{"type",CoreIR::Const::make(context,ptype)}});
         hw_store_set[print_name(op->name)] = std::make_shared<Storage_Def>(Storage_Def(ptype, pt));
         stream << "created storage called " << print_name(op->name) << endl;
-        cout << "created storage called " << print_name(op->name) << endl;
+        //cout << "created storage called " << print_name(op->name) << endl;
         
         op->body.accept(this);
 
@@ -1552,11 +1549,11 @@ bool CodeGen_CoreIR_Target::CodeGen_CoreIR_C::is_output(string var_name) {
     return const_inst->sel("out");
 
   } else if (is_input(name)) {
-    cout << "trying to get input " << name << " from " << self->sel("in")->getType()->toString() << endl;
+    //cout << "trying to get input " << name << " from " << self->sel("in")->getType()->toString() << endl;
     CoreIR::Wireable* input_wire = self->sel("in")->sel(name);
     internal_assert(input_wire);
     stream << "// " << name << " added as input " << name << endl;
-    cout << "// " << name << " added as input " << name << endl;
+    //cout << "// " << name << " added as input " << name << endl;
     return input_wire;
 
   } else if (is_storage(name)) {
@@ -1570,7 +1567,7 @@ bool CodeGen_CoreIR_Target::CodeGen_CoreIR_C::is_output(string var_name) {
     }
 
     for (int i=indices.size()-1; i >= 0; --i) {
-      cout << "selecting storage in get_wire" << endl;
+      //cout << "selecting storage in get_wire" << endl;
       current_wire = current_wire->sel(indices[i]);
     }
     pt_struct->was_read = true;
@@ -1589,8 +1586,8 @@ bool CodeGen_CoreIR_Target::CodeGen_CoreIR_C::is_output(string var_name) {
     }
     CoreIR::Wireable* current_wire = wire;
     for (int i=indices.size()-1; i >= 0; --i) {
-      cout << i << endl;
-      cout << "selecting wire index " << indices[i] << " for wire " << name << " in get_wire" << endl;
+      //cout << i << endl;
+      //cout << "selecting wire index " << indices[i] << " for wire " << name << " in get_wire" << endl;
       current_wire = current_wire->sel(indices[i]);
     }
     //cout << "finished with get_wire" << endl;
@@ -1658,25 +1655,24 @@ bool CodeGen_CoreIR_Target::CodeGen_CoreIR_C::is_output(string var_name) {
           stream << "// disconnecting wire for reg " << out_name << endl;
           CoreIR::Wireable* d_wire = pt_struct->reg->sel("in");
           for (int i=out_indices.size()-1; i >= 0; --i) {
-            cout << "selecting in reg add_wire: " << out_indices[i] << endl;
+            //cout << "selecting in reg add_wire: " << out_indices[i] << endl;
             d_wire = d_wire->sel(out_indices[i]);
           }
-          cout << "select in add_wire done" << endl;
+          //cout << "select in add_wire done" << endl;
           def->disconnect(d_wire);
           def->connect(in_wire, d_wire);
         }
 
         pt_struct->was_written = true;
         stream << "// added passthrough wire to " << out_name << endl;
-        cout << "// added passthrough wire to " << out_name << endl;
+        //cout << "// added passthrough wire to " << out_name << endl;
 
         // connect wire to passthrough
         CoreIR::Wireable* current_wire = pt_struct->wire->sel("in");
         for (int i=out_indices.size()-1; i >= 0; --i) {
-          cout << "selecting in add_wire: " << out_indices[i] << endl;
+          //cout << "selecting in add_wire: " << out_indices[i] << endl;
           current_wire = current_wire->sel(out_indices[i]);
         }
-        cout << "select in add_wire done" << endl;
         def->connect(in_wire, current_wire);
 
       }
@@ -2099,13 +2095,13 @@ void CodeGen_CoreIR_Target::CodeGen_CoreIR_C::visit(const Load *op) {
     } else {
       std::vector<const Variable*> dep_vars = find_dep_vars(op->index);
       stream << "// vars for " << name << ": ";
-      cout << "// vars for " << name << ": ";
+      //cout << "// vars for " << name << ": ";
       for (auto v : dep_vars) {
         stream << v->name << ", ";
-        cout << v->name << ", ";
+        //cout << v->name << ", ";
       }
       stream << endl;
-      cout << endl;
+      //cout << endl;
 
       std::vector<VarValues> pts;
       for (const Variable* v : dep_vars) {
