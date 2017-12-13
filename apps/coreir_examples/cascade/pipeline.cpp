@@ -45,11 +45,11 @@ public:
                            x==1&&y==1, 4,
                            x==1&&y==2, 2,
                            x==2&&y==0, 1,
-                           x==2&&y==1, 12,
+                           x==2&&y==1, 2,
                            x==2&&y==2, 1, 0);
 
         // define the algorithm
-        clamped(x,y) = input(x,y);
+        clamped(x,y) = cast<uint16_t>(input(x,y));
 
         conv1(x, y) += clamped(x+win.x, y+win.y) * kernel(win.x, win.y);
 	//conv1(x, y) += clamped(x+win.x, y+win.y) * gaussian2d[win.x+1][win.y+1];
@@ -74,7 +74,7 @@ public:
 
         args.push_back(input);
 	//args.push_back(weight);
-        args.push_back(bias);
+        //args.push_back(bias);
 
 
     }
@@ -119,7 +119,7 @@ public:
         // level
         hw_output.compute_root();
         //hw_output.tile(x, y, xo, yo, xi, yi, 1920, 1080).reorder(xi, yi, xo, yo);
-        hw_output.tile(x, y, xo, yo, xi, yi, 62,62).reorder(xi, yi, xo, yo);
+        hw_output.tile(x, y, xo, yo, xi, yi, 60,60).reorder(xi, yi, xo, yo);
 
         //hw_output.unroll(xi, 2);
         hw_output.accelerate({clamped}, xi, xo, {});  // define the inputs and the output
@@ -140,7 +140,7 @@ public:
      	hw_output.compute_root();
 	conv1.linebuffer();
 
-	hw_output.tile(x, y, xo, yo, xi, yi, 62,62).reorder(xi,yi,xo,yo);
+	hw_output.tile(x, y, xo, yo, xi, yi, 60,60).reorder(xi,yi,xo,yo);
 
 	hw_output.accelerate({clamped}, xi, xo, {});
 

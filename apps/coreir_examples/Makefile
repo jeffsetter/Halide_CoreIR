@@ -1,9 +1,10 @@
-ALL_COREIR_APPS = pointwise \
-	blur_1_4 conv_1_1 conv_1_2 conv_2_1 conv_3_1 conv_bw \
-	onebit_comp onebit_and onebit_mux onebit_bool \
-	harris
+ALL_COREIR_APPS = pointwise param \
+	blur_1_4 conv_1_1 conv_1_2 conv_2_1 conv_3_1 conv_bw gaussian \
+	conv_nest conv_multi \
+	onebit_comp onebit_and onebit_mux onebit_bool harris 
 
-NOT_WORKING_APPS = conv_rgb conv_multi cascade
+NOT_WORKING_APPS = cascade conv_rgb demosaic stereo camera_pipe simpleCNN unsharp \
+	demosaic_flow demosaic_harris
 
 all: test_all
 cleanall:
@@ -19,7 +20,7 @@ cleanall:
 $(ALL_COREIR_APPS):
 	$(MAKE) -C $@ || exit 1
 
-test_conv: conv_1_2 conv_2_1 conv_3_1 conv_bw
+test_conv: conv_1_2 conv_2_1 conv_3_1 conv_bw conv_nest
 
 test_onebit: onebit_comp onebit_and onebit_mux onebit_bool
 

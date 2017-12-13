@@ -20,16 +20,16 @@ pipeline_hls.cpp pipeline_native.o pipeline_cuda.o hls_target.cpp: pipeline
 run: run.cpp pipeline_hls.cpp pipeline_native.o hls_target.cpp
 	$(CXX) $(CXXFLAGS) -O1 -DNDEBUG $(HLS_CXXFLAGS) -g -Wall -Werror $^ -lpthread -ldl $(LIB_HALIDE) -o $@ $(PNGFLAGS) $(LDFLAGS)
 
-
 run_cuda: pipeline_native.o pipeline_cuda.o run_cuda.cpp
 	$(CXX) -O3 $(CXXFLAGS) -Wall -Werror $^ -lpthread -ldl -o $@  $(PNGFLAGS) `pkg-config --libs opencv`
 
 out.png: run
 	./run input.png
 
-design_top.json: pipeline
+design_top.json design_top.txt: pipeline
 	HL_DEBUG_CODEGEN=0 ./pipeline
-graph.png: design_top.json
+
+graph.png: design_top.txt
 	dot -Tpng design_top.txt > graph.png
 
 $(HLS_LOG): ../hls_support/run_hls.tcl pipeline_hls.cpp run.cpp

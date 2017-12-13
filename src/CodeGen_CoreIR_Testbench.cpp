@@ -23,14 +23,16 @@ using std::map;
 
 class CoreIR_Closure : public Closure {
 public:
-    CoreIR_Closure(Stmt s)  {
+  CoreIR_Closure(Stmt s, string output_string)  {
         s.accept(this);
+        output_name = output_string;
     }
 
     vector<CoreIR_Argument> arguments(const Scope<CodeGen_CoreIR_Base::Stencil_Type> &scope);
 
 protected:
     using Closure::visit;
+    string output_name;
 
 };
 
@@ -50,12 +52,17 @@ vector<CoreIR_Argument> CoreIR_Closure::arguments(const Scope<CodeGen_CoreIR_Bas
         if(ends_with(i.first, ".stream") ||
            ends_with(i.first, ".stencil") ) {
             CodeGen_CoreIR_Base::Stencil_Type stype = streams_scope.get(i.first);
-            res.push_back({i.first, true, Type(), stype});
+
+            if (starts_with(i.first, output_name)) {
+              res.push_back({i.first, true, true, Type(), stype});              
+            } else {
+              res.push_back({i.first, true, false, Type(), stype});              
+            }
         } else if (ends_with(i.first, ".stencil_update")) {
             internal_error << "we don't expect to see a stencil_update type in CoreIR_Closure.\n";
         } else {
             // it is a scalar variable
-            res.push_back({i.first, false, i.second, CodeGen_CoreIR_Base::Stencil_Type()});
+            res.push_back({i.first, false, true, i.second, CodeGen_CoreIR_Base::Stencil_Type()});
         }
     }
     return res;
@@ -82,15 +89,19 @@ CodeGen_CoreIR_Testbench::~CodeGen_CoreIR_Testbench() {
 }
 
 void CodeGen_CoreIR_Testbench::visit(const ProducerConsumer *op) {
-    if (starts_with(op->name, "_hls_target.")) {
+    string target_prefix = "_hls_target.";
+    if (starts_with(op->name, target_prefix)) {
         Stmt hw_body = op->produce;
 
         debug(1) << "compute the closure for " << op->name << '\n';
-        CoreIR_Closure c(hw_body);
+
+        // get substring after target_prefix
+        string output_name = op->name.substr(target_prefix.length()); 
+        CoreIR_Closure c(hw_body, output_name);
         vector<CoreIR_Argument> args = c.arguments(stencils);
 
         // generate CoreIR target code using the child code generator
-        string ip_name = unique_name("hls_target");
+        string ip_name = unique_name("coreir_target");
         cg_target.add_kernel(hw_body, ip_name, args);
 
         // emits the target function call

@@ -54,7 +54,7 @@ int main(int argc, char **argv) {
     printf("finished generating image\n");
 
     if (success) {
-        printf("Successed!\n");
+        printf("Succeeded!\n");
         return 0;
     } else {
         printf("Failed!\n");

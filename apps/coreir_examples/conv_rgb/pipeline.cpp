@@ -44,11 +44,12 @@ public:
         conv1(x, y, c) += clamped(x+win.x, y+win.y, c) * kernel(win.x, win.y);
 
         // unroll the reduction
-        conv1.update(0);//.unroll(win.x).unroll(win.y);
+        conv1.update(0).unroll(win.x).unroll(win.y).unroll(c);
 
         //hw_output = convolve55_rd(conv1);
 	hw_output(x,y,c) = cast<uint8_t>(conv1(x,y,c));
         output(x, y, c) = hw_output(x, y, c);
+
 
         // constraints
         output.bound(c, 0, 3);
@@ -110,7 +111,7 @@ public:
         hw_output.accelerate({clamped}, xi, xo, {kernel});  // define the inputs and the output
         conv1.linebuffer();
 	//        conv1.unroll(c).unroll(x).unroll(y);
-	//        hw_output.unroll(c);
+        hw_output.unroll(c); conv1.unroll(c);
 
         //output.print_loop_nest();
         Target hls_target = get_target_from_environment();
@@ -127,7 +128,7 @@ public:
 	conv1.linebuffer();
 	hw_output.tile(x, y, xo, yo, xi, yi, 256,256).reorder(c,xi,yi,xo,yo);
 	hw_output.accelerate({clamped}, xi, xo, {kernel});
-
+        hw_output.unroll(c);
 
         Target coreir_target = get_target_from_environment();
         coreir_target.set_feature(Target::CPlusPlusMangling);
