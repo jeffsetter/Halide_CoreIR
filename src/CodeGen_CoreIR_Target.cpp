@@ -399,6 +399,15 @@ void CodeGen_CoreIR_Target::CodeGen_CoreIR_C::add_kernel(Stmt stmt,
                 CodeGen_CoreIR_Base::Stencil_Type stype = args[i].stencil_type;
                 stream << print_stencil_type(args[i].stencil_type) << " &"
                        << print_name(args[i].name) << " = " << arg_name << ";\n";
+
+                // add alias to coreir
+                if (is_input(arg_name)) {
+                  rename_wire(print_name(args[i].name), arg_name, Expr());
+                  //hw_input_set.insert(print_name(args[i].name));
+                }
+                if (is_output(arg_name) ) {
+                  hw_output_set.insert(print_name(args[i].name));
+                }                
 		
             } else {
                 stream << print_type(args[i].scalar_type) << " &"
@@ -427,14 +436,6 @@ void CodeGen_CoreIR_Target::CodeGen_CoreIR_C::add_kernel(Stmt stmt,
           
             }
 
-            // add alias to coreir
-            if (is_input(arg_name)) {
-              rename_wire(print_name(args[i].name), arg_name, Expr());
-              //hw_input_set.insert(print_name(args[i].name));
-            }
-            if (is_output(arg_name) ) {
-              hw_output_set.insert(print_name(args[i].name));
-            }                
 
         }
 	stream << "\n// hw_input_set contains: ";
