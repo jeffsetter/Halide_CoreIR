@@ -88,7 +88,7 @@ CodeGen_CoreIR_Target::CodeGen_CoreIR_C::CodeGen_CoreIR_C(std::ostream &s, Outpu
     // add all generators from commonlib
     CoreIRLoadLibrary_commonlib(context);
     std::vector<string> commonlib_gen_names = {"umin", "smin", "umax", "smax",
-                                               "Linebuffer", "Linebuffer_3d", "counter",
+                                               "linebuffer2d", "linebuffer3d", "counter",
                                                "muxn", "absd", "reg_array"}; // neq
     for (auto gen_name : commonlib_gen_names) {
       gens[gen_name] = "commonlib." + gen_name;
@@ -823,7 +823,7 @@ void CodeGen_CoreIR_Target::CodeGen_CoreIR_C::visit(const Call *op) {
                           {"stencil_width", CoreIR::Const::make(context,stencil_width)},
                           {"stencil_height", CoreIR::Const::make(context,stencil_height)},
                           {"image_width", CoreIR::Const::make(context,fifo_depth)}};
-          coreir_lb = def->addInstance(lb_name, gens["Linebuffer"], lb_args);
+          coreir_lb = def->addInstance(lb_name, gens["linebuffer2d"], lb_args);
         } else if (num_dims == 3) {
           //cout << "created a 3d linebuffer!" << endl;
           int stencil_depth = lb_dims[0];
@@ -847,7 +847,7 @@ void CodeGen_CoreIR_Target::CodeGen_CoreIR_C::visit(const Call *op) {
                            {"image_d0", CoreIR::Const::make(context,image_depth)}, 
                            {"image_d1", CoreIR::Const::make(context,image_width)}};
 
-          coreir_lb = def->addInstance(lb_name, gens["Linebuffer_3d"], lb3_args);
+          coreir_lb = def->addInstance(lb_name, gens["linebuffer3d"], lb3_args);
 
         }
 
