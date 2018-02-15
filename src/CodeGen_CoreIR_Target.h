@@ -87,38 +87,6 @@ protected:
 
         using CodeGen_CoreIR_Base::visit;
 
-        void visit(const For *op); // create counter
-        void visit(const Realize *op); // create passthrough for indirection
-        void visit(const Allocate *op);
-	void visit(const Call *op); // bitwise, streams, etc
-	void visit(const Provide *op);
-        void visit(const Load *op); // variable load -> mux
-        void visit(const Store *op);
-        void visit(const IfThenElse *op); // wire up enable,reset for conditional
-
-        // coreir operators
-        void visit_unaryop(Type t, Expr a, const char* op_sym, std::string op_name);
-	void visit(const Not *op);
-	void visit_binop(Type t, Expr a, Expr b, const char* op_sym, std::string op_name);
-	void visit(const Mul *op);
-	void visit(const Div *op);
-	void visit(const Mod *op);
-	void visit(const Add *op);
-	void visit(const Sub *op);
-	void visit(const And *op);
-	void visit(const Or *op);
-	void visit(const EQ *op);
-	void visit(const NE *op);
-	void visit(const LT *op);
-	void visit(const LE *op);
-	void visit(const GT *op);
-	void visit(const GE *op);
-        void visit(const Max *op);
-        void visit(const Min *op);
-	void visit(const Cast *op);
-        void visit_ternop(Type t, Expr a, Expr b, Expr c, const char*  op_sym1, const char* op_sym2, std::string op_name);
-        void visit(const Select *op);
-
         // for coreir generation
         bool create_json = false;
         uint8_t bitwidth;
@@ -149,6 +117,39 @@ protected:
         CoreIR::Wireable* get_wire(std::string name, Expr e, std::vector<uint> indices={});
         void rename_wire(std::string new_name, std::string in_name, Expr in_expr, std::vector<uint> indices={});
         void add_wire(std::string name, CoreIR::Wireable* wire, std::vector<uint> indices={});
+
+        // coreir operators
+        void visit_unaryop(Type t, Expr a, const char* op_sym, std::string op_name);
+	void visit(const Not *op);
+	void visit_binop(Type t, Expr a, Expr b, const char* op_sym, std::string op_name);
+	void visit(const Mul *op);
+	void visit(const Div *op);
+	void visit(const Mod *op);
+	void visit(const Add *op);
+	void visit(const Sub *op);
+	void visit(const And *op);
+	void visit(const Or *op);
+	void visit(const EQ *op);
+	void visit(const NE *op);
+	void visit(const LT *op);
+	void visit(const LE *op);
+	void visit(const GT *op);
+	void visit(const GE *op);
+        void visit(const Max *op);
+        void visit(const Min *op);
+	void visit(const Cast *op);
+        void visit_ternop(Type t, Expr a, Expr b, Expr c, const char*  op_sym1, const char* op_sym2, std::string op_name);
+        void visit(const Select *op);
+
+        void visit(const For *op); // create counter
+        void visit(const Realize *op); // create passthrough for indirection
+        void visit(const Allocate *op);
+	void visit(const Call *op); // bitwise, streams, etc
+	void visit(const Provide *op);
+        void visit(const Load *op); // variable load -> mux
+        void visit(const Store *op);
+        void visit(const IfThenElse *op); // wire up enable,reset for conditional
+
 
         // analysis functions of Halide IR
         std::vector<const Variable*> find_dep_vars(Expr e);
