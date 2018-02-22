@@ -604,12 +604,21 @@ bool CodeGen_CoreIR_Target::CodeGen_CoreIR_C::is_output(string var_name) {
     assert(inst_args);
     stream << "// creating element called: " << name << endl;
     //cout << "named " << inst_args->gen <<endl;
-    CoreIR::Wireable* inst = def->addInstance(unique_name(inst_args->name), inst_args->gen, inst_args->args, inst_args->genargs);
+		string inst_name = unique_name(inst_args->name);
+    CoreIR::Wireable* inst = def->addInstance(inst_name, inst_args->gen, inst_args->args, inst_args->genargs);
     add_wire(name, inst->sel(inst_args->selname));
 
 
     auto ref_name = inst_args->ref_name;
-    string prev_name = name;
+
+		// FIXME: counter should just be created beforehand (if loop body uses variable)
+		// if it is a counter, set wen to high
+		if (inst_args->gen.compare(gens["counter"]) == 0) {
+			string const_name = inst_name + "_wen";
+			def->addInstance(const_name, gens["bitconst"], {{"value",CoreIR::Const::make(context,true)}});
+			def->connect({const_name, "out"},{inst_name, "en"});
+		}
+
     return inst->sel(inst_args->selname);
 
   } else {
@@ -1013,7 +1022,7 @@ void CodeGen_CoreIR_Target::CodeGen_CoreIR_C::visit(const LE *op) {
     internal_assert(op->b.type().is_uint());
     visit_binop(op->type, op->a, op->b, "<=",  "ule");
   } else {
-    internal_assert(op->b.type().is_uint());
+    internal_assert(!op->b.type().is_uint());
     visit_binop(op->type, op->a, op->b, "s<=", "sle");
   }
 }
@@ -1132,7 +1141,7 @@ void CodeGen_CoreIR_Target::CodeGen_CoreIR_C::visit(const Provide *op) {
             // add reg_array
             CoreIR::Type* ptype = pt_struct->ptype;
             string regs_name = "regs" + new_name;
-            //FIXME: clr or rst?
+            //FIXME: hooking up clr or rst?
             CoreIR::Wireable* regs = def->addInstance(regs_name, gens["reg_array"], {{"type",CoreIR::Const::make(context,ptype)}, {"has_clr", CoreIR::Const::make(context,true)}});
             pt_struct->reg = regs;
           }

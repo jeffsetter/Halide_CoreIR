@@ -1,3 +1,5 @@
+SHELL := /bin/bash
+
 ALL_COREIR_APPS = pointwise param \
 	blur_1_4 conv_1_1 conv_1_2 conv_2_1 conv_3_1 conv_bw gaussian \
 	conv_nest conv_multi \
@@ -5,6 +7,10 @@ ALL_COREIR_APPS = pointwise param \
 
 NOT_WORKING_APPS = cascade conv_rgb demosaic stereo camera_pipe simpleCNN unsharp \
 	demosaic_flow demosaic_harris
+
+# all directories (just text) excluding a particular list
+ALL_APPS := $(subst /,, $(dir $(wildcard */.)))
+ALL_APPS := $(filter-out hls_support tools, $(ALL_APPS))
 
 all: test_all
 cleanall:
@@ -24,9 +30,20 @@ test_conv: conv_1_2 conv_2_1 conv_3_1 conv_bw conv_nest
 
 test_onebit: onebit_comp onebit_and onebit_mux onebit_bool
 
-test_all: $(ALL_COREIR_APPS)
-	@echo -e "\033[0;32m ALL APPS PASSED!!!! \033[0m"
-	@echo "Did not run: "
-	@for app in $(NOT_WORKING_APPS); do \
-	  echo $$app; \
+# runs all tests, and then specifies which passed and which failed
+test_all testall: $(ALL_COREIR_APPS)
+	@echo ""
+	@for app in $(ALL_APPS); do \
+		if [[ "$(ALL_COREIR_APPS)" == *"$$app"* ]]; then \
+			if [ -f $$app"/design_prepass.json" ]; then \
+				printf "%-15s \033[0;32m%s\033[0m\n" $$app "PASSED"; \
+			else \
+				printf "%-15s \033[0;31m%s\033[0m\n" $$app "FAILED"; \
+			fi \
+		elif [[ "$(NOT_WORKING_APPS)" == *"$$app"* ]]; then \
+			printf "%-15s \033[1;37m%s\033[0m\n" $$app "DID NOT RUN"; \
+		else \
+			printf "%-15s \033[1;33m%s\033[0m\n" $$app "NOT CLASSIFIED"; \
+		fi \
 	done
+
