@@ -28,7 +28,7 @@ public:
 			bool_and(x,y) = lt1(x,y) && lt2(x,y);
 			bool_not(x,y) = !( lt1(x,y) );
 			bool_or(x,y)  = bool_and(x,y) || bool_not(x,y);
-			bool_xor(x,y) = bool_or(x,y) ^ bool_and(x,y);
+			bool_xor(x,y) = bool_or(x,y) ^ bool_not(x,y);
 
 			hw_output(x, y) = bool_xor(x,y);
 			output(x, y) = hw_output(x, y);
