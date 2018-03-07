@@ -30,7 +30,7 @@ public:
 			bool_or(x,y)  = bool_and(x,y) || bool_not(x,y);
 			bool_xor(x,y) = bool_or(x,y) ^ bool_not(x,y);
 
-			hw_output(x, y) = bool_xor(x,y);
+			hw_output(x, y) = select(bool_xor(x,y), cast<uint8_t>(200), 0);
 			output(x, y) = hw_output(x, y);
 
 			// Arguments
