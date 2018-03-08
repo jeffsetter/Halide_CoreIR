@@ -56,7 +56,7 @@ public:
   void compile_cpu() {
     std::cout << "\ncompiling cpu code..." << std::endl;
 
-    output.tile(x, y, xo, yo, xi, yi, 10,16);
+    output.tile(x, y, xo, yo, xi, yi, 13,16);
     output.fuse(xo, yo, xo).parallel(xo);
 
     output.vectorize(xi, 4);
@@ -77,7 +77,7 @@ public:
     // inputs of 'clamped', buffering intermediates at (output, xo) loop
     // level
     hw_output.compute_root();
-    hw_output.tile(x, y, xo, yo, xi, yi, 10,16).reorder(xi, yi, xo, yo);
+    hw_output.tile(x, y, xo, yo, xi, yi, 13,16).reorder(xi, yi, xo, yo);
     hw_output.accelerate({clamped}, xi, xo, {});  // define the inputs and the output
     conv.linebuffer();
 
@@ -94,7 +94,7 @@ public:
     clamped.compute_root();
     hw_output.compute_root();
     conv.linebuffer();
-    hw_output.tile(x, y, xo, yo, xi, yi, 10,16).reorder(xi,yi,xo,yo);
+    hw_output.tile(x, y, xo, yo, xi, yi, 13,16).reorder(xi,yi,xo,yo);
     hw_output.accelerate({clamped}, xi, xo, {});
 
     Target coreir_target = get_target_from_environment();

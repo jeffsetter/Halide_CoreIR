@@ -907,8 +907,8 @@ void CodeGen_CoreIR_Target::CodeGen_CoreIR_C::visit_ternop(Type t, Expr a, Expr 
     // wiring names are different for each operator
     if (op_name.compare("bitmux")==0 || op_name.compare("mux")==0) {
       def->connect(a_wire, coreir_inst->sel("sel"));
-      def->connect(b_wire, coreir_inst->sel("in0"));
-      def->connect(c_wire, coreir_inst->sel("in1"));
+      def->connect(b_wire, coreir_inst->sel("in1"));
+      def->connect(c_wire, coreir_inst->sel("in0"));
     } else {
       def->connect(a_wire, coreir_inst->sel("in0"));
       def->connect(b_wire, coreir_inst->sel("in1"));

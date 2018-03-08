@@ -9,8 +9,13 @@
 #include "halide_image.h"
 #include "halide_image_io.h"
 
-using namespace Halide::Tools;
+#include "coreir.h"
+#include "coreir/passes/transform/rungenerators.h"
+#include "coreir/simulator/interpreter.h"
+#include "coreir/libs/commonlib.h"
 
+using namespace Halide::Tools;
+using namespace CoreIR;
 
 class my_load_image {
 public:
@@ -51,6 +56,7 @@ int main(int argc, char **argv) {
     Image<uint8_t> input = load_image(argv[1]);
     Image<uint8_t> out_native(input.width()-8, input.height()-8);
     Image<uint8_t> out_hls(480, 640);
+		Image<uint8_t> out_coreir(input.width(), input.height());
 
     printf("start.\n");
 
@@ -72,9 +78,62 @@ int main(int argc, char **argv) {
                            x, y, c, out_hls(x, y, c));
                     fails++;
                 }
-          }
-	}
+						}
+				}
     }
+
+/*
+This does not work yet because the algorithm (9x9 convolution) uses 32bit values.
+
+		// New context for coreir test
+		Context* c = newContext();
+		Namespace* g = c->getGlobal();
+
+		CoreIRLoadLibrary_commonlib(c);
+		if (!loadFromFile(c,"./design_prepass.json")) {
+			std::cout << "Could not load from json!!" << std::endl;
+			c->die();
+		}
+
+		c->runPasses({"rungenerators", "flattentypes", "flatten", "wireclocks-coreir"});
+
+		Module* m = g->getModule("DesignTop");
+		assert(m != nullptr);
+		SimulatorState state(m);
+
+		state.setValue("self.in_arg_1_0_0", BitVector(16,0));
+		state.resetCircuit();
+		state.setClock("self.clk", 0, 1);
+
+		for (int y = 0; y < input.height(); y++) {
+			for (int x = 0; x < input.width(); x++) {
+				for (int c = 0; c < input.channels(); c++) {
+					// set input value
+					state.setValue("self.in_arg_1_0_0", BitVector(16, input(x,y,c)));
+					// propogate to all wires
+					state.exeCombinational();
+            
+					// read output wire
+					out_coreir(x,y,c) = state.getBitVec("self.out_0_0").to_type<uint16_t>();
+					int xd = 2;	int yd = 2;
+					if (x>=xd && y>=yd && out_native(x-xd, y-yd, c) != out_coreir(x, y, c)) {
+						printf("out_native(%d, %d, %d) = %d, but out_coreir(%d, %d, %d) = %d\n",
+									 x-xd, y-yd, c, out_native(x-xd, y-yd, c),
+									 x, y, c, out_coreir(x, y, c));
+						fails++;
+					}
+
+					// give another rising edge (execute seq)
+					state.exeSequential();
+
+				}
+			}
+		}
+
+		deleteContext(c);
+		printf("finished running and comparing coreir interpreter\n");
+*/
+
     if (!fails) {
         printf("passed.\n");
         return 0;
