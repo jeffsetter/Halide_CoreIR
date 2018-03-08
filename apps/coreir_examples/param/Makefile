@@ -8,7 +8,8 @@ include ../hls_support/Makefile.inc
 HLS_LOG = vivado_hls.log
 
 .PHONY: all run_hls
-all: design_top.json out.png
+#### FIXME: turn on simulation of param app
+all: design_top.json
 run_hls: $(HLS_LOG)
 
 pipeline: pipeline.cpp

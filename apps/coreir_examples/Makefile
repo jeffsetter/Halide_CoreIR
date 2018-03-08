@@ -1,7 +1,7 @@
 SHELL := /bin/bash
 
 ALL_COREIR_APPS = pointwise param \
-	blur_1_4 conv_1_1 conv_1_2 conv_2_1 conv_3_1 conv_bw gaussian \
+	conv_1_1 conv_1_2 conv_2_1 conv_3_1 conv_bw gaussian \
 	conv_nest conv_multi \
 	onebit_comp onebit_and onebit_mux onebit_bool harris 
 

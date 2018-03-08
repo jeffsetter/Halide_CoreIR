@@ -83,6 +83,7 @@ int main(int argc, char **argv) {
     }
 
 /*
+FIXME: turn on gaussian app when casting is available
 This does not work yet because the algorithm (9x9 convolution) uses 32bit values.
 
 		// New context for coreir test

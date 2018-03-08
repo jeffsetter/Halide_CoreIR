@@ -3,10 +3,10 @@
   "global":{
     "modules":{
       "DesignTop":{
-        "type":["Record",{
-          "in":["Record",{"arg_1":["Array",1,["Array",1,["Array",16,"BitIn"]]]}],
-          "out":["Array",1,["Array",1,"Bit"]]
-        }],
+        "type":["Record",[
+          ["in",["Record",[["arg_1",["Array",1,["Array",1,["Array",16,"BitIn"]]]]]]],
+          ["out",["Array",1,["Array",1,"Bit"]]]
+        ]],
         "instances":{
           "bitand_153_151_154":{
             "modref":"corebit.and"
@@ -26,17 +26,17 @@
           "const10__152":{
             "genref":"coreir.const",
             "genargs":{"width":["Int",16]},
-            "modargs":{"value":[["BitVector",16],10]}
+            "modargs":{"value":[["BitVector",16],"16'h000a"]}
           },
           "const20__150":{
             "genref":"coreir.const",
             "genargs":{"width":["Int",16]},
-            "modargs":{"value":[["BitVector",16],20]}
+            "modargs":{"value":[["BitVector",16],"16'h0014"]}
           },
           "const50__148":{
             "genref":"coreir.const",
             "genargs":{"width":["Int",16]},
-            "modargs":{"value":[["BitVector",16],50]}
+            "modargs":{"value":[["BitVector",16],"16'h0032"]}
           },
           "pt_hw_output_1_stencil":{
             "genref":"mantle.wire",
