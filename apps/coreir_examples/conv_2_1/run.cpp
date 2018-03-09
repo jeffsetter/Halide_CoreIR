@@ -81,7 +81,7 @@ int main(int argc, char **argv) {
           out_coreir(x,y,c) = state.getBitVec("self.out_0_0").to_type<uint16_t>();
           if (x>=0 && y>=1 && out_native(x, y-1, c) != out_coreir(x, y, c)) {
             printf("out_native(%d, %d, %d) = %d, but out_coreir(%d, %d, %d) = %d\n",
-                   x, y, c, out_native(x, y, c),
+                   x, y-1, c, out_native(x, y-1, c),
                    x, y, c, out_coreir(x, y, c));
             success = false;
           }

@@ -19,7 +19,7 @@ pipeline_hls.cpp pipeline_native.o pipeline_cuda.o: pipeline
 
 ###pipeline_hls.cpp hls_target.cpp pipeline_native.o
 run: run.cpp pipeline_native.o
-	$(CXX) $(CXXFLAGS) -O1 -DNDEBUG $(HLS_CXXFLAGS) -g -Wall -Werror $^ -lpthread -ldl -o $@ $(PNGFLAGS)
+	$(CXX) $(CXXFLAGS) -O1 -DNDEBUG $(HLS_CXXFLAGS) -g -Wall -Werror $^ -lpthread  $(LIB_HALIDE) -ldl $(PNGFLAGS) -o $@ $(LDFLAGS)
 
 
 out.png: run input_unique.pgm
