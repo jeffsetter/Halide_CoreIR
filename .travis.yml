@@ -15,6 +15,7 @@ addons:
       - g++-4.9
       - libedit-dev
       - libpng-dev
+      - graphviz
 env:
   # Configurations
   #
