@@ -533,6 +533,17 @@ bool CodeGen_CoreIR_Target::CodeGen_CoreIR_C::is_output(string var_name) {
   // Functions to wire coreir things together //
   //////////////////////////////////////////////
 
+CoreIR::Wireable* index_wire(CoreIR::Wireable* in_wire, std::vector<uint> indices) {
+
+	CoreIR::Wireable* current_wire = in_wire;
+
+	for (int i=indices.size()-1; i >= 0; --i) {
+		current_wire = current_wire->sel(indices[i]);
+	}
+
+	return current_wire;
+}
+
 
   // This function is used when the output is going to be connected to a useable wire
   CoreIR::Wireable* CodeGen_CoreIR_Target::CodeGen_CoreIR_C::get_wire(string name, Expr e, std::vector<uint> indices) {
@@ -617,6 +628,11 @@ bool CodeGen_CoreIR_Target::CodeGen_CoreIR_C::is_output(string var_name) {
 			string const_name = inst_name + "_wen";
 			def->addInstance(const_name, gens["bitconst"], {{"value",CoreIR::Const::make(context,true)}});
 			def->connect({const_name, "out"},{inst_name, "en"});
+
+			string reset_name = inst_name + "_reset";
+			def->addInstance(reset_name, gens["bitconst"], {{"value",CoreIR::Const::make(context,false)}});
+			def->connect({reset_name, "out"},{inst_name, "reset"});
+
 		}
 
     return inst->sel(inst_args->selname);
@@ -759,7 +775,11 @@ bool CodeGen_CoreIR_Target::CodeGen_CoreIR_C::is_output(string var_name) {
       }
 
       if (is_output(new_name)) {
-        def->connect(hw_store_set[new_name]->wire->sel("out"), self->sel("out"));
+				if (hw_store_set[new_name]->is_reg()) {
+					def->connect(hw_store_set[new_name]->reg->sel("out"), self->sel("out"));
+				} else {
+					def->connect(hw_store_set[new_name]->wire->sel("out"), self->sel("out"));
+				}
         stream << "// connecting passthrough to output " << new_name << endl;
       }
       return;
@@ -1141,10 +1161,18 @@ void CodeGen_CoreIR_Target::CodeGen_CoreIR_C::visit(const Provide *op) {
             // add reg_array
             CoreIR::Type* ptype = pt_struct->ptype;
             string regs_name = "regs" + new_name;
+						stream << "// reg array created named " << new_name << "\n";
             //FIXME: hooking up clr or rst?
             CoreIR::Wireable* regs = def->addInstance(regs_name, gens["reg_array"], {{"type",CoreIR::Const::make(context,ptype)}, {"has_clr", CoreIR::Const::make(context,true)}});
             pt_struct->reg = regs;
+
+						// connect input
+						string in_name = id_value;
+						CoreIR::Wireable* wire = get_wire(in_name, op->values[0]);
+						auto regs_wire = index_wire(regs->sel("in"), indices);
+						def->connect(wire, regs_wire);
           }
+					
           internal_assert(is_storage(new_name) && hw_store_set[new_name]->is_reg());
           auto reg_struct = hw_store_set[new_name];
           def->connect(get_wire(cond_id, predicate->condition), reg_struct->reg->sel("clr"));
@@ -1586,7 +1614,7 @@ void CodeGen_CoreIR_Target::CodeGen_CoreIR_C::visit(const Call *op) {
 	    input_name = print_name(stencil_name);
         }
 
-	// generate coreir: wire with indices maybe
+				// generate coreir: wire with indices maybe
         if (predicate) {
           // FIXME: implement predicate
           stream << "// writing stream with a predicate\n";
@@ -2074,7 +2102,7 @@ void CodeGen_CoreIR_Target::CodeGen_CoreIR_C::visit(const Realize *op) {
 
         CoreIR::Wireable* pt = def->addInstance(pt_name, gens["passthrough"], {{"type",CoreIR::Const::make(context,ptype)}});
         hw_store_set[print_name(op->name)] = std::make_shared<Storage_Def>(Storage_Def(ptype, pt));
-        stream << "created storage called " << print_name(op->name) << endl;
+        stream << "// created storage called " << print_name(op->name) << endl;
         //cout << "created storage called " << print_name(op->name) << endl;
         
         op->body.accept(this);
