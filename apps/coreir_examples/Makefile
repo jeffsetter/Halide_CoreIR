@@ -2,7 +2,7 @@ SHELL := /bin/bash
 
 ALL_COREIR_APPS = pointwise param \
 	conv_1_1 conv_1_2 conv_2_1 conv_3_1 conv_bw gaussian \
-	conv_nest \
+	conv_nest conv_chain \
 	onebit_comp onebit_and onebit_mux onebit_bool harris 
 
 NOT_WORKING_APPS = cascade conv_rgb demosaic stereo camera_pipe simpleCNN unsharp \
