@@ -24,7 +24,7 @@ public:
 			abso(x,y) = abs(hw_input(x,y) - 100);
 			absdo(x,y) = absd( abso(x,y) , 30 );
 
-			hw_output(x, y) = absdo(x,y);
+			hw_output(x, y) = cast<int8_t>(absdo(x,y));
 			output(x, y) = hw_output(x, y);
 
 			// Arguments

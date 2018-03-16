@@ -20,104 +20,104 @@ using namespace CoreIR;
 using namespace std;
 
 int main(int argc, char **argv) {
-    Image<uint8_t> in(64, 64, 1);
+	Image<uint16_t> in(64, 64, 1);
 
-    Image<uint8_t> out_native(in.width(), in.height(), in.channels());
-    Image<uint8_t> out_hls(in.width(), in.height(), in.channels());
-    Image<uint8_t> out_coreir(in.width(), in.height(), in.channels());
-    in = load_image(argv[1]);
+	Image<uint8_t> out_native(in.width(), in.height(), in.channels());
+	Image<uint8_t> out_hls(in.width(), in.height(), in.channels());
+	Image<uint8_t> out_coreir(in.width(), in.height(), in.channels());
+	in = load_image(argv[1]);
 
-    printf("start.\n");
+	printf("start.\n");
 
-    pipeline_native(in, out_native);
-    save_image(out_native, "out.png");
-    save_image(out_native, "out.pgm");
+	pipeline_native(in, out_native);
+	save_image(out_native, "out.png");
+	save_image(out_native, "out.pgm");
 
-    printf("finished running native code\n");
+	printf("finished running native code\n");
 
-    pipeline_hls(in, out_hls);
+	pipeline_hls(in, out_hls);
 
-    printf("finished running HLS code\n");
+	printf("finished running HLS code\n");
 
-    bool success = true;
-    for (int y = 0; y < out_native.height(); y++) {
-      for (int x = 0; x < out_native.width(); x++) {
-	for (int c = 0; c < out_native.channels(); c++) {
-	  if (out_native(x, y, c) != out_hls(x, y, c)) {
-	    printf("out_native(%d, %d, %d) = %d, but out_c(%d, %d, %d) = %d\n",
-		   x, y, c, out_native(x, y, c),
-		   x, y, c, out_hls(x, y, c));
-	    success = false;
-	  }
+	bool success = true;
+	for (int y = 0; y < out_native.height(); y++) {
+		for (int x = 0; x < out_native.width(); x++) {
+			for (int c = 0; c < out_native.channels(); c++) {
+				if (out_native(x, y, c) != out_hls(x, y, c)) {
+					printf("out_native(%d, %d, %d) = %d, but out_c(%d, %d, %d) = %d\n",
+								 x, y, c, out_native(x, y, c),
+								 x, y, c, out_hls(x, y, c));
+					success = false;
+				}
+			}
+		}
 	}
-      }
-    }
 
-    // New context for coreir test
-    Context* c = newContext();
-    Namespace* g = c->getGlobal();
+	// New context for coreir test
+	Context* c = newContext();
+	Namespace* g = c->getGlobal();
 
-    CoreIRLoadLibrary_commonlib(c);
-    if (!loadFromFile(c,"./design_prepass.json")) {
-      cout << "Could not Load from json!!" << endl;
-      c->die();
-    }
+	CoreIRLoadLibrary_commonlib(c);
+	if (!loadFromFile(c,"./design_prepass.json")) {
+		cout << "Could not Load from json!!" << endl;
+		c->die();
+	}
 
-    c->runPasses({"rungenerators", "flattentypes", "flatten", "wireclocks-coreir"});
+	c->runPasses({"rungenerators", "flattentypes", "flatten", "wireclocks-coreir"});
 
 
-    Module* m = g->getModule("DesignTop");
-    assert(m != nullptr);
-    SimulatorState state(m);
+	Module* m = g->getModule("DesignTop");
+	assert(m != nullptr);
+	SimulatorState state(m);
 
-    state.setValue("self.in_arg_1_0_0", BitVector(16));
-    state.resetCircuit();
-    state.setClock("self.clk", 0, 1);
+	state.setValue("self.in_arg_1_0_0", BitVector(16));
+	state.resetCircuit();
+	//state.setClock("self.clk", 0, 1);
 
-    std::ofstream instream;
-    std::ofstream outstream;
-    instream.open("coreir_input.txt");
-    outstream.open("coreir_output.txt");
+	std::ofstream instream;
+	std::ofstream outstream;
+	instream.open("coreir_input.txt");
+	outstream.open("coreir_output.txt");
 
-    for (int y = 0; y < in.height(); y++) {
-      for (int x = 0; x < in.width(); x++) {
-	for (int c = 0; c < in.channels(); c++) {
-	  // set input value
-	  state.setValue("self.in_arg_1_0_0", BitVector(16, in(x,y,c)));
-	  instream << state.getBitVec("self.in_arg_1_0_0") << endl;
+	for (int y = 0; y < in.height(); y++) {
+		for (int x = 0; x < in.width(); x++) {
+			for (int c = 0; c < in.channels(); c++) {
+				// set input value
+				state.setValue("self.in_arg_1_0_0", BitVector(16, in(x,y,c)));
+				instream << state.getBitVec("self.in_arg_1_0_0") << endl;
 
-	  // propogate to all wires
-	  state.exeCombinational();
+				// propogate to all wires
+				state.exeCombinational();
             
-	  // read output wire
-	  outstream << state.getBitVec("self.out_0_0") << endl;
-	  out_coreir(x,y,c) = state.getBitVec("self.out_0_0").to_type<uint16_t>();
-	  if (y>=0 && out_native(x, y, c) != out_coreir(x, y, c)) {
-	    printf("out_native(%d, %d, %d) = %d, but out_coreir(%d, %d, %d) = %d\n",
-		   x, y, c, out_native(x, y, c),
-		   x, y, c, out_coreir(x, y, c));
-	    success = false;
-	  }
+				// read output wire
+				outstream << state.getBitVec("self.out_0_0") << endl;
+				out_coreir(x,y,c) = state.getBitVec("self.out_0_0").to_type<uint16_t>();
+				if (y>=0 && out_native(x, y, c) != out_coreir(x, y, c)) {
+					printf("out_native(%d, %d, %d) = %d, but out_coreir(%d, %d, %d) = %d\n",
+								 x, y, c, out_native(x, y, c),
+								 x, y, c, out_coreir(x, y, c));
+					success = false;
+				}
 
-	  // give another rising edge (execute seq)
-	  state.exeSequential();
+				// give another rising edge (execute seq)
+				state.exeSequential();
 
+			}
+		}
 	}
-      }
-    }
 
-    instream.close();
-    outstream.close();
+	instream.close();
+	outstream.close();
 
-    deleteContext(c);
-    printf("finished running CoreIR code\n");
+	deleteContext(c);
+	printf("finished running CoreIR code\n");
 
-    if (success) {
-        printf("Succeeded!\n");
-        return 0;
-    } else {
-        printf("Failed!\n");
-        return 1;
-    }
+	if (success) {
+		printf("Succeeded!\n");
+		return 0;
+	} else {
+		printf("Failed!\n");
+		return 1;
+	}
 
 }

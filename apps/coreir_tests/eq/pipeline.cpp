@@ -24,7 +24,7 @@ public:
 			eq(x,y) = hw_input(x,y) == 128;
 			ne(x,y) = hw_input(x,y) != 64;
 
-			hw_output(x, y) = eq(x,y) ^ ne(x,y);
+			hw_output(x, y) = select(eq(x,y) && ne(x,y), cast<uint8_t>(200), 0);
 			output(x, y) = hw_output(x, y);
 
 			// Arguments
