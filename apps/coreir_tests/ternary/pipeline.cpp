@@ -15,16 +15,16 @@ public:
 	std::vector<Argument> args;
 
 	MyPipeline()
-		: in(UInt(8), 2),
+		: in(UInt(16), 2),
 			output("output"), hw_output("hw_output")
     {
 			// Pointwise operations
-			hw_input(x,y) = cast<int8_t>( in(x,y) );
+			hw_input(x,y) = cast<uint16_t>( in(x,y) );
 
 			mad(x,y) = hw_input(x,y) * 3 + 10;
 			sel(x,y) = select( mad(x,y) > 52, 39, 7);
 
-			hw_output(x, y) = sel(x,y);
+			hw_output(x, y) = cast<uint8_t>(sel(x,y));
 			output(x, y) = hw_output(x, y);
 
 			// Arguments

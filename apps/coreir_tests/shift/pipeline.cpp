@@ -19,7 +19,7 @@ public:
 			output("output"), hw_output("hw_output")
     {
 			// Pointwise operations
-			hw_input(x,y) = cast<int8_t>( in(x,y) );
+			hw_input(x,y) = cast<uint16_t>( in(x,y) );
 
 			shiftr(x,y) = hw_input(x,y) >> 4;
 			shiftl(x,y) = hw_input(x,y) << 3;
