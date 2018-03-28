@@ -17,8 +17,8 @@ Var x("x"), y("y");
 Var xo("xo"), xi("xi"), yi("yi"), yo("yo");
 
 // Set these to control how large the design will be
-#define NUM_CONV 10
-#define WIN_SIZE 5
+#define NUM_CONV 5
+#define WIN_SIZE 3
 
 class MyPipeline {
 public:

@@ -5,7 +5,7 @@ ALL_COREIR_APPS = pointwise param \
 	conv_nest conv_chain \
 	onebit_comp onebit_and onebit_mux onebit_bool harris 
 
-NOT_WORKING_APPS = cascade conv_rgb demosaic stereo camera_pipe simpleCNN unsharp \
+NOT_WORKING_APPS = blur_1_4 cascade conv_rgb demosaic stereo camera_pipe simpleCNN unsharp \
 	demosaic_flow demosaic_harris conv_multi
 
 # all directories (just text) excluding a particular list
@@ -22,9 +22,10 @@ cleanall:
 	done
 	$(MAKE) -C tools cleanall > /dev/null
 
+# continue running these even if they fail
 .PHONY: $(ALL_COREIR_APPS)
 $(ALL_COREIR_APPS):
-	$(MAKE) -C $@ || exit 1
+	$(MAKE) -C $@ -i
 
 test_conv: conv_1_2 conv_2_1 conv_3_1 conv_bw conv_nest
 

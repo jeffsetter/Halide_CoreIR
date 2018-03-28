@@ -5,7 +5,8 @@
       "DesignTop":{
         "type":["Record",[
           ["in",["Record",[["arg_1",["Array",1,["Array",1,["Array",16,"BitIn"]]]]]]],
-          ["out",["Array",1,["Array",1,"Bit"]]]
+          ["out",["Array",1,["Array",1,"Bit"]]],
+          ["valid","Bit"]
         ]],
         "instances":{
           "bitand_153_151_154":{
