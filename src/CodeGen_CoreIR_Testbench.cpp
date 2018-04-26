@@ -75,9 +75,9 @@ const string hls_headers =
     "#include \"hls_target.h\"\n";
 }
 
-CodeGen_CoreIR_Testbench::CodeGen_CoreIR_Testbench(ostream &tb_stream)
+CodeGen_CoreIR_Testbench::CodeGen_CoreIR_Testbench(ostream &tb_stream, bool has_valid)
     : CodeGen_CoreIR_Base(tb_stream, CPlusPlusImplementation, ""),
-      cg_target("coreir_target") {
+      cg_target("coreir_target", has_valid) {
     cg_target.init_module();
 
     stream << hls_headers;

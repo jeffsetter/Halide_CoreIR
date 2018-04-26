@@ -1,12 +1,15 @@
 SHELL := /bin/bash
 
 ALL_COREIR_APPS = pointwise param \
-	conv_1_1 conv_1_2 conv_2_1 conv_3_1 conv_bw gaussian \
+	conv_1_1 conv_1_2 conv_2_1 conv_3_1 conv_bw gaussian blur_1_4 \
+	conv_1_2_valid conv_2_1_valid conv_3_1_valid conv_bw_valid cascade \
 	conv_nest conv_chain \
 	onebit_comp onebit_and onebit_mux onebit_bool harris 
 
-NOT_WORKING_APPS = blur_1_4 cascade conv_rgb demosaic stereo camera_pipe simpleCNN unsharp \
-	demosaic_flow demosaic_harris conv_multi
+NOT_WORKING_APPS = \
+	conv_rgb demosaic stereo camera_pipe simpleCNN unsharp \
+	demosaic_flow demosaic_harris conv_multi \
+	harris_valid
 
 # all directories (just text) excluding a particular list
 ALL_APPS := $(subst /,, $(dir $(wildcard */.)))
@@ -14,10 +17,7 @@ ALL_APPS := $(filter-out hls_support tools, $(ALL_APPS))
 
 all: test_all
 cleanall:
-	for app in $(ALL_COREIR_APPS); do \
-	  $(MAKE) -C $$app clean > /dev/null; \
-	done
-	for app in $(NOT_WORKING_APPS); do \
+	for app in $(ALL_APPS); do \
 	  $(MAKE) -C $$app clean > /dev/null; \
 	done
 	$(MAKE) -C tools cleanall > /dev/null

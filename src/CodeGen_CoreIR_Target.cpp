@@ -50,12 +50,13 @@ bool contain_for_loop(Stmt s) {
 
 }
 
-CodeGen_CoreIR_Target::CodeGen_CoreIR_Target(const string &name)
+CodeGen_CoreIR_Target::CodeGen_CoreIR_Target(const string &name, bool has_valid)
   : target_name(name),
-    hdrc(hdr_stream, CodeGen_CoreIR_C::CPlusPlusHeader),
-    srcc(src_stream, CodeGen_CoreIR_C::CPlusPlusImplementation) { }
+    hdrc(hdr_stream, CodeGen_CoreIR_C::CPlusPlusHeader, has_valid),
+    srcc(src_stream, CodeGen_CoreIR_C::CPlusPlusImplementation, has_valid) { }
 
-CodeGen_CoreIR_Target::CodeGen_CoreIR_C::CodeGen_CoreIR_C(std::ostream &s, OutputKind output_kind) : CodeGen_CoreIR_Base(s, output_kind) {
+CodeGen_CoreIR_Target::CodeGen_CoreIR_C::CodeGen_CoreIR_C(std::ostream &s, OutputKind output_kind, bool has_valid) : 
+  CodeGen_CoreIR_Base(s, output_kind), has_valid(has_valid) {
   // set up coreir generation
   bitwidth = 16;
   context = CoreIR::newContext();
@@ -135,9 +136,18 @@ CodeGen_CoreIR_Target::CodeGen_CoreIR_C::~CodeGen_CoreIR_C() {
       cout << RED << "Could not save to json!!" << RESET << endl;
       context->die();
     }
-    context->runPasses({"rungenerators", "removepassthroughs"});
+
+    context->runPasses({"removepassthroughs"});
+
+//    if (!saveToDot(design, "design_top.txt")) {
+//      cout << RED << "Could not save to dot!!" << RESET << endl;
+//      context->die();
+//    }
+
+    //context->runPasses({"rungenerators", "removepassthroughs"});
     //FIXME: we should have everything connected
-		//context->runPasses({"rungenerators","removepassthroughs","verifyconnectivity-onlyinputs-noclkrst"});
+		context->runPasses({"rungenerators","flatten","removepassthroughs"});
+		context->runPasses({"verifyconnectivity-onlyinputs-noclkrst"},{"global","commonlib","memory","mantle"});
 		//context->runPasses({"rungenerators", "flattentypes", "flatten", "wireclocks-coreir"});
 
     //design->print();
@@ -177,7 +187,7 @@ CodeGen_CoreIR_Target::CodeGen_CoreIR_C::~CodeGen_CoreIR_C() {
 
     cout << GREEN << "Created CoreIR design!!!" << RESET << endl;
     
-    CoreIR::deleteContext(context);
+    //CoreIR::deleteContext(context);
   } else {
     cout << "No target json outputted " << endl;
   }
@@ -227,7 +237,6 @@ void CodeGen_CoreIR_Target::add_kernel(Stmt s,
 void CodeGen_CoreIR_Target::dump() {
   std::cerr << src_stream.str() << std::endl;
 }
-
 
 string CodeGen_CoreIR_Target::CodeGen_CoreIR_C::print_stencil_pragma(const string &name) {
   ostringstream oss;
@@ -339,11 +348,20 @@ void CodeGen_CoreIR_Target::CodeGen_CoreIR_C::add_kernel(Stmt stmt,
   //cout << "design has " << num_inputs << " inputs with bitwidth " << to_string(bitwidth) << " " <<endl;
   // FIXME: can't distinguish bw output/input easily (assuming single output first)
 
-  CoreIR::Type* design_type = context->Record({
+  CoreIR::Type* design_type;
+  if (has_valid) {
+    design_type = context->Record({
       {"in", context->Record(input_types)},
       {"out", output_type},
       {"valid", context->Bit()}
     });
+  } else {
+    design_type = context->Record({
+      {"in", context->Record(input_types)},
+      {"out", output_type}
+    });
+  }
+
   design = global_ns->newModuleDecl("DesignTop", design_type);
   def = design->newModuleDef();
   self = def->sel("self");
@@ -442,13 +460,13 @@ void CodeGen_CoreIR_Target::CodeGen_CoreIR_C::add_kernel(Stmt stmt,
     }
     stream << "\n";
     stream << "\n// hw_output_set contains: ";
-    cout << "\n// hw_output_set contains: ";
+    //cout << "\n// hw_output_set contains: ";
     for (const std::string& x : hw_output_set) {
       stream << " " << x;
-      cout << " " << x;
+      //cout << " " << x;
     }
     stream << "\n";
-    cout << "\n";
+    //cout << "\n";
 
     // print body
     print(stmt);
@@ -555,7 +573,7 @@ CoreIR::Wireable* index_wire(CoreIR::Wireable* in_wire, std::vector<uint> indice
 
 // This function is used when the output is going to be connected to a useable wire
 CoreIR::Wireable* CodeGen_CoreIR_Target::CodeGen_CoreIR_C::get_wire(string name, Expr e, std::vector<uint> indices) {
-  cout << "connect for " << name << "\n";
+  //cout << "connect for " << name << "\n";
   if (is_const(e)) {
     int const_value = id_const_value(e);
     string const_name = unique_name("const" + std::to_string(const_value) + "_" + name);
@@ -660,7 +678,7 @@ CoreIR::Wireable* CodeGen_CoreIR_Target::CodeGen_CoreIR_C::get_wire(string name,
 }
 
 void CodeGen_CoreIR_Target::CodeGen_CoreIR_C::add_wire(string out_name, CoreIR::Wireable* in_wire, vector<uint> out_indices) {
-  cout << "add wire to " << out_name << "\n";
+  //cout << "add wire to " << out_name << "\n";
   if (is_storage(out_name)) {
     auto pt_struct = hw_store_set[out_name];
 
@@ -689,7 +707,7 @@ void CodeGen_CoreIR_Target::CodeGen_CoreIR_C::add_wire(string out_name, CoreIR::
         pt_struct->was_read = false;
       }
 
-      cout << "// wiring to " << out_name << endl;
+      //cout << "// wiring to " << out_name << endl;
       // disconnect associated wire in reg, and connect new wire
       if (pt_struct->is_reg()) {
         stream << "// disconnecting wire for reg " << out_name << endl;
@@ -718,7 +736,7 @@ void CodeGen_CoreIR_Target::CodeGen_CoreIR_C::add_wire(string out_name, CoreIR::
     }
       
   } else {
-    cout << "not storage\n";
+    //cout << "not storage\n";
     internal_assert(out_indices.empty());
     // wire is being stored for use as an input
     hw_wire_set[out_name] = in_wire;
@@ -726,7 +744,7 @@ void CodeGen_CoreIR_Target::CodeGen_CoreIR_C::add_wire(string out_name, CoreIR::
 }
 
 void CodeGen_CoreIR_Target::CodeGen_CoreIR_C::rename_wire(string new_name, string in_name, Expr in_expr, vector<uint> indices) {
-  cout << "rename wire for " << in_name << " to " << new_name << "\n";
+  //cout << "rename wire for " << in_name << " to " << new_name << "\n";
   // if this is a definition, then just copy the pointer
   //cout << "trying to add/modify: " << new_name << " = " << in_name << "\n";
   if (is_defined(in_name) && !is_wire(in_name)) { 
@@ -839,15 +857,19 @@ std::string strip_stream(std::string input) {
 
 void CodeGen_CoreIR_Target::CodeGen_CoreIR_C::record_dispatch(std::string producer_name, std::string consumer_name) {
   hw_dispatch_set[consumer_name].push_back(producer_name);
-  cout << "// recording dispatch for " << producer_name << "\n";
+  //cout << "// recording dispatch for " << producer_name << "\n";
+  stream << "// recording dispatch from " << producer_name 
+         << " to " << consumer_name << "\n";
 
-  // connect output valid if that is the consumer
-  for (auto output : hw_output_set) {
-    if (strip_stream(output) == consumer_name) {
-      stream << "// connecting " << producer_name << " to output valid\n";
-      cout << "// connecting " << producer_name << " to output valid\n";
-      connect_linebuffer(consumer_name, def->sel("self.valid"));
-      return;
+  // connect output valid if that is the consumer, and design has valid
+  if (has_valid) {
+    for (auto output : hw_output_set) {
+      if (strip_stream(output) == consumer_name) {
+        stream << "// connecting " << producer_name << " to output valid\n";
+        //cout << "// connecting " << producer_name << " to output valid\n";
+        connect_linebuffer(consumer_name, self->sel("valid"));
+        return;
+      }
     }
   }
 }
@@ -863,17 +885,19 @@ bool CodeGen_CoreIR_Target::CodeGen_CoreIR_C::connect_linebuffer(std::string con
   std::string consumer = strip_stream(consumer_name);
   stream << "// Using lb consumer " << consumer_name
          << " (stripped " << consumer << ")\n";
-  std::cout << "stripped name: " << consumer << std::endl;
+  //cout << "stripped name: " << consumer << std::endl;
   std::string producer, producer_name;
 
+  // trace back consumers looking for one that is a linebuffer
   std::string consumer_recurse = consumer;
   while (hw_dispatch_set.count(consumer_recurse) > 0) {
     consumer = consumer_recurse;
     auto producer_list = hw_dispatch_set[consumer];
 
     // FIXME: what about merges?
-    assert(producer_list.size() == 1);
+    //internal_assert(producer_list.size() == 1);
 
+    // use the first producer (hopefully they all work equally)
     producer_name = producer_list[0];
     producer = strip_stream(producer_name);
 
@@ -1635,11 +1659,13 @@ void CodeGen_CoreIR_Target::CodeGen_CoreIR_C::visit(const Call *op) {
       CoreIR::Values lb_args = {{"input_type", CoreIR::Const::make(context,input_type)},
                                 {"output_type", CoreIR::Const::make(context,output_type)},
                                 {"image_type", CoreIR::Const::make(context,image_type)},
-                                {"has_valid",CoreIR::Const::make(context,true)}};
+                                {"has_valid",CoreIR::Const::make(context,has_valid)}};
 
       coreir_lb = def->addInstance(lb_name, gens["linebuffer"], lb_args);
-      connected_wen = connect_linebuffer(lb_in_name, coreir_lb->sel("wen"));
-      record_linebuffer_valid(lb_out_name, coreir_lb->sel("valid"));
+      if (has_valid) {
+        connected_wen = connect_linebuffer(lb_in_name, coreir_lb->sel("wen"));
+        record_linebuffer_valid(lb_out_name, coreir_lb->sel("valid"));
+      }
 					
     }
     /*
@@ -1972,7 +1998,7 @@ void CodeGen_CoreIR_Target::CodeGen_CoreIR_C::visit(const Call *op) {
 
         
   } else if (op->name == "dispatch_stream") {
-    cout << "doing a dispatch\n";
+    //cout << "doing a dispatch\n";
     // emits the calling arguments in comment
     vector<string> args(op->args.size());
     for(size_t i = 0; i < op->args.size(); i++)
@@ -2059,10 +2085,10 @@ void CodeGen_CoreIR_Target::CodeGen_CoreIR_C::visit(const Call *op) {
       string next_lb_name = print_name(consumer_names[0]);
 
       stream << "// connecting " << stream_in_name << " to " << next_lb_name << "\n";
-      cout << "doing optimization of dispatch\n";
+      //cout << "doing optimization of dispatch\n";
       record_dispatch(stream_in_name, next_lb_name);
       rename_wire(stream_out_name, stream_in_name, op->args[0]);
-      cout << "finished optimization of dispatch\n";
+      //cout << "finished optimization of dispatch\n";
       //def->connect({stream_in_name,"valid"}, {next_lb_name, "wen"});
       return;
     }
@@ -2078,6 +2104,11 @@ void CodeGen_CoreIR_Target::CodeGen_CoreIR_C::visit(const Call *op) {
       stencils.push(consumer_stream_name, consumer_stream_type);
       stream << print_stencil_pragma(consumer_stream_name);
       stencils.pop(consumer_stream_name);
+
+      // record dispatch for coreir
+      string stream_in_name = print_name(stream_name);
+      string next_lb_name = print_name(consumer_names[i]);
+      record_dispatch(stream_in_name, next_lb_name);
     }
 
     // emits for a loop for each dimensions (larger dimension number, outer the loop)
@@ -2089,23 +2120,6 @@ void CodeGen_CoreIR_Target::CodeGen_CoreIR_C::visit(const Call *op) {
              << dim_name << " <= " << store_extents[i] - stencil_sizes[i] << "; "
              << dim_name << " += " << stencil_steps[i] << ")\n";
 
-      // generate coreir: counter
-      /*
-        internal_assert(is_const(op->min));
-        internal_assert(is_const(op->extent));
-        int min_value = id_const_value(op->min);
-        int max_value = min_value + id_const_value(op->extent);
-        int inc_value = 1;
-        string counter_name = "count_" + print_name(op->name);
-        CoreIR::Wireable* counter_inst = def->addInstance(counter_name, gens["counter"], 
-        {{"width",CoreIR::Const::make(context,bitwidth)},
-        {"min",CoreIR::Const::make(context,min_value)},
-        {"max",CoreIR::Const::make(context,max_value)},
-        {"inc",CoreIR::Const::make(context,inc_value)}}
-        );
-        hw_wire_set[print_name(op->name)] = counter_inst->sel("out");
-        cout << "counter added with name " << print_name(op->name) << endl;
-      */
     }
 
 

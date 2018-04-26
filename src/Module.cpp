@@ -253,7 +253,7 @@ void Module::compile(const Outputs &output_files) const {
     if (!output_files.coreir_source_name.empty()) {
         debug(1) << "Module.compile(): coreir_source_name " << output_files.coreir_source_name << "\n";
         std::ofstream file(output_files.coreir_source_name);
-        Internal::CodeGen_CoreIR_Testbench cg(file);
+        Internal::CodeGen_CoreIR_Testbench cg(file, target().has_feature(Target::CoreIRValid));
         cg.compile(*this);
     }
     if (!output_files.zynq_c_source_name.empty()) {

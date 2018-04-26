@@ -5,8 +5,7 @@
       "DesignTop":{
         "type":["Record",[
           ["in",["Record",[["arg_1",["Array",1,["Array",1,["Array",16,"BitIn"]]]]]]],
-          ["out",["Array",1,["Array",1,"Bit"]]],
-          ["valid","Bit"]
+          ["out",["Array",1,["Array",1,"Bit"]]]
         ]],
         "instances":{
           "bitand_153_151_154":{
@@ -57,21 +56,21 @@
           }
         },
         "connections":[
-          ["bitand_153_151_154.in0","ult_152_147_153.out"],
-          ["bitand_153_151_154.in1","ult_147_150_151.out"],
-          ["bitand_153_151_154.out","bitor_154_155_156.in0"],
-          ["bitmux_157_157_149.in0","ule_148_147_149.out"],
-          ["bitmux_157_157_149.in1","bitnot_156.out"],
-          ["bitmux_157_157_149.out","pt_hw_output_1_stencil.in.0.0"],
-          ["bitmux_157_157_149.sel","bitnot_156.out"],
-          ["bitnot_156.in","bitor_154_155_156.out"],
-          ["bitor_154_155_156.in1","bitxor_149_151_155.out"],
-          ["bitxor_149_151_155.in0","ule_148_147_149.out"],
-          ["bitxor_149_151_155.in1","ult_147_150_151.out"],
-          ["const10__152.out","ult_152_147_153.in0"],
-          ["const20__150.out","ult_147_150_151.in1"],
-          ["const50__148.out","ule_148_147_149.in0"],
-          ["pt_hw_output_1_stencil.out","self.out"],
+          ["ult_147_150_151.out","bitand_153_151_154.in1"],
+          ["ule_148_147_149.out","bitmux_157_157_149.in0"],
+          ["bitnot_156.out","bitmux_157_157_149.in1"],
+          ["pt_hw_output_1_stencil.in.0.0","bitmux_157_157_149.out"],
+          ["bitnot_156.out","bitmux_157_157_149.sel"],
+          ["bitor_154_155_156.in0","bitand_153_151_154.out"],
+          ["bitor_154_155_156.out","bitnot_156.in"],
+          ["ule_148_147_149.out","bitxor_149_151_155.in0"],
+          ["ult_147_150_151.out","bitxor_149_151_155.in1"],
+          ["bitxor_149_151_155.out","bitor_154_155_156.in1"],
+          ["ult_147_150_151.in1","const20__150.out"],
+          ["ule_148_147_149.in0","const50__148.out"],
+          ["self.out","pt_hw_output_1_stencil.out"],
+          ["ult_152_147_153.in0","const10__152.out"],
+          ["ult_152_147_153.out","bitand_153_151_154.in0"],
           ["ule_148_147_149.in1","self.in.arg_1.0.0"],
           ["ult_147_150_151.in0","self.in.arg_1.0.0"],
           ["ult_152_147_153.in1","self.in.arg_1.0.0"]

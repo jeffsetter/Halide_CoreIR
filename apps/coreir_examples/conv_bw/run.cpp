@@ -86,7 +86,15 @@ int main(int argc, char **argv) {
       c->die();
     }
 
-    c->runPasses({"rungenerators", "flattentypes", "flatten", "wireclocks-coreir"});
+    c->runPasses({"rungenerators", "wireclocks-coreir"});
+		c->runPasses({"verifyconnectivity-onlyinputs"},{"global","commonlib","memory","mantle"});
+    c->runPasses({"flattentypes", "flatten"});
+
+    if (!saveToFile(g,"design_flattened.json")) {
+      std::cout << "Could not save to json!!" << std::endl;
+      c->die();
+    }
+
 
     Module* m = g->getModule("DesignTop");
     assert(m != nullptr);

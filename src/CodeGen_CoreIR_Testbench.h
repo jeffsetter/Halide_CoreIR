@@ -20,7 +20,7 @@ namespace Internal {
  */
 class CodeGen_CoreIR_Testbench : public CodeGen_CoreIR_Base {
 public:
-    CodeGen_CoreIR_Testbench(std::ostream &tb_stream);
+  CodeGen_CoreIR_Testbench(std::ostream &tb_stream, bool has_valid);
     ~CodeGen_CoreIR_Testbench();
 
 protected:

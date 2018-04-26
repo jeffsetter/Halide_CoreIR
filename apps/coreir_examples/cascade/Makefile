@@ -40,6 +40,15 @@ $(HLS_LOG): ../hls_support/run_hls.tcl pipeline_hls.cpp run.cpp
 out_cuda.png: run_cuda
 	CUDA_LAUNCH_BLOCKING=1 HL_NUM_THREADS=4 ./run_cuda ../../images/benchmark_8mp_gray.png
 
+gen_testimage:
+	$(MAKE) -C ../tools/gen_testimage gen_testimage
+	cp ../tools/gen_testimage/gen_testimage .
+
+input_unique.pgm: gen_testimage
+	./gen_testimage 10 10 b input_unique.pgm
+	./gen_testimage 10 10 b input.png
+
+
 clean:
 	rm -f pipeline run
 	rm -f *.html

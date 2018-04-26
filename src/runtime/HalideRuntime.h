@@ -690,7 +690,8 @@ typedef enum halide_target_feature_t {
     halide_target_feature_hvx_v62 = 35, ///< Enable Hexagon v62 architecture.
 
     halide_target_feature_zynq = 36, // Enable Xilinx Zynq runtime.
-    halide_target_feature_end = 37 ///< A sentinel. Every target is considered to have this feature, and setting this feature does nothing.
+    halide_target_feature_coreir_valid = 37, ///< Enable valid bit generation for CoreIR targets.
+    halide_target_feature_end = 38 ///< A sentinel. Every target is considered to have this feature, and setting this feature does nothing.
 } halide_target_feature_t;
 
 /** This function is called internally by Halide in some situations to determine

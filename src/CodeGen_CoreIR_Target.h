@@ -62,7 +62,7 @@ namespace Halide {
       public:
       /** Initialize a C code generator pointing at a particular output
        * stream (e.g. a file, or std::cout) */
-      CodeGen_CoreIR_Target(const std::string &name);
+      CodeGen_CoreIR_Target(const std::string &name, bool has_valid);
       virtual ~CodeGen_CoreIR_Target();
 
       void init_module();
@@ -76,7 +76,7 @@ namespace Halide {
       protected:
       class CodeGen_CoreIR_C : public CodeGen_CoreIR_Base {
         public:
-        CodeGen_CoreIR_C(std::ostream &s, OutputKind output_kind);
+        CodeGen_CoreIR_C(std::ostream &s, OutputKind output_kind, bool has_valid);
         ~CodeGen_CoreIR_C();
 
         void add_kernel(Stmt stmt,
@@ -89,6 +89,7 @@ namespace Halide {
 
         // for coreir generation
         bool create_json = false;
+        bool has_valid = false;
         uint8_t bitwidth;
         CoreIR::Context* context = NULL;
         CoreIR::Namespace* global_ns = NULL;
