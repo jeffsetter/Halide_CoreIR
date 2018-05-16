@@ -137,12 +137,12 @@ CodeGen_CoreIR_Target::CodeGen_CoreIR_C::~CodeGen_CoreIR_C() {
       context->die();
     }
 
-    context->runPasses({"removepassthroughs"});
 
-//    if (!saveToDot(design, "design_top.txt")) {
-//      cout << RED << "Could not save to dot!!" << RESET << endl;
-//      context->die();
-//    }
+    context->runPasses({"rungenerators","removepassthroughs"});
+    if (!saveToDot(design, "design_top.txt")) {
+      cout << RED << "Could not save to dot!!" << RESET << endl;
+      context->die();
+    }
 
     //context->runPasses({"rungenerators", "removepassthroughs"});
     //FIXME: we should have everything connected
@@ -177,10 +177,18 @@ CodeGen_CoreIR_Target::CodeGen_CoreIR_C::~CodeGen_CoreIR_C() {
       cout << RED << "Could not load from json!!" << RESET << endl;
       context->die();
     }
-    if (!saveToDot(m, "design_top.txt")) {
-      cout << RED << "Could not save to dot file :(" << RESET << endl;
+
+    CoreIR::Module* mod2 = nullptr;
+    if (!loadFromFile(context, "design_prepass.json", &mod2)) {
+      cout << RED << "Could not load from json!!" << RESET << endl;
       context->die();
     }
+
+		context->runPasses({"removepassthroughs"});
+//    if (!saveToDot(mod2, "design_top.txt")) {
+//      cout << RED << "Could not save to dot file :(" << RESET << endl;
+//      context->die();
+//    }
 
     ASSERT(m, "Could not load top: design");
     //m->print();

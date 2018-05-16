@@ -50,10 +50,10 @@ input_unique.pgm: gen_testimage
 
 
 clean:
-	rm -f pipeline run
+	rm -f pipeline run gen_testimage
 	rm -f *.html
 	rm -f pipeline_native.h pipeline_native.o
 	rm -f pipeline_hls.h pipeline_hls.cpp hls_target.h hls_target.cpp
 	rm -f pipeline_coreir.cpp pipeline_coreir.h
 	rm -f coreir_target.h coreir_target.cpp *.json
-	rm -f design_top.txt out.png graph.png
+	rm -f design_top.txt out.png coreir_out.png input_unique.pgm graph.png

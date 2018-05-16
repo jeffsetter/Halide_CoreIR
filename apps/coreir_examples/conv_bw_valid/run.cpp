@@ -124,6 +124,9 @@ int main(int argc, char **argv) {
     }
 
     c->runPasses({"rungenerators", "flattentypes", "flatten", "wireclocks-coreir"});
+    if (!saveToFile(g, "design_postpass.json", g->getModule("DesignTop"))) {
+      c->die();
+    }
 
     Module* m = g->getModule("DesignTop");
     assert(m != nullptr);
@@ -178,7 +181,7 @@ int main(int argc, char **argv) {
       }
     }
   }
-
+    printf("finished running CoreIR code\n");
 
     if (success) {
       printf("Succeeded!\n");
