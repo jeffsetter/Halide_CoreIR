@@ -136,13 +136,14 @@ CodeGen_CoreIR_Target::CodeGen_CoreIR_C::~CodeGen_CoreIR_C() {
       cout << RED << "Could not save to json!!" << RESET << endl;
       context->die();
     }
+
+
+    context->runPasses({"rungenerators","removepassthroughs"});
     if (!saveToFile(global_ns, "design_top.json", design)) {
       cout << RED << "Could not save to json!!" << RESET << endl;
       context->die();
     }
 
-
-    context->runPasses({"rungenerators","removepassthroughs"});
     if (!saveToDot(design, "design_top.txt")) {
       cout << RED << "Could not save to dot!!" << RESET << endl;
       context->die();
