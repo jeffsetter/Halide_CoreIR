@@ -167,7 +167,7 @@ CodeGen_CoreIR_Target::CodeGen_CoreIR_C::~CodeGen_CoreIR_C() {
   
     // write out the json
     cout << "Saving json and dot" << endl;
-    if (!saveToFile(global_ns, "design_generated.json", design)) {
+    if (!saveToFile(global_ns, "design_flattened.json", design)) {
       cout << RED << "Could not save to json!!" << RESET << endl;
       context->die();
     }
