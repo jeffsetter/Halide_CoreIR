@@ -28,8 +28,7 @@ graph.png: design_top.txt
 
 
 # Test if app works, using cached result if json design matches golden.
-test:
-	@$(MAKE) -s design_top.json
+test: design_top.json run
 	@if [ -f "passed.md5" ]; then \
 		md5sum -c --status passed.md5; \
 		EXIT_CODE=$$?; \
@@ -51,7 +50,7 @@ test:
 	fi
 
 # Run design on cpu and coreir interpreter, and print if it passes/fails.
-testrun:
+testrun: design_top.json run
 		@-$(MAKE) out.png; \
 		EXIT_CODE=$$?; \
 		if [[ $$EXIT_CODE = "0" ]]; then \
@@ -61,18 +60,17 @@ testrun:
 		fi
 
 # Update golden file, run design, and store result in md5 filename.
-update_golden passed.md5 failed.md5: design_top.json
-#	@$(MAKE) -s design_top.json
+update_golden passed.md5 failed.md5: design_top.json run
 	@cp design_top.json design_top_golden.json
 	@-$(MAKE) -s out.png; \
 	EXIT_CODE=$$?; \
 	if [[ $$EXIT_CODE = "0" ]]; then \
 		rm -f failed.md5; \
-		md5sum design_top.json > passed.md5; \
+		md5sum run design_top.json > passed.md5; \
 		echo "$(APPNAME): Updated design_top_golden.json and created passed.md5"; \
 	else \
 		rm -f failed.md5; \
-		md5sum design_top.json > failed.md5; \
+		md5sum run design_top.json > failed.md5; \
 		echo "$(APPNAME): Updated design_top_golden.json and created failed.md5"; \
 	fi
 
