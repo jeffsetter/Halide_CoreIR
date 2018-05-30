@@ -26,7 +26,7 @@ cleanall:
 # continue running these even if they fail
 .PHONY: $(ALL_COREIR_APPS)
 $(ALL_COREIR_APPS):
-	$(MAKE) -C $@ -i
+	$(MAKE) -C $@ -i test
 
 test_conv: conv_1_2 conv_2_1 conv_3_1 conv_bw conv_nest
 

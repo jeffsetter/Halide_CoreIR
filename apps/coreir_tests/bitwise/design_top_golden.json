@@ -1,0 +1,52 @@
+{"top":"global.DesignTop",
+"namespaces":{
+  "global":{
+    "modules":{
+      "DesignTop":{
+        "type":["Record",[
+          ["in",["Record",[["arg_1",["Array",1,["Array",1,["Array",16,"BitIn"]]]]]]],
+          ["out",["Array",1,["Array",1,["Array",16,"Bit"]]]]
+        ]],
+        "instances":{
+          "and_353_354_355":{
+            "genref":"coreir.and",
+            "genargs":{"width":["Int",16]}
+          },
+          "const-21__354":{
+            "genref":"coreir.const",
+            "genargs":{"width":["Int",16]},
+            "modargs":{"value":[["BitVector",16],"16'hffeb"]}
+          },
+          "const63__357":{
+            "genref":"coreir.const",
+            "genargs":{"width":["Int",16]},
+            "modargs":{"value":[["BitVector",16],"16'h003f"]}
+          },
+          "not_355":{
+            "genref":"coreir.not",
+            "genargs":{"width":["Int",16]}
+          },
+          "or_353_357_358":{
+            "genref":"coreir.or",
+            "genargs":{"width":["Int",16]}
+          },
+          "xor_356_358_359":{
+            "genref":"coreir.xor",
+            "genargs":{"width":["Int",16]}
+          }
+        },
+        "connections":[
+          ["self.in.arg_1.0.0","and_353_354_355.in0"],
+          ["const-21__354.out","and_353_354_355.in1"],
+          ["not_355.in","and_353_354_355.out"],
+          ["or_353_357_358.in1","const63__357.out"],
+          ["xor_356_358_359.in0","not_355.out"],
+          ["self.in.arg_1.0.0","or_353_357_358.in0"],
+          ["xor_356_358_359.in1","or_353_357_358.out"],
+          ["xor_356_358_359.out","self.out.0.0"]
+        ]
+      }
+    }
+  }
+}
+}

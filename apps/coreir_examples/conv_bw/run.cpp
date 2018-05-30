@@ -23,7 +23,6 @@ const unsigned char gaussian2d[5][5] = {
     {1,     3,     6,     3,     1}
 };
 
-
 int main(int argc, char **argv) {
     Image<uint8_t> in(62, 62, 1);
     Image<uint8_t> weight(5,5);

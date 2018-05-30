@@ -15,6 +15,19 @@ pipeline_hls.cpp pipeline_native.o design_top.json design_top.txt: pipeline
 	HL_DEBUG_CODEGEN=0 ./pipeline
 
 
+# Create input image.
+gen_testimage:
+	$(MAKE) -C ../tools/gen_testimage gen_testimage
+	cp ../tools/gen_testimage/gen_testimage .
+
+input_unique.pgm: gen_testimage
+	./gen_testimage 16 16 b input_unique.pgm
+	./gen_testimage 16 16 b input.png
+input_ones.pgm: gen_testimage
+	./gen_testimage 16 16 a input_ones.pgm
+	./gen_testimage 16 16 a input.png
+input.png: input_unique.pgm
+
 # Use design and run it to create output image.
 run: run.cpp pipeline_hls.cpp pipeline_native.o hls_target.cpp
 	$(CXX) $(CXXFLAGS) -O1 -DNDEBUG $(HLS_CXXFLAGS) -g -Wall -Werror $^ -lpthread -ldl $(LIB_HALIDE) -o $@ $(PNGFLAGS) $(LDFLAGS)
@@ -22,13 +35,17 @@ run: run.cpp pipeline_hls.cpp pipeline_native.o hls_target.cpp
 out.png: run input.png design_top.json
 	./run input.png
 
+
 # Use graphviz to create graph of processing nodes.
 graph.png: design_top.txt
 	dot -Tpng design_top.txt > graph.png
 
 
 # Test if app works, using cached result if json design matches golden.
-test: design_top.json run
+test:
+	@$(MAKE) -s pipeline > /dev/null
+	@$(MAKE) -s design_top.json &> /dev/null
+	@$(MAKE) -s run > /dev/null
 	@if [ -f "passed.md5" ]; then \
 		md5sum -c --status passed.md5; \
 		EXIT_CODE=$$?; \
@@ -50,8 +67,8 @@ test: design_top.json run
 	fi
 
 # Run design on cpu and coreir interpreter, and print if it passes/fails.
-testrun: design_top.json run
-		@-$(MAKE) out.png; \
+testrun:
+		@-$(MAKE) out.png > /dev/null; \
 		EXIT_CODE=$$?; \
 		if [[ $$EXIT_CODE = "0" ]]; then \
 			printf "%-15s \033[1;33m%s\033[0m\n" $(APPNAME) "PASSED, but needs golden updated"; \
@@ -61,6 +78,7 @@ testrun: design_top.json run
 
 # Update golden file, run design, and store result in md5 filename.
 update_golden passed.md5 failed.md5: design_top.json run
+	@$(MAKE) design_top.json run
 	@cp design_top.json design_top_golden.json
 	@-$(MAKE) -s out.png; \
 	EXIT_CODE=$$?; \
