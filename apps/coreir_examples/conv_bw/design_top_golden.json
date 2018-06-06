@@ -137,29 +137,82 @@
           "mul_516_517_518":{
             "genref":"coreir.mul",
             "genargs":{"width":["Int",16]}
+          },
+          "pt_conv1_2_stencil":{
+            "genref":"mantle.wire",
+            "genargs":{"type":["CoreIRType",["Array",1,["Array",1,["Array",16,"Bit"]]]]}
+          },
+          "pt_conv1_2_stencil$1":{
+            "genref":"mantle.wire",
+            "genargs":{"type":["CoreIRType",["Array",1,["Array",1,["Array",16,"Bit"]]]]}
+          },
+          "pt_conv1_2_stencil$2":{
+            "genref":"mantle.wire",
+            "genargs":{"type":["CoreIRType",["Array",1,["Array",1,["Array",16,"Bit"]]]]}
+          },
+          "pt_conv1_2_stencil$3":{
+            "genref":"mantle.wire",
+            "genargs":{"type":["CoreIRType",["Array",1,["Array",1,["Array",16,"Bit"]]]]}
+          },
+          "pt_conv1_2_stencil$4":{
+            "genref":"mantle.wire",
+            "genargs":{"type":["CoreIRType",["Array",1,["Array",1,["Array",16,"Bit"]]]]}
+          },
+          "pt_conv1_2_stencil$5":{
+            "genref":"mantle.wire",
+            "genargs":{"type":["CoreIRType",["Array",1,["Array",1,["Array",16,"Bit"]]]]}
+          },
+          "pt_conv1_2_stencil$6":{
+            "genref":"mantle.wire",
+            "genargs":{"type":["CoreIRType",["Array",1,["Array",1,["Array",16,"Bit"]]]]}
+          },
+          "pt_conv1_2_stencil$7":{
+            "genref":"mantle.wire",
+            "genargs":{"type":["CoreIRType",["Array",1,["Array",1,["Array",16,"Bit"]]]]}
+          },
+          "pt_conv1_2_stencil$8":{
+            "genref":"mantle.wire",
+            "genargs":{"type":["CoreIRType",["Array",1,["Array",1,["Array",16,"Bit"]]]]}
+          },
+          "pt_conv1_2_stencil$9":{
+            "genref":"mantle.wire",
+            "genargs":{"type":["CoreIRType",["Array",1,["Array",1,["Array",16,"Bit"]]]]}
+          },
+          "pt_hw_output_2_stencil":{
+            "genref":"mantle.wire",
+            "genargs":{"type":["CoreIRType",["Array",1,["Array",1,["Array",16,"Bit"]]]]}
           }
         },
         "connections":[
-          ["const0_0.out","add_466_470_471.in0"],
+          ["pt_conv1_2_stencil.out.0.0","add_466_470_471.in0"],
           ["mul_468_469_470.out","add_466_470_471.in1"],
-          ["add_472_476_477.in0","add_466_470_471.out"],
+          ["pt_conv1_2_stencil$1.in.0.0","add_466_470_471.out"],
+          ["pt_conv1_2_stencil$1.out.0.0","add_472_476_477.in0"],
           ["mul_474_475_476.out","add_472_476_477.in1"],
-          ["add_478_482_483.in0","add_472_476_477.out"],
+          ["pt_conv1_2_stencil$2.in.0.0","add_472_476_477.out"],
+          ["pt_conv1_2_stencil$2.out.0.0","add_478_482_483.in0"],
           ["mul_480_481_482.out","add_478_482_483.in1"],
-          ["add_484_488_489.in0","add_478_482_483.out"],
+          ["pt_conv1_2_stencil$3.in.0.0","add_478_482_483.out"],
+          ["pt_conv1_2_stencil$3.out.0.0","add_484_488_489.in0"],
           ["mul_486_487_488.out","add_484_488_489.in1"],
-          ["add_490_494_495.in0","add_484_488_489.out"],
+          ["pt_conv1_2_stencil$4.in.0.0","add_484_488_489.out"],
+          ["pt_conv1_2_stencil$4.out.0.0","add_490_494_495.in0"],
           ["mul_492_493_494.out","add_490_494_495.in1"],
-          ["add_496_500_501.in0","add_490_494_495.out"],
+          ["pt_conv1_2_stencil$5.in.0.0","add_490_494_495.out"],
+          ["pt_conv1_2_stencil$5.out.0.0","add_496_500_501.in0"],
           ["mul_498_499_500.out","add_496_500_501.in1"],
-          ["add_502_506_507.in0","add_496_500_501.out"],
+          ["pt_conv1_2_stencil$6.in.0.0","add_496_500_501.out"],
+          ["pt_conv1_2_stencil$6.out.0.0","add_502_506_507.in0"],
           ["mul_504_505_506.out","add_502_506_507.in1"],
-          ["add_508_512_513.in0","add_502_506_507.out"],
+          ["pt_conv1_2_stencil$7.in.0.0","add_502_506_507.out"],
+          ["pt_conv1_2_stencil$7.out.0.0","add_508_512_513.in0"],
           ["mul_510_511_512.out","add_508_512_513.in1"],
-          ["add_514_518_519.in0","add_508_512_513.out"],
+          ["pt_conv1_2_stencil$8.in.0.0","add_508_512_513.out"],
+          ["pt_conv1_2_stencil$8.out.0.0","add_514_518_519.in0"],
           ["mul_516_517_518.out","add_514_518_519.in1"],
-          ["self.out.0.0","add_514_518_519.out"],
+          ["pt_conv1_2_stencil$9.in.0.0","add_514_518_519.out"],
           ["mul_492_493_494.in1","const0_0$1.out"],
+          ["pt_conv1_2_stencil.in.0.0","const0_0.out"],
           ["mul_468_469_470.in1","const11_11.out"],
           ["mul_486_487_488.in1","const12_12.out"],
           ["mul_504_505_506.in1","const13_13.out"],
@@ -178,7 +231,9 @@
           ["mul_504_505_506.in0","lb_p4_clamped_stencil_update_stream.out.2.0"],
           ["mul_510_511_512.in0","lb_p4_clamped_stencil_update_stream.out.2.1"],
           ["mul_516_517_518.in0","lb_p4_clamped_stencil_update_stream.out.2.2"],
-          ["lb_p4_clamped_stencil_update_stream_wen.out","lb_p4_clamped_stencil_update_stream.wen"]
+          ["lb_p4_clamped_stencil_update_stream_wen.out","lb_p4_clamped_stencil_update_stream.wen"],
+          ["pt_hw_output_2_stencil.in.0.0","pt_conv1_2_stencil$9.out.0.0"],
+          ["self.out","pt_hw_output_2_stencil.out"]
         ]
       }
     }

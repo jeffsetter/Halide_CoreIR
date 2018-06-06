@@ -1,0 +1,30 @@
+{"top":"global.DesignTop",
+"namespaces":{
+  "global":{
+    "modules":{
+      "DesignTop":{
+        "type":["Record",[
+          ["in",["Record",[["arg_1",["Array",1,["Array",1,["Array",16,"BitIn"]]]]]]],
+          ["out",["Array",1,["Array",1,"Bit"]]]
+        ]],
+        "instances":{
+          "const15__316":{
+            "genref":"coreir.const",
+            "genargs":{"width":["Int",16]},
+            "modargs":{"value":[["BitVector",16],"16'h000f"]}
+          },
+          "neq_315_316_317":{
+            "genref":"coreir.neq",
+            "genargs":{"width":["Int",16]}
+          }
+        },
+        "connections":[
+          ["neq_315_316_317.in1","const15__316.out"],
+          ["self.in.arg_1.0.0","neq_315_316_317.in0"],
+          ["self.out.0.0","neq_315_316_317.out"]
+        ]
+      }
+    }
+  }
+}
+}

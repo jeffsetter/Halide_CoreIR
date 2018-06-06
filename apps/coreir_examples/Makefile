@@ -1,6 +1,9 @@
 SHELL := /bin/bash
 
-ALL_COREIR_APPS = pointwise param \
+# comment out this line to output when creating and testing designs
+OUTPUT = &>/dev/null
+
+WORKING_APPS = pointwise param \
 	conv_1_1 conv_1_2 conv_2_1 conv_3_1 conv_bw gaussian blur_1_4 \
 	conv_1_2_valid conv_2_1_valid conv_3_1_valid conv_bw_valid cascade \
 	conv_nest conv_chain \
@@ -16,6 +19,10 @@ NOT_WORKING_APPS = \
 ALL_APPS := $(subst /,, $(dir $(wildcard */.)))
 ALL_APPS := $(filter-out hls_support tools, $(ALL_APPS))
 
+WORKING_APPS_TESTS := $(WORKING_APPS:=-test)
+WORKING_APPS_GOLDENS := $(WORKING_APPS:=-update-golden)
+WORKING_APPS_CHECKS := $(WORKING_APPS:=-check)
+
 all: test_all
 cleanall:
 	for app in $(ALL_APPS); do \
@@ -24,21 +31,39 @@ cleanall:
 	$(MAKE) -C tools cleanall > /dev/null
 
 # continue running these even if they fail
-.PHONY: $(ALL_COREIR_APPS)
-$(ALL_COREIR_APPS):
+.PHONY: $(WORKING_APPS)
+$(WORKING_APPS):
 	$(MAKE) -C $@ -i test
+
+%-test:
+	$(MAKE) -C $* -si test $(OUTPUT)
+	@$(MAKE) -C $* -s check --no-print-directory
+
+%-update-golden:
+	$(MAKE) -C $* update_golden $(OUTPUT)
+	@$(MAKE) -C $* -s check --no-print-directory
+
+%-check:
+	@$(MAKE) -C $* -s check --no-print-directory
 
 test_conv: conv_1_2 conv_2_1 conv_3_1 conv_bw conv_nest
 
 test_onebit: onebit_comp onebit_and onebit_mux onebit_bool
 
-# runs all tests, and then specifies which passed and which failed
-test_all testall: $(ALL_COREIR_APPS)
+test_all_apps: $(WORKING_APPS_TESTS)
+	$(MAKE) check_all_apps
+
+check_all_apps:
 	@echo ""
+	@echo "---TESTING SUMMARY---"
 	@for app in $(ALL_APPS); do \
-		if [[ "$(ALL_COREIR_APPS)" == *"$$app"* ]]; then \
-			if [ -f $$app"/design_prepass.json" ]; then \
-				printf "%-15s \033[0;32m%s\033[0m\n" $$app "PASSED"; \
+		if [[ "$(WORKING_APPS)" == *"$$app"* ]]; then \
+			if [[ -f $$app"/design_prepass.json" && ( -f $$app/"out.png" || -f $$app/"passed.md5" ) ]]; then \
+				if [ -f $$app/"passed.md5" ]; then \
+					printf "%-15s \033[0;32m%s\033[0m\n" $$app "PASSED"; \
+				else \
+					printf "%-15s \033[1;33m%s\033[0m\n" $$app "PASSED, but needs golden updated"; \
+				fi \
 			else \
 				printf "%-15s \033[0;31m%s\033[0m\n" $$app "FAILED"; \
 			fi \
@@ -49,3 +74,22 @@ test_all testall: $(ALL_COREIR_APPS)
 		fi \
 	done
 
+testall test_all test-all:
+	@$(MAKE) test_all_apps -i
+
+update_goldens_all_apps: $(WORKING_APPS_GOLDENS)
+	@$(MAKE) check_all_apps
+
+updateall update_all updategoldens update_goldens:
+	@$(MAKE) update_goldens_all_apps -i
+
+checkall check_all: $(WORKING_APPS_CHECKS)
+	@for app in $(ALL_APPS); do \
+		if [[ "$(WORKING_APPS)" == *"$$app"* ]]; then \
+			true; \
+		elif [[ "$(NOT_WORKING_APPS)" == *"$$app"* ]]; then \
+			printf "%-15s \033[1;37m%s\033[0m\n" $$app "DID NOT RUN"; \
+		else \
+			printf "%-15s \033[1;33m%s\033[0m\n" $$app "NOT CLASSIFIED"; \
+		fi \
+	done

@@ -7,64 +7,10 @@
 #include "pipeline_native.h"
 //#include "pipeline_hls.h"
 
-#include "coreir.h"
-#include "coreir/passes/transform/rungenerators.h"
-#include "coreir/simulator/interpreter.h"
-#include "coreir/libs/commonlib.h"
+#include "coreir_simulation.h"
 
 using namespace Halide::Tools;
 using namespace CoreIR;
-
-template <typename elem_t>
-class ImageWriter {
-public:
-  ImageWriter(uint32_t width, uint32_t height, uint32_t channels=1) :
-    width(width), height(height), channels(channels),
-    current_x(0), current_y(0), current_z(0) { }
-
-  void write(Image<elem_t> &image, elem_t data) {
-    if (!(current_x < width &&
-          current_y < height &&
-          current_z < channels)) {
-      std::cout << "wrote too many: " 
-                << current_x << "," << current_y << "," << current_z << std::endl;      
-    }
-    image(current_x, current_y, current_z) = data;
-
-    // increment coords
-    current_x++;
-    if (current_x == width) {
-      current_y++;
-      current_x = 0;
-    }
-    if (current_y == height) {
-      current_z++;
-      current_y = 0;
-    }
-  }
-
-  elem_t read(Image<elem_t> &image, uint x, uint y, uint z) {
-    if (!(x < width &&
-          y < height &&
-          z < channels)) {
-      std::cout << "read out of bounds: " << x << "," << y << "," << z << std::endl;      
-    }
-
-    return image(x,y,z);
-  }
-
-  void save_image(Image<elem_t> &image, std::string image_name) {
-    Halide::Tools::save_image(image, image_name);
-  }
-
-  void print_coords() {
-    std::cout << "x=" << current_x << ",y=" << current_y << ",z=" << current_z << std::endl;
-  }
-
-private:
-  const uint32_t width, height, channels;
-  uint32_t current_x, current_y, current_z;
-};
 
 int main(int argc, char **argv) {
   Image<uint8_t> in(64,64, 1);
@@ -73,7 +19,6 @@ int main(int argc, char **argv) {
   //Image<uint8_t> out_hls(in.width(), in.height(), in.channels());
   Image<uint8_t> coreir_image(in.width()-4, in.height()-4, in.channels());
   Image<uint8_t> out_coreir(in.width(), in.height(), in.channels());
-
 
   ImageWriter<uint8_t> *coreir_writer = 
     new ImageWriter<uint8_t>(coreir_image.width(), coreir_image.height(), coreir_image.channels());
@@ -154,7 +99,7 @@ int main(int argc, char **argv) {
                  x, y, c, out_coreir(x,y,c), valid);
         }
         if (valid) {
-          coreir_writer->write(coreir_image,out_coreir(x,y,c));
+          coreir_writer->write(out_coreir(x,y,c));
         }
         //printf("out_coreir(%d, %d, %d) = %d,  valid=%d, first_pixel=%d\n",x,y,c,out_coreir(x,y,c), valid, coreir_writer->read(0,0,0));
 
@@ -180,16 +125,16 @@ int main(int argc, char **argv) {
     }
   }
 
-  coreir_writer->save_image(coreir_image,"out_coreir.png");
+  coreir_writer->save_image("out_coreir.png");
   coreir_writer->print_coords();
 
   for (int y = 0; y < out_native.height(); y++) {
     for (int x = 0; x < out_native.width(); x++) {
 	    for (int c = 0; c < out_native.channels(); c++) {
-        if (out_native(x, y, c) != coreir_writer->read(coreir_image,x, y, c)) {
+        if (out_native(x, y, c) != coreir_writer->read(x, y, c)) {
           printf("out_native(%d, %d, %d) = %d, but out_coreir(%d, %d, %d) = %d\n",
                  x, y, c, out_native(x, y, c),
-                 x, y, c, coreir_writer->read(coreir_image,x, y, c));
+                 x, y, c, coreir_writer->read(x, y, c));
           success = false;
         }
       }

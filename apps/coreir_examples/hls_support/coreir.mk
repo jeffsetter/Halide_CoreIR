@@ -11,7 +11,7 @@ all:
 pipeline: pipeline.cpp
 	$(CXX) $(CXXFLAGS) -Wall -g $^ $(LIB_HALIDE) -o $@ $(LDFLAGS) -ltinfo
 
-pipeline_hls.cpp pipeline_native.o design_top.json design_top.txt: pipeline
+pipeline_hls.cpp hls_target.cpp pipeline_native.o design_top.json design_top.txt: pipeline
 	HL_DEBUG_CODEGEN=0 ./pipeline
 
 
@@ -20,13 +20,21 @@ gen_testimage:
 	$(MAKE) -C ../tools/gen_testimage gen_testimage
 	cp ../tools/gen_testimage/gen_testimage .
 
-input_unique.pgm: gen_testimage
+input_unique.pgm-default:
+	$(MAKE) gen_testimage
 	./gen_testimage 16 16 b input_unique.pgm
 	./gen_testimage 16 16 b input.png
-input_ones.pgm: gen_testimage
+input_ones.pgm-default:
+	$(MAKE) gen_testimage
 	./gen_testimage 16 16 a input_ones.pgm
 	./gen_testimage 16 16 a input.png
-input.png: input_unique.pgm
+input.png-default: 
+	@if [[ ! -f input.png ]]; then \
+		$(MAKE) input_unique.pgm; \
+	fi
+
+%: %-default
+	@ true
 
 # Use design and run it to create output image.
 run: run.cpp pipeline_hls.cpp pipeline_native.o hls_target.cpp
@@ -43,9 +51,9 @@ graph.png: design_top.txt
 
 # Test if app works, using cached result if json design matches golden.
 test:
-	@$(MAKE) -s pipeline > /dev/null
-	@$(MAKE) -s design_top.json &> /dev/null
-	@$(MAKE) -s run > /dev/null
+	@-$(MAKE) -s pipeline > /dev/null
+	@-$(MAKE) -s design_top.json &> /dev/null
+	@-$(MAKE) -s run > /dev/null
 	@if [ -f "passed.md5" ]; then \
 		md5sum -c --status passed.md5; \
 		EXIT_CODE=$$?; \
@@ -70,19 +78,17 @@ test:
 testrun:
 		@-$(MAKE) out.png > /dev/null; \
 		EXIT_CODE=$$?; \
-		if [[ $$EXIT_CODE = "0" ]]; then \
+		if [[ $$EXIT_CODE = "0" && -f "out.png" ]]; then \
 			printf "%-15s \033[1;33m%s\033[0m\n" $(APPNAME) "PASSED, but needs golden updated"; \
 		else \
 			printf "%-15s \033[0;31m%s\033[0m\n" $(APPNAME) "FAILED, and needs golden updated" && exit 1; \
 		fi
 
 # Update golden file, run design, and store result in md5 filename.
-update_golden passed.md5 failed.md5: design_top.json run
-	@$(MAKE) design_top.json run
-	@cp design_top.json design_top_golden.json
-	@-$(MAKE) -s out.png; \
+updategolden update_golden passed.md5 failed.md5:
+	@$(MAKE) out.png; \
 	EXIT_CODE=$$?; \
-	if [[ $$EXIT_CODE = "0" ]]; then \
+	if [[ $$EXIT_CODE = "0" && -f "out.png" ]]; then \
 		rm -f failed.md5; \
 		md5sum run design_top.json > passed.md5; \
 		echo "$(APPNAME): Updated design_top_golden.json and created passed.md5"; \
@@ -91,6 +97,32 @@ update_golden passed.md5 failed.md5: design_top.json run
 		md5sum run design_top.json > failed.md5; \
 		echo "$(APPNAME): Updated design_top_golden.json and created failed.md5"; \
 	fi
+	@cp design_top.json design_top_golden.json
+
+check:
+	@printf "%-15s" $(APPNAME); 
+	@if [ -f "design_prepass.json" ]; then \
+		printf "  \033[0;32m%s\033[0m" " coreir"; \
+	else \
+		printf "  \033[0;31m%s\033[0m" "!coreir"; \
+	fi 
+	@if [ -f "run" ]; then \
+		printf "  \033[0;32m%s\033[0m" " run"; \
+	else \
+		printf "  \033[0;31m%s\033[0m" "!run"; \
+	fi 
+	@if [ -f "out.png" ]; then \
+		printf "  \033[0;32m%s\033[0m" " out.png"; \
+	else \
+		printf "  \033[0;31m%s\033[0m" "!out.png"; \
+	fi 
+	@if [ -f "passed.md5" ]; then \
+		printf "  \033[0;32m%s\033[0m" "passed.md5"; \
+	fi 
+	@if [ -f "failed.md5" ]; then \
+		printf "  \033[0;31m%s\033[0m" "failed.md5"; \
+	fi 
+	@printf "\n"
 
 # Clean all of the common generated files.
 clean_commonfiles:
@@ -99,6 +131,6 @@ clean_commonfiles:
 	rm -f pipeline_native.h pipeline_native.o
 	rm -f pipeline_hls.h pipeline_hls.cpp hls_target.h hls_target.cpp
 	rm -f pipeline_coreir.cpp pipeline_coreir.h coreir_target.h coreir_target.cpp
-	rm -f input_unique.pgm input_unique.png
+	rm -f gen_testimage input_unique.pgm input_unique.png
 	rm -f design_prepass.json design_top.json design_flattened.json
-	rm -f design_top.txt graph.png out.png
+	rm -f design_top.txt graph.png out.png out_coreir.png

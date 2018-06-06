@@ -72,7 +72,7 @@ public:
 	void compile_cpu() {
 		std::cout << "\ncompiling cpu code..." << std::endl;
 
-		output.tile(x, y, xo, yo, xi, yi, 60,60);
+		output.tile(x, y, xo, yo, xi, yi, 15,15);
 		output.fuse(xo, yo, xo).parallel(xo);
 
 		output.vectorize(xi, 8);
@@ -109,7 +109,8 @@ public:
 		// level
 		hw_output.compute_root();
 		//hw_output.tile(x, y, xo, yo, xi, yi, 1920, 1080).reorder(xi, yi, xo, yo);
-		hw_output.tile(x, y, xo, yo, xi, yi, 60,60).reorder(xi, yi, xo, yo);
+		hw_output.tile(x, y, xo, yo, xi, yi, 64-(WIN_SIZE-1)*NUM_CONV,64-(WIN_SIZE-1)*NUM_CONV)
+      .reorder(xi, yi, xo, yo);
 
 		//hw_output.unroll(xi, 2);
 		hw_output.accelerate({clamped}, xi, xo, {});  // define the inputs and the output
@@ -137,7 +138,8 @@ public:
 			conv[conv_i].linebuffer();
 		}
 
-		hw_output.tile(x, y, xo, yo, xi, yi, 60,60).reorder(xi,yi,xo,yo);
+		hw_output.tile(x, y, xo, yo, xi, yi, 64-(WIN_SIZE-1)*NUM_CONV,  64-(WIN_SIZE-1)*NUM_CONV)
+      .reorder(xi,yi,xo,yo);
 
 		hw_output.accelerate({clamped}, xi, xo, {});
 

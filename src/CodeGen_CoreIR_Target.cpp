@@ -139,6 +139,7 @@ CodeGen_CoreIR_Target::CodeGen_CoreIR_C::~CodeGen_CoreIR_C() {
 
 
     context->runPasses({"rungenerators","removepassthroughs"});
+    //context->runPasses({"rungenerators"});
     if (!saveToFile(global_ns, "design_top.json", design)) {
       cout << RED << "Could not save to json!!" << RESET << endl;
       context->die();

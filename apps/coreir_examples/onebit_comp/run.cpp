@@ -18,9 +18,9 @@ using namespace CoreIR;
 int main(int argc, char **argv) {
     Image<uint8_t> in(10,10 , 1);
 
-    Image<uint8_t> out_native(in.width(), in.height(), in.channels());
-    Image<uint8_t> out_hls(in.width(), in.height(), in.channels());
-		Image<uint8_t> out_coreir(in.width(), in.height());
+    Image<uint32_t> out_native(in.width(), in.height(), in.channels());
+    Image<uint32_t> out_hls(in.width(), in.height(), in.channels());
+		Image<uint32_t> out_coreir(in.width(), in.height());
     in = load_image(argv[1]);
 
     printf("start.\n");

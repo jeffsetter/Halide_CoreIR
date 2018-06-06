@@ -36,6 +36,17 @@ public:
     return image(x,y,z);
   }
 
+  void save_image(std::string image_name) {
+    Halide::Tools::save_image(image, image_name);
+  }
+
+  void print_coords() {
+    std::cout << "x=" << current_x 
+              << ",y=" << current_y
+              << ",z=" << current_z << std::endl;
+  }
+
+
 private:
   const uint width, height, channels;
   Halide::Tools::Image<elem_t> image;
