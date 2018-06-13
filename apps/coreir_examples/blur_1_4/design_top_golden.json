@@ -96,52 +96,24 @@
             "genref":"coreir.mux",
             "genargs":{"width":["Int",16]}
           },
-          "pt_conv_2_stencil":{
-            "genref":"mantle.wire",
-            "genargs":{"type":["CoreIRType",["Array",1,["Array",1,["Array",16,"Bit"]]]]}
-          },
-          "pt_conv_2_stencil$1":{
-            "genref":"mantle.wire",
-            "genargs":{"type":["CoreIRType",["Array",1,["Array",1,["Array",16,"Bit"]]]]}
-          },
-          "pt_conv_2_stencil$2":{
-            "genref":"mantle.wire",
-            "genargs":{"type":["CoreIRType",["Array",1,["Array",1,["Array",16,"Bit"]]]]}
-          },
-          "pt_conv_2_stencil$3":{
-            "genref":"mantle.wire",
-            "genargs":{"type":["CoreIRType",["Array",1,["Array",1,["Array",16,"Bit"]]]]}
-          },
-          "pt_conv_2_stencil$4":{
-            "genref":"mantle.wire",
-            "genargs":{"type":["CoreIRType",["Array",1,["Array",1,["Array",16,"Bit"]]]]}
-          },
-          "pt_hw_output_2_stencil":{
-            "genref":"mantle.wire",
-            "genargs":{"type":["CoreIRType",["Array",1,["Array",1,["Array",16,"Bit"]]]]}
-          },
           "slt159_393_394":{
             "genref":"coreir.slt",
             "genargs":{"width":["Int",16]}
           }
         },
         "connections":[
-          ["pt_conv_2_stencil.out.0.0","add_373_376_377.in0"],
+          ["const0_0.out","add_373_376_377.in0"],
           ["mul_3753_376.out","add_373_376_377.in1"],
-          ["pt_conv_2_stencil$1.in.0.0","add_373_376_377.out"],
-          ["pt_conv_2_stencil$1.out.0.0","add_378_381_382.in0"],
+          ["add_378_381_382.in0","add_373_376_377.out"],
           ["mul_3805_381.out","add_378_381_382.in1"],
-          ["pt_conv_2_stencil$2.in.0.0","add_378_381_382.out"],
-          ["pt_conv_2_stencil$2.out.0.0","add_383_386_387.in0"],
+          ["add_383_386_387.in0","add_378_381_382.out"],
           ["mul_3855_386.out","add_383_386_387.in1"],
-          ["pt_conv_2_stencil$3.in.0.0","add_383_386_387.out"],
-          ["pt_conv_2_stencil$3.out.0.0","add_388_391_392.in0"],
+          ["add_388_391_392.in0","add_383_386_387.out"],
           ["mul_3903_391.out","add_388_391_392.in1"],
-          ["pt_conv_2_stencil$4.in.0.0","add_388_391_392.out"],
-          ["pt_conv_2_stencil$4.out.0.0","ashr_393_395_396.in0"],
+          ["ashr_393_395_396.in0","add_388_391_392.out"],
+          ["slt159_393_394.in1","add_388_391_392.out"],
           ["const4__395.out","ashr_393_395_396.in1"],
           ["mux_3949_396.in0","ashr_393_395_396.out"],
-          ["pt_conv_2_stencil.in.0.0","const0_0.out"],
           ["slt159_393_394.in0","const159_159.out"],
           ["mul_3903_391.in1","const3_3$1.out"],
           ["mul_3753_376.in1","const3_3.out"],
@@ -154,10 +126,8 @@
           ["mul_3855_386.in0","lb_p3_clamped_stencil_update_stream.out.0.2"],
           ["mul_3903_391.in0","lb_p3_clamped_stencil_update_stream.out.0.3"],
           ["lb_p3_clamped_stencil_update_stream_wen.out","lb_p3_clamped_stencil_update_stream.wen"],
-          ["pt_hw_output_2_stencil.in.0.0","mux_3949_396.out"],
-          ["slt159_393_394.out","mux_3949_396.sel"],
-          ["slt159_393_394.in1","pt_conv_2_stencil$4.out.0.0"],
-          ["self.out","pt_hw_output_2_stencil.out"]
+          ["self.out.0.0","mux_3949_396.out"],
+          ["slt159_393_394.out","mux_3949_396.sel"]
         ]
       }
     }

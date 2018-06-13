@@ -3,9 +3,8 @@
 
 /** \file
  *
- * Defines an IRPrinter that emits HLS C++ code.
+ * Defines an IRPrinter that emits a CoreIR JSON file.
  */
-
 #include "CodeGen_CoreIR_Base.h"
 #include "Module.h"
 #include "Scope.h"
@@ -20,12 +19,11 @@ namespace Halide {
       std::string name;
       bool is_stencil;
       bool is_output;
-
       Type scalar_type;
-
       CodeGen_CoreIR_Base::Stencil_Type stencil_type;
     };
 
+    // Encapsulates all arguments for a coreir module to be constructed and wired up later.
     struct CoreIR_Inst_Args {
       std::string ref_name = "";
       std::string name;
@@ -41,6 +39,7 @@ namespace Halide {
 
     };
 
+    // Contains information that could create a register in a coreir design later.
     struct Storage_Def {
       CoreIR::Type* ptype;
       CoreIR::Wireable* wire;
@@ -56,7 +55,8 @@ namespace Halide {
 
     typedef std::map<std::string,int> VarValues;
 
-/** This class emits Xilinx Vivado HLS compatible C++ code.
+/** 
+ * This class emits CoreIR designs in JSON format.
  */
     class CodeGen_CoreIR_Target {
       public:
@@ -66,11 +66,9 @@ namespace Halide {
       virtual ~CodeGen_CoreIR_Target();
 
       void init_module();
-
       void add_kernel(Stmt stmt,
                       const std::string &name,
                       const std::vector<CoreIR_Argument> &args);
-
       void dump();
 
       protected:
@@ -149,14 +147,14 @@ namespace Halide {
         void visit_ternop(Type t, Expr a, Expr b, Expr c, const char*  op_sym1, const char* op_sym2, std::string op_name);
         void visit(const Select *op);
 
-        void visit(const For *op); // create counter
-        void visit(const Realize *op); // create passthrough for indirection
-        void visit(const Allocate *op);
-        void visit(const Call *op); // bitwise, streams, etc
-        void visit(const Provide *op);
-        void visit(const Load *op); // variable load -> mux
-        void visit(const Store *op);
+        void visit(const For *op);        // create counter with loop
+        void visit(const Realize *op);    // create reusable variable, create passthrough for indirection, 
+        void visit(const Call *op);       // bitwise, streams, etc
+        void visit(const Allocate *op);   // allocate an array (unused so far)
+        void visit(const Provide *op);    // stencil store including init values
         void visit(const IfThenElse *op); // wire up enable,reset for conditional
+        void visit(const Store *op);      // load a single index from an array
+        void visit(const Load *op);       // load from array; variable load -> mux
 
 
         // analysis functions of Halide IR

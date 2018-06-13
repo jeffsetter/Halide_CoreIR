@@ -1046,10 +1046,6 @@
           "mul_1433_1110_1434":{
             "genref":"coreir.mul",
             "genargs":{"width":["Int",16]}
-          },
-          "pt_hw_output_2_stencil":{
-            "genref":"mantle.wire",
-            "genargs":{"type":["CoreIRType",["Array",1,["Array",1,["Array",16,"Bit"]]]]}
           }
         },
         "connections":[
@@ -1217,7 +1213,7 @@
           ["lb_p3_in_bounded_stencil_update_stream.out.8.8","add_1104_1437_1438.in1"],
           ["ashr_1104_1439_1440.in0","add_1104_1437_1438.out"],
           ["const16__1439.out","ashr_1104_1439_1440.in1"],
-          ["pt_hw_output_2_stencil.in.0.0","ashr_1104_1439_1440.out"],
+          ["self.out.0.0","ashr_1104_1439_1440.out"],
           ["mul_1207_1198_1208.in1","const1458__1198$1.out"],
           ["mul_1231_1198_1232.in1","const1458__1198$2.out"],
           ["mul_1249_1198_1250.in1","const1458__1198$3.out"],
@@ -1373,8 +1369,7 @@
           ["mul_1425_1120_1426.in0","lb_p3_in_bounded_stencil_update_stream.out.8.5"],
           ["mul_1429_1115_1430.in0","lb_p3_in_bounded_stencil_update_stream.out.8.6"],
           ["mul_1433_1110_1434.in0","lb_p3_in_bounded_stencil_update_stream.out.8.7"],
-          ["lb_p3_in_bounded_stencil_update_stream_wen.out","lb_p3_in_bounded_stencil_update_stream.wen"],
-          ["self.out","pt_hw_output_2_stencil.out"]
+          ["lb_p3_in_bounded_stencil_update_stream_wen.out","lb_p3_in_bounded_stencil_update_stream.wen"]
         ]
       }
     }

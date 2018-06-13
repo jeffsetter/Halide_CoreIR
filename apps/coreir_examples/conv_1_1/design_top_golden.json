@@ -25,29 +25,14 @@
           "mul_287_288_289":{
             "genref":"coreir.mul",
             "genargs":{"width":["Int",16]}
-          },
-          "pt_conv1_2_stencil":{
-            "genref":"mantle.wire",
-            "genargs":{"type":["CoreIRType",["Array",1,["Array",1,["Array",16,"Bit"]]]]}
-          },
-          "pt_conv1_2_stencil$1":{
-            "genref":"mantle.wire",
-            "genargs":{"type":["CoreIRType",["Array",1,["Array",1,["Array",16,"Bit"]]]]}
-          },
-          "pt_hw_output_2_stencil":{
-            "genref":"mantle.wire",
-            "genargs":{"type":["CoreIRType",["Array",1,["Array",1,["Array",16,"Bit"]]]]}
           }
         },
         "connections":[
-          ["pt_conv1_2_stencil.out.0.0","add_285_289_290.in0"],
+          ["const0__284.out","add_285_289_290.in0"],
           ["mul_287_288_289.out","add_285_289_290.in1"],
-          ["pt_conv1_2_stencil$1.in.0.0","add_285_289_290.out"],
-          ["pt_conv1_2_stencil.in.0.0","const0__284.out"],
+          ["self.out.0.0","add_285_289_290.out"],
           ["mul_287_288_289.in1","const3__288.out"],
-          ["self.in.arg_1.0.0","mul_287_288_289.in0"],
-          ["pt_hw_output_2_stencil.in.0.0","pt_conv1_2_stencil$1.out.0.0"],
-          ["self.out","pt_hw_output_2_stencil.out"]
+          ["self.in.arg_1.0.0","mul_287_288_289.in0"]
         ]
       }
     }

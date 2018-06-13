@@ -30,10 +30,6 @@
           "mux_318400":{
             "genref":"coreir.mux",
             "genargs":{"width":["Int",16]}
-          },
-          "pt_hw_output_2_stencil":{
-            "genref":"mantle.wire",
-            "genargs":{"type":["CoreIRType",["Array",1,["Array",1,["Array",16,"Bit"]]]]}
           }
         },
         "connections":[
@@ -42,8 +38,7 @@
           ["eq_316_317_318.in1","const5__317.out"],
           ["self.in.arg_1.0.0","eq_316_317_318.in0"],
           ["mux_318400.sel","eq_316_317_318.out"],
-          ["pt_hw_output_2_stencil.in.0.0","mux_318400.out"],
-          ["self.out","pt_hw_output_2_stencil.out"]
+          ["self.out.0.0","mux_318400.out"]
         ]
       }
     }

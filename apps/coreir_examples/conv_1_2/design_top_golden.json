@@ -46,40 +46,20 @@
           "mul_313_314_315":{
             "genref":"coreir.mul",
             "genargs":{"width":["Int",16]}
-          },
-          "pt_conv1_2_stencil":{
-            "genref":"mantle.wire",
-            "genargs":{"type":["CoreIRType",["Array",1,["Array",1,["Array",16,"Bit"]]]]}
-          },
-          "pt_conv1_2_stencil$1":{
-            "genref":"mantle.wire",
-            "genargs":{"type":["CoreIRType",["Array",1,["Array",1,["Array",16,"Bit"]]]]}
-          },
-          "pt_conv1_2_stencil$2":{
-            "genref":"mantle.wire",
-            "genargs":{"type":["CoreIRType",["Array",1,["Array",1,["Array",16,"Bit"]]]]}
-          },
-          "pt_hw_output_2_stencil":{
-            "genref":"mantle.wire",
-            "genargs":{"type":["CoreIRType",["Array",1,["Array",1,["Array",16,"Bit"]]]]}
           }
         },
         "connections":[
-          ["pt_conv1_2_stencil.out.0.0","add_305_309_310.in0"],
+          ["const0__304.out","add_305_309_310.in0"],
           ["mul_307_308_309.out","add_305_309_310.in1"],
-          ["pt_conv1_2_stencil$1.in.0.0","add_305_309_310.out"],
-          ["pt_conv1_2_stencil$1.out.0.0","add_311_315_316.in0"],
+          ["add_311_315_316.in0","add_305_309_310.out"],
           ["mul_313_314_315.out","add_311_315_316.in1"],
-          ["pt_conv1_2_stencil$2.in.0.0","add_311_315_316.out"],
-          ["pt_conv1_2_stencil.in.0.0","const0__304.out"],
+          ["self.out.0.0","add_311_315_316.out"],
           ["mul_307_308_309.in1","const5__308.out"],
           ["mul_313_314_315.in1","const5__314.out"],
           ["self.in.arg_1","lb_p4_clamped_stencil_update_stream.in"],
           ["mul_307_308_309.in0","lb_p4_clamped_stencil_update_stream.out.0.0"],
           ["mul_313_314_315.in0","lb_p4_clamped_stencil_update_stream.out.0.1"],
-          ["lb_p4_clamped_stencil_update_stream_wen.out","lb_p4_clamped_stencil_update_stream.wen"],
-          ["pt_hw_output_2_stencil.in.0.0","pt_conv1_2_stencil$2.out.0.0"],
-          ["self.out","pt_hw_output_2_stencil.out"]
+          ["lb_p4_clamped_stencil_update_stream_wen.out","lb_p4_clamped_stencil_update_stream.wen"]
         ]
       }
     }

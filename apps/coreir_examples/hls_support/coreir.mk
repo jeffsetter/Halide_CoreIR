@@ -60,6 +60,7 @@ test:
 		if [[ $$EXIT_CODE = "0" ]]; then \
 			printf "%-15s \033[0;32m%s\033[0m\n" $(APPNAME) "PASSED"; \
 		else \
+			rm -f passed.md5; \
 			$(MAKE) -s testrun; \
 		fi \
 	elif [ -f "failed.md5" ]; then \
@@ -68,6 +69,7 @@ test:
 		if [[ $$EXIT_CODE = "0" ]]; then \
 			printf "%-15s \033[0;31m%s\033[0m\n" $(APPNAME) "FAILED" && exit 1; \
 		else \
+			rm -f failed.md5; \
 			$(MAKE) -s testrun; \
 		fi \
 	else \

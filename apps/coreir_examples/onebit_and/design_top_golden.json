@@ -16,17 +16,12 @@
             "genref":"coreir.const",
             "genargs":{"width":["Int",16]},
             "modargs":{"value":[["BitVector",16],"16'h0005"]}
-          },
-          "pt_hw_output_2_stencil":{
-            "genref":"mantle.wire",
-            "genargs":{"type":["CoreIRType",["Array",1,["Array",1,["Array",16,"Bit"]]]]}
           }
         },
         "connections":[
           ["self.in.arg_1.0.0","and_315_316_317.in0"],
           ["const5__316.out","and_315_316_317.in1"],
-          ["pt_hw_output_2_stencil.in.0.0","and_315_316_317.out"],
-          ["self.out","pt_hw_output_2_stencil.out"]
+          ["self.out.0.0","and_315_316_317.out"]
         ]
       }
     }

@@ -544,34 +544,6 @@
             "genref":"coreir.mux",
             "genargs":{"width":["Int",16]}
           },
-          "pt_grad_x_2_stencil":{
-            "genref":"mantle.wire",
-            "genargs":{"type":["CoreIRType",["Array",1,["Array",1,["Array",16,"Bit"]]]]}
-          },
-          "pt_grad_xx_2_stencil":{
-            "genref":"mantle.wire",
-            "genargs":{"type":["CoreIRType",["Array",1,["Array",1,["Array",16,"Bit"]]]]}
-          },
-          "pt_grad_xy_2_stencil":{
-            "genref":"mantle.wire",
-            "genargs":{"type":["CoreIRType",["Array",1,["Array",1,["Array",16,"Bit"]]]]}
-          },
-          "pt_grad_y_2_stencil":{
-            "genref":"mantle.wire",
-            "genargs":{"type":["CoreIRType",["Array",1,["Array",1,["Array",16,"Bit"]]]]}
-          },
-          "pt_grad_yy_2_stencil":{
-            "genref":"mantle.wire",
-            "genargs":{"type":["CoreIRType",["Array",1,["Array",1,["Array",16,"Bit"]]]]}
-          },
-          "pt_hw_output_2_stencil":{
-            "genref":"mantle.wire",
-            "genargs":{"type":["CoreIRType",["Array",1,["Array",1,["Array",16,"Bit"]]]]}
-          },
-          "pt_p3_cim_stencil$1":{
-            "genref":"mantle.wire",
-            "genargs":{"type":["CoreIRType",["Array",1,["Array",1,["Array",16,"Bit"]]]]}
-          },
           "slt_810_795_811":{
             "genref":"coreir.slt",
             "genargs":{"width":["Int",16]}
@@ -800,14 +772,14 @@
           ["mul_648_649_650.in1","const2__649.out"],
           ["mul_679_675_680.in1","const2__675$1.out"],
           ["mul_674_675_676.in1","const2__675.out"],
-          ["pt_grad_xx_2_stencil.out","lb_grad_xx_2_stencil_update_stream.in"],
+          ["mul_666_666_667.out","lb_grad_xx_2_stencil_update_stream.in.0.0"],
           ["lb_p3_cim_stencil_update_stream.wen","lb_grad_xx_2_stencil_update_stream.valid"],
           ["lb_padded_2_stencil_update_stream.valid","lb_grad_xx_2_stencil_update_stream.wen"],
-          ["pt_grad_xy_2_stencil.out","lb_grad_xy_2_stencil_update_stream.in"],
+          ["mul_692_693_694.out","lb_grad_xy_2_stencil_update_stream.in.0.0"],
           ["lb_padded_2_stencil_update_stream.valid","lb_grad_xy_2_stencil_update_stream.wen"],
-          ["pt_grad_yy_2_stencil.out","lb_grad_yy_2_stencil_update_stream.in"],
+          ["mul_695_695_696.out","lb_grad_yy_2_stencil_update_stream.in.0.0"],
           ["lb_padded_2_stencil_update_stream.valid","lb_grad_yy_2_stencil_update_stream.wen"],
-          ["pt_p3_cim_stencil$1.out","lb_p3_cim_stencil_update_stream.in"],
+          ["sub_790_793_794.out","lb_p3_cim_stencil_update_stream.in.0.0"],
           ["smax_796_797_798.in0","lb_p3_cim_stencil_update_stream.out.0.0"],
           ["smax_796_797_798.in1","lb_p3_cim_stencil_update_stream.out.0.1"],
           ["smax_798_799_800.in1","lb_p3_cim_stencil_update_stream.out.0.2"],
@@ -832,24 +804,17 @@
           ["mul_674_675_676.in0","lb_padded_2_stencil_update_stream.out.2.1"],
           ["lb_padded_2_stencil_update_stream_wen.out","lb_padded_2_stencil_update_stream.wen"],
           ["sub_646_650_651.in1","mul_648_649_650.out"],
-          ["pt_grad_x_2_stencil.out.0.0","mul_666_666_667.in0"],
-          ["pt_grad_x_2_stencil.out.0.0","mul_666_666_667.in1"],
-          ["pt_grad_xx_2_stencil.in.0.0","mul_666_666_667.out"],
+          ["smax_663_664_665.out","mul_666_666_667.in0"],
+          ["smax_663_664_665.out","mul_666_666_667.in1"],
           ["sub_677_680_681.in1","mul_679_675_680.out"],
-          ["pt_grad_x_2_stencil.out.0.0","mul_692_693_694.in0"],
-          ["pt_grad_y_2_stencil.out.0.0","mul_692_693_694.in1"],
-          ["pt_grad_xy_2_stencil.in.0.0","mul_692_693_694.out"],
-          ["pt_grad_y_2_stencil.out.0.0","mul_695_695_696.in0"],
-          ["pt_grad_y_2_stencil.out.0.0","mul_695_695_696.in1"],
-          ["pt_grad_yy_2_stencil.in.0.0","mul_695_695_696.out"],
+          ["smax_663_664_665.out","mul_692_693_694.in0"],
+          ["smax_689_690_691.out","mul_692_693_694.in1"],
+          ["smax_689_690_691.out","mul_695_695_696.in0"],
+          ["smax_689_690_691.out","mul_695_695_696.in1"],
           ["sub_787_789_790.in0","mul_784_785_787.out"],
           ["sub_787_789_790.in1","mul_788_788_789.out"],
-          ["pt_hw_output_2_stencil.in.0.0","mux_811_812_813.out"],
+          ["self.out.0.0","mux_811_812_813.out"],
           ["slt_810_795_811.out","mux_811_812_813.sel"],
-          ["smax_663_664_665.out","pt_grad_x_2_stencil.in.0.0"],
-          ["smax_689_690_691.out","pt_grad_y_2_stencil.in.0.0"],
-          ["self.out","pt_hw_output_2_stencil.out"],
-          ["sub_790_793_794.out","pt_p3_cim_stencil$1.in.0.0"],
           ["smax_808_809_810.out","slt_810_795_811.in0"],
           ["smin_661_662_663.out","smax_663_664_665.in0"],
           ["smin_687_688_689.out","smax_689_690_691.in0"],

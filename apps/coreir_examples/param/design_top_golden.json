@@ -12,10 +12,6 @@
             "genref":"coreir.add",
             "genargs":{"width":["Int",16]}
           },
-          "pt_hw_output_2_stencil":{
-            "genref":"mantle.wire",
-            "genargs":{"type":["CoreIRType",["Array",1,["Array",1,["Array",16,"Bit"]]]]}
-          },
           "tap_offset":{
             "genref":"coreir.const",
             "genargs":{"width":["Int",16]},
@@ -26,8 +22,7 @@
         "connections":[
           ["self.in.arg_0.0.0","add_277_offset_278.in0"],
           ["tap_offset.out","add_277_offset_278.in1"],
-          ["pt_hw_output_2_stencil.in.0.0","add_277_offset_278.out"],
-          ["self.out","pt_hw_output_2_stencil.out"]
+          ["self.out.0.0","add_277_offset_278.out"]
         ]
       }
     }

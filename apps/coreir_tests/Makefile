@@ -24,6 +24,13 @@ update_goldens:
 		$(MAKE) -sC $$app update_golden; \
 	done
 
+checkall check_all:
+	@echo ""
+	@for app in $(ALL_APPS); do \
+		$(MAKE) -sC $$app check; \
+	done
+
+
 cleanall:
 	for app in $(ALL_APPS); do \
 	  $(MAKE) -C $$app clean > /dev/null; \

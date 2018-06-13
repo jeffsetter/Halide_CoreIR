@@ -47,41 +47,21 @@
           "mul_331_332_333":{
             "genref":"coreir.mul",
             "genargs":{"width":["Int",16]}
-          },
-          "pt_conv1_2_stencil":{
-            "genref":"mantle.wire",
-            "genargs":{"type":["CoreIRType",["Array",1,["Array",1,["Array",16,"Bit"]]]]}
-          },
-          "pt_conv1_2_stencil$1":{
-            "genref":"mantle.wire",
-            "genargs":{"type":["CoreIRType",["Array",1,["Array",1,["Array",16,"Bit"]]]]}
-          },
-          "pt_conv1_2_stencil$2":{
-            "genref":"mantle.wire",
-            "genargs":{"type":["CoreIRType",["Array",1,["Array",1,["Array",16,"Bit"]]]]}
-          },
-          "pt_hw_output_2_stencil":{
-            "genref":"mantle.wire",
-            "genargs":{"type":["CoreIRType",["Array",1,["Array",1,["Array",16,"Bit"]]]]}
           }
         },
         "connections":[
-          ["pt_conv1_2_stencil.out.0.0","add_323_327_328.in0"],
+          ["const0__322.out","add_323_327_328.in0"],
           ["mul_325_326_327.out","add_323_327_328.in1"],
-          ["pt_conv1_2_stencil$1.in.0.0","add_323_327_328.out"],
-          ["pt_conv1_2_stencil$1.out.0.0","add_329_333_334.in0"],
+          ["add_329_333_334.in0","add_323_327_328.out"],
           ["mul_331_332_333.out","add_329_333_334.in1"],
-          ["pt_conv1_2_stencil$2.in.0.0","add_329_333_334.out"],
-          ["pt_conv1_2_stencil.in.0.0","const0__322.out"],
+          ["self.out.0.0","add_329_333_334.out"],
           ["mul_325_326_327.in1","const5__326.out"],
           ["mul_331_332_333.in1","const5__332.out"],
           ["self.in.arg_1","lb_p4_clamped_stencil_update_stream.in"],
           ["mul_325_326_327.in0","lb_p4_clamped_stencil_update_stream.out.0.0"],
           ["mul_331_332_333.in0","lb_p4_clamped_stencil_update_stream.out.0.1"],
           ["self.valid","lb_p4_clamped_stencil_update_stream.valid"],
-          ["lb_p4_clamped_stencil_update_stream_wen.out","lb_p4_clamped_stencil_update_stream.wen"],
-          ["pt_hw_output_2_stencil.in.0.0","pt_conv1_2_stencil$2.out.0.0"],
-          ["self.out","pt_hw_output_2_stencil.out"]
+          ["lb_p4_clamped_stencil_update_stream_wen.out","lb_p4_clamped_stencil_update_stream.wen"]
         ]
       }
     }
