@@ -7,56 +7,12 @@ include ../../support/Makefile.inc
 include ../hls_support/Makefile.inc
 HLS_LOG = vivado_hls.log
 
-.PHONY: all run_hls
+#### Common CoreIR targets
+#### try make {design_top.json, out.png, graph.png, test, update_golden}
+include ../hls_support/coreir.mk
+
+.PHONY: all
 all: out.png
-run_hls: $(HLS_LOG)
 
-pipeline: pipeline.cpp
-	$(CXX) $(CXXFLAGS) -Wall -g $^ $(LIB_HALIDE) -o $@ $(LDFLAGS) -ltinfo
-
-pipeline_hls.cpp pipeline_native.o pipeline_zynq.o pipeline_cuda.o hls_target.cpp: pipeline
-	HL_DEBUG_CODEGEN=0 ./pipeline
-
-run: run.cpp pipeline_hls.cpp hls_target.cpp pipeline_native.o
-	$(CXX) $(CXXFLAGS) -O1 -DNDEBUG $(HLS_CXXFLAGS) -g -Wall -Werror $^ -lpthread -ldl $(LIB_HALIDE) -o $@ $(PNGFLAGS) $(LDFLAGS)
-
-run_cuda: pipeline_native.o pipeline_cuda.o run_cuda.cpp
-	$(CXX) -O3 $(CXXFLAGS) -Wall -Werror $^ -lpthread -ldl -o $@  $(PNGFLAGS)
-
-out.png: run
-	./run ../../images/gray.png
-
-design_top.json: pipeline
-	HL_DEBUG_CODEGEN=0 ./pipeline
-graph.png: design_top.json
-	dot -Tpng design_top.txt > graph.png
-
-out_cuda.png: run_cuda
-	CUDA_LAUNCH_BLOCKING=1 HL_NUM_THREADS=4 ./run_cuda ../../images/benchmark_8mp_gray.png
-
-$(HLS_LOG): ../hls_support/run_hls.tcl pipeline_hls.cpp run.cpp
-	RUN_PATH=$(realpath ./) \
-	RUN_ARGS=$(realpath ./../../images/gray.png) \
-	vivado_hls -f $< -l $(HLS_LOG)
-
-#pipeline_zynq.o: pipeline_zynq.c
-#	$(CXX) -c -O2 $(CXXFLAGS) -g -Wall -Werror $^ -o $@
-
-run_zynq.o: run_zynq.cpp
-	$(CXX) -c $(CXXFLAGS) -g -Wall -Werror $^ -o $@  $(PNGFLAGS)
-
-run_zynq: pipeline_zynq.o pipeline_native.o run_zynq.o
-	$(CXX) -Wall -Werror $^ -lpthread -ldl -o $@  $(PNGFLAGS)
-
-run_power: run_power.cpp
-	$(CXX) -O $(CXXFLAGS) -g -Wall -Werror $^ -o $@
-
-out_zynq.png: run_zynq
-	HL_NUM_THREADS=3 ./run_zynq ../../images/benchmark_8mp_gray.png
-
-clean:
-	rm -f pipeline run run_zynq run_cuda
-	rm -f pipeline_*.cpp pipeline_*.h pipeline_*.c *.o
-	rm -f hls_target.h hls_target.cpp coreir_target.cpp coreir_target.h
-	rm -f *.html
-	rm -f *.json *.txt *.png
+clean: clean_commonfiles
+	rm -f pipeline_zynq.c pipeline_zynq.h pipeline_zynq.o

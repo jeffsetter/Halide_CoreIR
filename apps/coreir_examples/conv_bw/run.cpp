@@ -23,7 +23,6 @@ const unsigned char gaussian2d[5][5] = {
     {1,     3,     6,     3,     1}
 };
 
-
 int main(int argc, char **argv) {
     Image<uint8_t> in(62, 62, 1);
     Image<uint8_t> weight(5,5);
@@ -86,7 +85,15 @@ int main(int argc, char **argv) {
       c->die();
     }
 
-    c->runPasses({"rungenerators", "flattentypes", "flatten", "wireclocks-coreir"});
+    c->runPasses({"rungenerators", "wireclocks-coreir"});
+		c->runPasses({"verifyconnectivity-onlyinputs"},{"global","commonlib","memory","mantle"});
+    c->runPasses({"flattentypes", "flatten"});
+
+    if (!saveToFile(g,"design_flattened.json")) {
+      std::cout << "Could not save to json!!" << std::endl;
+      c->die();
+    }
+
 
     Module* m = g->getModule("DesignTop");
     assert(m != nullptr);

@@ -85,8 +85,8 @@ public:
         output.tile(x, y, xo, yo, xi, yi, 60,60);
         output.fuse(xo, yo, xo).parallel(xo);
 
-        output.vectorize(xi, 8);
-        conv1.compute_at(output, xo).vectorize(x, 8);
+        //output.vectorize(xi, 8);
+        //conv1.compute_at(output, xo).vectorize(x, 8);
 
         //output.print_loop_nest();
         output.compile_to_lowered_stmt("pipeline_native.ir.html", args, HTML);
@@ -147,6 +147,7 @@ public:
 
         Target coreir_target = get_target_from_environment();
         coreir_target.set_feature(Target::CPlusPlusMangling);
+        coreir_target.set_feature(Target::CoreIRValid);
         output.compile_to_lowered_stmt("pipeline_coreir.ir.html", args, HTML, coreir_target);
         output.compile_to_coreir("pipeline_coreir.cpp", args, "pipeline_coreir", coreir_target);
     }

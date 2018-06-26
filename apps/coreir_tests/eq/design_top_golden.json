@@ -1,0 +1,47 @@
+{"top":"global.DesignTop",
+"namespaces":{
+  "global":{
+    "modules":{
+      "DesignTop":{
+        "type":["Record",[
+          ["in",["Record",[["arg_1",["Array",1,["Array",1,["Array",16,"BitIn"]]]]]]],
+          ["out",["Array",1,["Array",1,["Array",16,"Bit"]]]]
+        ]],
+        "instances":{
+          "const0__354":{
+            "genref":"coreir.const",
+            "genargs":{"width":["Int",16]},
+            "modargs":{"value":[["BitVector",16],"16'h0000"]}
+          },
+          "const128__351":{
+            "genref":"coreir.const",
+            "genargs":{"width":["Int",16]},
+            "modargs":{"value":[["BitVector",16],"16'h0080"]}
+          },
+          "const200__353":{
+            "genref":"coreir.const",
+            "genargs":{"width":["Int",16]},
+            "modargs":{"value":[["BitVector",16],"16'h00c8"]}
+          },
+          "eq_350_351_352":{
+            "genref":"coreir.eq",
+            "genargs":{"width":["Int",16]}
+          },
+          "mux_352_353_354":{
+            "genref":"coreir.mux",
+            "genargs":{"width":["Int",16]}
+          }
+        },
+        "connections":[
+          ["mux_352_353_354.in0","const0__354.out"],
+          ["eq_350_351_352.in1","const128__351.out"],
+          ["mux_352_353_354.in1","const200__353.out"],
+          ["self.in.arg_1.0.0","eq_350_351_352.in0"],
+          ["mux_352_353_354.sel","eq_350_351_352.out"],
+          ["self.out.0.0","mux_352_353_354.out"]
+        ]
+      }
+    }
+  }
+}
+}

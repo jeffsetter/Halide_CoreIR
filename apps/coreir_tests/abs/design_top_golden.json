@@ -1,0 +1,46 @@
+{"top":"global.DesignTop",
+"namespaces":{
+  "global":{
+    "modules":{
+      "DesignTop":{
+        "type":["Record",[
+          ["in",["Record",[["arg_1",["Array",1,["Array",1,["Array",16,"BitIn"]]]]]]],
+          ["out",["Array",1,["Array",1,["Array",16,"Bit"]]]]
+        ]],
+        "instances":{
+          "abs_364":{
+            "genref":"commonlib.abs",
+            "genargs":{"width":["Int",16]}
+          },
+          "absd_36630_367":{
+            "genref":"commonlib.absd",
+            "genargs":{"width":["Int",16]}
+          },
+          "add_362_363_364":{
+            "genref":"coreir.add",
+            "genargs":{"width":["Int",16]}
+          },
+          "const-100__363":{
+            "genref":"coreir.const",
+            "genargs":{"width":["Int",16]},
+            "modargs":{"value":[["BitVector",16],"16'hff9c"]}
+          },
+          "const30_30":{
+            "genref":"coreir.const",
+            "genargs":{"width":["Int",16]},
+            "modargs":{"value":[["BitVector",16],"16'h001e"]}
+          }
+        },
+        "connections":[
+          ["add_362_363_364.out","abs_364.in"],
+          ["absd_36630_367.in0","abs_364.out"],
+          ["const30_30.out","absd_36630_367.in1"],
+          ["self.out.0.0","absd_36630_367.out"],
+          ["self.in.arg_1.0.0","add_362_363_364.in0"],
+          ["const-100__363.out","add_362_363_364.in1"]
+        ]
+      }
+    }
+  }
+}
+}

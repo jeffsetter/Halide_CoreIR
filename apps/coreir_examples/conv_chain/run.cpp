@@ -5,23 +5,26 @@
 #include "halide_image.h"
 #include "halide_image_io.h"
 #include "pipeline_native.h"
-//#include "pipeline_hls.h"
+#include "pipeline_hls.h"
 
-#include "coreir.h"
-#include "coreir/passes/transform/rungenerators.h"
-#include "coreir/simulator/interpreter.h"
-#include "coreir/libs/commonlib.h"
+#include "coreir_simulation.h"
 
 using namespace Halide::Tools;
 using namespace CoreIR;
 
+// Set these to control how large the design will be
+#define NUM_CONV 5
+#define WIN_SIZE 3
+
 int main(int argc, char **argv) {
     Image<uint8_t> in(64, 64, 1);
-    Image<uint8_t> weight(5,5);
+    int border_size = (WIN_SIZE-1) * NUM_CONV;
+    int output_width = in.width() - border_size;
+    int output_height = in.height() - border_size;
 
-    Image<uint8_t> out_native(in.width()-4, in.height()-4, in.channels());
-    //Image<uint8_t> out_hls(in.width(), in.height(), in.channels());
-    Image<uint8_t> out_coreir(in.width(), in.height(), in.channels());
+    Image<uint8_t> out_native(output_width, output_height, in.channels());
+    Image<uint8_t> out_hls(output_width, output_height, in.channels());
+    Image<uint8_t> out_coreir(output_width, output_height, in.channels());
 
     in = load_image(argv[1]);
     save_image(in, "input_crop.png");
@@ -32,7 +35,7 @@ int main(int argc, char **argv) {
     save_image(out_native, "out.png");
     printf("finish running native code\n");
 
-    /*pipeline_hls(in, 0, out_hls);
+    pipeline_hls(in, out_hls);
 
     printf("finish running HLS code\n");
 
@@ -49,11 +52,9 @@ int main(int argc, char **argv) {
             }
         }
     }
-    */
-    bool success = true;
-
+    //bool success = true;
+/*
     // New context for coreir test
-/*    
     Context* c = newContext();
     Namespace* g = c->getGlobal();
 
@@ -85,9 +86,9 @@ int main(int argc, char **argv) {
           // read output wire
           out_coreir(x,y,c) = state.getBitVec("self.out_0_0").to_type<uint16_t>();
           //uint16_t coreir_value = state.getBitVec("self.out_0_0").to_type<uint16_t>();
-          if (x>=4 && y>=4 && out_native(x-4, y-4, c) != out_coreir(x,y,c)) {
+          if (x>=border_size && y>=border_size && out_native(x-border_size, y-border_size, c) != out_coreir(x,y,c)) {
             printf("out_native(%d, %d, %d) = %d, but out_coreir(%d, %d, %d) = %d\n",
-                   x-4, y-4, c, out_native(x-4, y-4, c),
+                   x-border_size, y-border_size, c, out_native(x-border_size, y-border_size, c),
                    x, y, c, out_coreir(x,y,c));
             success = false;
             

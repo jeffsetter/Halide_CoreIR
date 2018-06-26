@@ -30,89 +30,91 @@ using std::cout;
 namespace {
 
 class ContainForLoop : public IRVisitor {
-    using IRVisitor::visit;
-    void visit(const For *op) {
-        found = true;
-        return;
-    }
+  using IRVisitor::visit;
+  void visit(const For *op) {
+    found = true;
+    return;
+  }
 
 public:
-    bool found;
+  bool found;
 
-    ContainForLoop() : found(false) {}
+  ContainForLoop() : found(false) {}
 };
 
 bool contain_for_loop(Stmt s) {
-    ContainForLoop cfl;
-    s.accept(&cfl);
-    return cfl.found;
+  ContainForLoop cfl;
+  s.accept(&cfl);
+  return cfl.found;
 }
 
 }
 
-CodeGen_CoreIR_Target::CodeGen_CoreIR_Target(const string &name)
-    : target_name(name),
-      hdrc(hdr_stream, CodeGen_CoreIR_C::CPlusPlusHeader),
-      srcc(src_stream, CodeGen_CoreIR_C::CPlusPlusImplementation) { }
+CodeGen_CoreIR_Target::CodeGen_CoreIR_Target(const string &name, bool has_valid)
+  : target_name(name),
+    hdrc(hdr_stream, CodeGen_CoreIR_C::CPlusPlusHeader, has_valid),
+    srcc(src_stream, CodeGen_CoreIR_C::CPlusPlusImplementation, has_valid) { }
 
-CodeGen_CoreIR_Target::CodeGen_CoreIR_C::CodeGen_CoreIR_C(std::ostream &s, OutputKind output_kind) : CodeGen_CoreIR_Base(s, output_kind) {
-    // set up coreir generation
-    bitwidth = 16;
-    context = CoreIR::newContext();
-    global_ns = context->getGlobal();
+CodeGen_CoreIR_Target::CodeGen_CoreIR_C::CodeGen_CoreIR_C(std::ostream &s, OutputKind output_kind, bool has_valid) : 
+  CodeGen_CoreIR_Base(s, output_kind), has_valid(has_valid) {
+  // set up coreir generation
+  bitwidth = 16;
+  context = CoreIR::newContext();
+  global_ns = context->getGlobal();
 
-    // add all generators from coreirprims
-    context->getNamespace("coreir");
-    std::vector<string> corelib_gen_names = {"mul", "add", "sub", 
-                                             "and", "or", "xor", "not",
-                                             "eq", "neq",
-                                             "ult", "ugt", "ule", "uge",
-                                             "slt", "sgt", "sle", "sge", 
-                                             "shl", "ashr",
-                                             "mux", "const", "wire"};
+  // add all generators from coreirprims
+  context->getNamespace("coreir");
+  std::vector<string> corelib_gen_names = {"mul", "add", "sub", 
+                                           "and", "or", "xor", "not",
+                                           "eq", "neq",
+                                           "ult", "ugt", "ule", "uge",
+                                           "slt", "sgt", "sle", "sge", 
+                                           "shl", "ashr",
+                                           "mux", "const", "wire"};
 
-    for (auto gen_name : corelib_gen_names) {
-      gens[gen_name] = "coreir." + gen_name;
-      assert(context->hasGenerator(gens[gen_name]));
-    }
+  for (auto gen_name : corelib_gen_names) {
+    gens[gen_name] = "coreir." + gen_name;
+    assert(context->hasGenerator(gens[gen_name]));
+  }
 
-    // add all modules from corebit
-    context->getNamespace("corebit");
-    std::vector<string> corebitlib_mod_names = {"bitand", "bitor", "bitxor", "bitnot",
-                                                "bitmux", "bitconst"};
-    for (auto mod_name : corebitlib_mod_names) {
-      gens[mod_name] = "corebit." + mod_name.substr(3);
-      assert(context->hasModule(gens[mod_name]));
-    }
+  // add all modules from corebit
+  context->getNamespace("corebit");
+  std::vector<string> corebitlib_mod_names = {"bitand", "bitor", "bitxor", "bitnot",
+                                              "bitmux", "bitconst"};
+  for (auto mod_name : corebitlib_mod_names) {
+    gens[mod_name] = "corebit." + mod_name.substr(3);
+    assert(context->hasModule(gens[mod_name]));
+  }
 
-    // add all generators from commonlib
-    CoreIRLoadLibrary_commonlib(context);
-    std::vector<string> commonlib_gen_names = {"umin", "smin", "umax", "smax",
-                                               "linebuffer2d", "linebuffer3d", "counter",
-                                               "muxn", "abs", "absd", "reg_array"};
-    for (auto gen_name : commonlib_gen_names) {
-      gens[gen_name] = "commonlib." + gen_name;
-      assert(context->hasGenerator(gens[gen_name]));
-    }
+  // add all generators from commonlib
+  CoreIRLoadLibrary_commonlib(context);
+  std::vector<string> commonlib_gen_names = {"umin", "smin", "umax", "smax",
+                                             "linebuffer2d", "linebuffer3d", "counter",
+                                             "linebuffer",
+                                             "muxn", "abs", "absd", "reg_array"};
+  for (auto gen_name : commonlib_gen_names) {
+    gens[gen_name] = "commonlib." + gen_name;
+    assert(context->hasGenerator(gens[gen_name]));
+  }
 
-    gens["passthrough"] = "mantle.wire";
-    assert(context->hasGenerator(gens["passthrough"]));
+  gens["passthrough"] = "mantle.wire";
+  assert(context->hasGenerator(gens["passthrough"]));
 
 }
 
 
 CodeGen_CoreIR_Target::~CodeGen_CoreIR_Target() {
-    hdr_stream << "#endif\n";
+  hdr_stream << "#endif\n";
 
-    // write the header and the source streams into files
-    string src_name = target_name + ".cpp";
-    string hdr_name = target_name + ".h";
-    ofstream src_file(src_name.c_str());
-    ofstream hdr_file(hdr_name.c_str());
-    src_file << src_stream.str() << endl;
-    hdr_file << hdr_stream.str() << endl;
-    src_file.close();
-    hdr_file.close();
+  // write the header and the source streams into files
+  string src_name = target_name + ".cpp";
+  string hdr_name = target_name + ".h";
+  ofstream src_file(src_name.c_str());
+  ofstream hdr_file(hdr_name.c_str());
+  src_file << src_stream.str() << endl;
+  hdr_file << hdr_stream.str() << endl;
+  src_file.close();
+  hdr_file.close();
 }
 
 CodeGen_CoreIR_Target::CodeGen_CoreIR_C::~CodeGen_CoreIR_C() {
@@ -134,15 +136,24 @@ CodeGen_CoreIR_Target::CodeGen_CoreIR_C::~CodeGen_CoreIR_C() {
       cout << RED << "Could not save to json!!" << RESET << endl;
       context->die();
     }
-    //context->runPasses({"rungenerators", "removepassthroughs"});
-    //FIXME: we should have everything connected
-        context->runPasses({"rungenerators","removepassthroughs","verifyconnectivity-onlyinputs-noclkrst"});
 
-    //design->print();
-    //context->runPasses({"flattentypes"});
-    //design->print();
-    //context->runPasses({"flatten","verifyfullyconnected-noclkrst"});
-    //design->print();
+
+    context->runPasses({"rungenerators","removepassthroughs"});
+    //context->runPasses({"rungenerators"});
+    if (!saveToFile(global_ns, "design_top.json", design)) {
+      cout << RED << "Could not save to json!!" << RESET << endl;
+      context->die();
+    }
+
+    if (!saveToDot(design, "design_top.txt")) {
+      cout << RED << "Could not save to dot!!" << RESET << endl;
+      context->die();
+    }
+
+    //context->runPasses({"rungenerators", "removepassthroughs"});
+		context->runPasses({"rungenerators","flatten","removepassthroughs"});
+		context->runPasses({"verifyconnectivity-onlyinputs-noclkrst"},{"global","commonlib","memory","mantle"});
+		//context->runPasses({"rungenerators", "flattentypes", "flatten", "wireclocks-coreir"});
 
     cout << "Validating json" << endl;
     design->getDef()->validate();
@@ -150,7 +161,7 @@ CodeGen_CoreIR_Target::CodeGen_CoreIR_C::~CodeGen_CoreIR_C() {
   
     // write out the json
     cout << "Saving json and dot" << endl;
-    if (!saveToFile(global_ns, "design_top.json", design)) {
+    if (!saveToFile(global_ns, "design_flattened.json", design)) {
       cout << RED << "Could not save to json!!" << RESET << endl;
       context->die();
     }
@@ -165,10 +176,18 @@ CodeGen_CoreIR_Target::CodeGen_CoreIR_C::~CodeGen_CoreIR_C() {
       cout << RED << "Could not load from json!!" << RESET << endl;
       context->die();
     }
-    if (!saveToDot(m, "design_top.txt")) {
-      cout << RED << "Could not save to dot file :(" << RESET << endl;
+
+    CoreIR::Module* mod2 = nullptr;
+    if (!loadFromFile(context, "design_prepass.json", &mod2)) {
+      cout << RED << "Could not load from json!!" << RESET << endl;
       context->die();
     }
+
+		context->runPasses({"removepassthroughs"});
+//    if (!saveToDot(mod2, "design_top.txt")) {
+//      cout << RED << "Could not save to dot file :(" << RESET << endl;
+//      context->die();
+//    }
 
     ASSERT(m, "Could not load top: design");
     //m->print();
@@ -183,67 +202,66 @@ CodeGen_CoreIR_Target::CodeGen_CoreIR_C::~CodeGen_CoreIR_C() {
 
 namespace {
 const string hls_header_includes =
-    "#include <assert.h>\n"
-    "#include <stdio.h>\n"
-    "#include <stdlib.h>\n"
-    "#include <hls_stream.h>\n"
-    "#include \"Stencil.h\"\n";
+  "#include <assert.h>\n"
+  "#include <stdio.h>\n"
+  "#include <stdlib.h>\n"
+  "#include <hls_stream.h>\n"
+  "#include \"Stencil.h\"\n";
 }
 
 void CodeGen_CoreIR_Target::init_module() {
-    debug(1) << "CodeGen_CoreIR_Target::init_module\n";
+  debug(1) << "CodeGen_CoreIR_Target::init_module\n";
 
-    // wipe the internal streams
-    hdr_stream.str("");
-    hdr_stream.clear();
-    src_stream.str("");
-    src_stream.clear();
+  // wipe the internal streams
+  hdr_stream.str("");
+  hdr_stream.clear();
+  src_stream.str("");
+  src_stream.clear();
 
-    // initialize the header file
-    string module_name = "HALIDE_CODEGEN_COREIR_TARGET_" + target_name + "_H";
-    std::transform(module_name.begin(), module_name.end(), module_name.begin(), ::toupper);
-    hdr_stream << "#ifndef " << module_name << '\n';
-    hdr_stream << "#define " << module_name << "\n\n";
-    hdr_stream << hls_header_includes << '\n';
+  // initialize the header file
+  string module_name = "HALIDE_CODEGEN_COREIR_TARGET_" + target_name + "_H";
+  std::transform(module_name.begin(), module_name.end(), module_name.begin(), ::toupper);
+  hdr_stream << "#ifndef " << module_name << '\n';
+  hdr_stream << "#define " << module_name << "\n\n";
+  hdr_stream << hls_header_includes << '\n';
 
-    // initialize the source file
-    src_stream << "#include \"" << target_name << ".h\"\n\n";
-    src_stream << "#include \"Linebuffer.h\"\n"
-               << "#include \"halide_math.h\"\n";
+  // initialize the source file
+  src_stream << "#include \"" << target_name << ".h\"\n\n";
+  src_stream << "#include \"Linebuffer.h\"\n"
+             << "#include \"halide_math.h\"\n";
 
 }
 
 void CodeGen_CoreIR_Target::add_kernel(Stmt s,
-                                    const string &name,
-                                    const vector<CoreIR_Argument> &args) {
-    debug(1) << "CodeGen_CoreIR_Target::add_kernel " << name << "\n";
+                                       const string &name,
+                                       const vector<CoreIR_Argument> &args) {
+  debug(1) << "CodeGen_CoreIR_Target::add_kernel " << name << "\n";
 
-    hdrc.add_kernel(s, name, args);
-    srcc.add_kernel(s, name, args);
+  hdrc.add_kernel(s, name, args);
+  srcc.add_kernel(s, name, args);
 }
 
 void CodeGen_CoreIR_Target::dump() {
-    std::cerr << src_stream.str() << std::endl;
+  std::cerr << src_stream.str() << std::endl;
 }
 
-
 string CodeGen_CoreIR_Target::CodeGen_CoreIR_C::print_stencil_pragma(const string &name) {
-    ostringstream oss;
-    internal_assert(stencils.contains(name));
-    Stencil_Type stype = stencils.get(name);
-    if (stype.type == Stencil_Type::StencilContainerType::Stream ||
-        stype.type == Stencil_Type::StencilContainerType::AxiStream) {
-        oss << "#pragma CoreIR STREAM variable=" << print_name(name) << " depth=" << stype.depth << "\n";
-        if (stype.depth <= 100) {
-            // use shift register implementation when the FIFO is shallow
-            oss << "#pragma CoreIR RESOURCE variable=" << print_name(name) << " core=FIFO_SRL\n\n";
-        }
-    } else if (stype.type == Stencil_Type::StencilContainerType::Stencil) {
-        oss << "#pragma CoreIR ARRAY_PARTITION variable=" << print_name(name) << ".value complete dim=0\n\n";
-    } else {
-        internal_error;
+  ostringstream oss;
+  internal_assert(stencils.contains(name));
+  Stencil_Type stype = stencils.get(name);
+  if (stype.type == Stencil_Type::StencilContainerType::Stream ||
+      stype.type == Stencil_Type::StencilContainerType::AxiStream) {
+    oss << "#pragma CoreIR STREAM variable=" << print_name(name) << " depth=" << stype.depth << "\n";
+    if (stype.depth <= 100) {
+      // use shift register implementation when the FIFO is shallow
+      oss << "#pragma CoreIR RESOURCE variable=" << print_name(name) << " core=FIFO_SRL\n\n";
     }
-    return oss.str();
+  } else if (stype.type == Stencil_Type::StencilContainerType::Stencil) {
+    oss << "#pragma CoreIR ARRAY_PARTITION variable=" << print_name(name) << ".value complete dim=0\n\n";
+  } else {
+    internal_error;
+  }
+  return oss.str();
 }
 
 uint num_bits(uint N) {
@@ -260,202 +278,220 @@ uint num_bits(uint N) {
 
 
 void CodeGen_CoreIR_Target::CodeGen_CoreIR_C::add_kernel(Stmt stmt,
-                                                   const string &name,
-                                                   const vector<CoreIR_Argument> &args) {
+                                                         const string &name,
+                                                         const vector<CoreIR_Argument> &args) {
 
-    // Emit the function prototype
-    uint num_inouts = 0;
-    //std::unordered_map<string,CoreIR::Type*> input_types;
-    //CoreIR::RecordType input_types = CoreIR::RecordType(context, CoreIR::RecordParams({{"reset", context->BitIn()}}));
-    std::vector<std::pair<string, CoreIR::Type*>> input_types;
-    CoreIR::Type* output_type = context->Bit();
-    //CodeGen_CoreIR_Base::Stencil_Type stype_first; // keeps track of the first stencil (output)
-    stream << "void " << print_name(name) << "(\n";
-    for (size_t i = 0; i < args.size(); i++) {
-        string arg_name = "arg_" + std::to_string(i);
-        if (args[i].is_stencil) {
-            CodeGen_CoreIR_Base::Stencil_Type stype = args[i].stencil_type;
+  // Emit the function prototype
+  uint num_inouts = 0;
+  //std::unordered_map<string,CoreIR::Type*> input_types;
+  //CoreIR::RecordType input_types = CoreIR::RecordType(context, CoreIR::RecordParams({{"reset", context->BitIn()}}));
+  std::vector<std::pair<string, CoreIR::Type*>> input_types;
+  CoreIR::Type* output_type = context->Bit();
+  //CodeGen_CoreIR_Base::Stencil_Type stype_first; // keeps track of the first stencil (output)
+  stream << "void " << print_name(name) << "(\n";
+  for (size_t i = 0; i < args.size(); i++) {
+    string arg_name = "arg_" + std::to_string(i);
+    if (args[i].is_stencil) {
+      CodeGen_CoreIR_Base::Stencil_Type stype = args[i].stencil_type;
 
-            internal_assert(args[i].stencil_type.type == Stencil_Type::StencilContainerType::AxiStream ||
-                            args[i].stencil_type.type == Stencil_Type::StencilContainerType::Stencil);
-            stream << print_stencil_type(args[i].stencil_type) << " ";
-            if (args[i].stencil_type.type == Stencil_Type::StencilContainerType::AxiStream) {
-                stream << "&";  // hls_stream needs to be passed by reference
-            }
-            stream << arg_name;
-            allocations.push(args[i].name, {args[i].stencil_type.elemType, "null"});
-            stencils.push(args[i].name, args[i].stencil_type);
+      internal_assert(args[i].stencil_type.type == Stencil_Type::StencilContainerType::AxiStream ||
+                      args[i].stencil_type.type == Stencil_Type::StencilContainerType::Stencil);
+      stream << print_stencil_type(args[i].stencil_type) << " ";
+      if (args[i].stencil_type.type == Stencil_Type::StencilContainerType::AxiStream) {
+        stream << "&";  // hls_stream needs to be passed by reference
+      }
+      stream << arg_name;
+      allocations.push(args[i].name, {args[i].stencil_type.elemType, "null"});
+      stencils.push(args[i].name, args[i].stencil_type);
 
 	    //if (args[i].stencil_type.type == Stencil_Type::StencilContainerType::AxiStream) {
-              vector<uint> indices;
-              for(const auto &range : stype.bounds) {
-                assert(is_const(range.extent));
-                indices.push_back(id_const_value(range.extent));
-              }
+      vector<uint> indices;
+      for(const auto &range : stype.bounds) {
+        assert(is_const(range.extent));
+        indices.push_back(id_const_value(range.extent));
+      }
 
 
-              if (args[i].is_output) {
-                //cout << "output: " << arg_name << " added with type " << CodeGen_C::print_type(stype.elemType) << " and bitwidth " << stype.elemType.bits() << endl;
-                //stream << "\n// output: " << arg_name << " added with type " << CodeGen_C::print_type(stype.elemType) << " and bitwidth " << stype.elemType.bits() << endl;
-                uint out_bitwidth = stype.elemType.bits() > 1 ? bitwidth : 1;
-                if (out_bitwidth > 1) { output_type = output_type->Arr(out_bitwidth); }
-                for (uint i=0; i<indices.size(); ++i) {
-                  output_type = output_type->Arr(indices[i]);
-                }
-
-                hw_output_set.insert(arg_name);
-              } else {
-                //cout << "input: " << arg_name << " added with type " << CodeGen_C::print_type(stype.elemType) << " and bitwidth " << stype.elemType.bits() << endl;
-                //stream << "\n// input: " << arg_name << " added with type " << CodeGen_C::print_type(stype.elemType) << " and bitwidth " << stype.elemType.bits() << endl;
-
-                uint in_bitwidth = stype.elemType.bits() > 1 ? bitwidth : 1;
-                CoreIR::Type* input_type = context->BitIn()->Arr(in_bitwidth);
-                for (uint i=0; i<indices.size(); ++i) {
-                  input_type = input_type->Arr(indices[i]);
-                }
-                //input_types.appendField(arg_name, input_type);
-                input_types.push_back({arg_name, input_type});
-                //cout << "  and its type is " << input_type->toString() << endl;
-
-                hw_input_set.insert(arg_name);
-              }
-
-              num_inouts++;
-
-              //        }
-        } else {
-            stream << print_type(args[i].scalar_type) << " " << arg_name;
-            uint in_bitwidth = args[i].scalar_type.bits() > 1 ? bitwidth : 1;
-            CoreIR::Type* input_type = context->BitIn()->Arr(in_bitwidth);
-            input_types.push_back({arg_name, input_type});
-            hw_input_set.insert(arg_name);
+      if (args[i].is_output) {
+        //cout << "output: " << arg_name << " added with type " << CodeGen_C::print_type(stype.elemType) << " and bitwidth " << stype.elemType.bits() << endl;
+        //stream << "\n// output: " << arg_name << " added with type " << CodeGen_C::print_type(stype.elemType) << " and bitwidth " << stype.elemType.bits() << endl;
+        // FIXME: use proper bitwidth
+        uint out_bitwidth = stype.elemType.bits() > 1 ? bitwidth : 1;
+        if (out_bitwidth > 1) { output_type = output_type->Arr(out_bitwidth); }
+        for (uint i=0; i<indices.size(); ++i) {
+          output_type = output_type->Arr(indices[i]);
         }
 
-        if (i < args.size()-1) stream << ",\n";
+        hw_output_set.insert(arg_name);
+      } else {
+        //cout << "input: " << arg_name << " added with type " << CodeGen_C::print_type(stype.elemType) << " and bitwidth " << stype.elemType.bits() << endl;
+        //stream << "\n// input: " << arg_name << " added with type " << CodeGen_C::print_type(stype.elemType) << " and bitwidth " << stype.elemType.bits() << endl;
+        // FIXME: use proper bitwidth
+        uint in_bitwidth = stype.elemType.bits() > 1 ? bitwidth : 1;
+        CoreIR::Type* input_type = context->BitIn()->Arr(in_bitwidth);
+        for (uint i=0; i<indices.size(); ++i) {
+          input_type = input_type->Arr(indices[i]);
+        }
+        //input_types.appendField(arg_name, input_type);
+        input_types.push_back({arg_name, input_type});
+        //cout << "  and its type is " << input_type->toString() << endl;
+      }
+
+      num_inouts++;
+
+      //        }
+    } else {
+      stream << print_type(args[i].scalar_type) << " " << arg_name;
+      // FIXME: use proper bitwidth
+      uint in_bitwidth = args[i].scalar_type.bits() > 1 ? bitwidth : 1;
+      CoreIR::Type* input_type = context->BitIn()->Arr(in_bitwidth);
+      input_types.push_back({arg_name, input_type});
     }
 
-    // Emit prototype to coreir
-    create_json = (num_inouts > 0);
+    if (i < args.size()-1) stream << ",\n";
+  }
 
-    //cout << "design has " << num_inputs << " inputs with bitwidth " << to_string(bitwidth) << " " <<endl;
-    // FIXME: can't distinguish bw output/input easily (assuming single output first)
+  // Emit prototype to coreir
+  create_json = (num_inouts > 0);
 
-    CoreIR::Type* design_type = context->Record({
-	{"in", context->Record(input_types)},
-        {"out", output_type}
+  //cout << "design has " << num_inputs << " inputs with bitwidth " << to_string(bitwidth) << " " <<endl;
+  // FIXME: can't distinguish bw output/input easily (assuming single output first)
+
+  CoreIR::Type* design_type;
+  if (has_valid) {
+    design_type = context->Record({
+      {"in", context->Record(input_types)},
+      {"out", output_type},
+      {"valid", context->Bit()}
     });
-    design = global_ns->newModuleDecl("DesignTop", design_type);
-    def = design->newModuleDef();
-    self = def->sel("self");
+  } else {
+    design_type = context->Record({
+      {"in", context->Record(input_types)},
+      {"out", output_type}
+    });
+  }
 
-    if (is_header()) {
-        stream << ");\n";
-    } else {
-        stream << ")\n";
-        open_scope();
+  design = global_ns->newModuleDecl("DesignTop", design_type);
+  def = design->newModuleDef();
+  self = def->sel("self");
 
-        // add CoreIR pragma at function scope
-        stream << "#pragma CoreIR DATAFLOW\n"
-               << "#pragma CoreIR INLINE region\n"
-               << "#pragma CoreIR INTERFACE s_axilite port=return"
-               << " bundle=config\n";
-        for (size_t i = 0; i < args.size(); i++) {
-            string arg_name = "arg_" + std::to_string(i);
-            if (args[i].is_stencil) {
-                if (ends_with(args[i].name, ".stream")) {
-                    // stream arguments use AXI-stream interface
-                    stream << "#pragma CoreIR INTERFACE axis register "
-                           << "port=" << arg_name << "\n";
-                } else {
-                    // stencil arguments use AXI-lite interface
-                    stream << "#pragma CoreIR INTERFACE s_axilite "
-                           << "port=" << arg_name
-                           << " bundle=config\n";
-                    stream << "#pragma CoreIR ARRAY_PARTITION "
-                           << "variable=" << arg_name << ".value complete dim=0\n";
-                }
-            } else {
-                // scalar arguments use AXI-lite interface
-                stream << "#pragma CoreIR INTERFACE s_axilite "
-                       << "port=" << arg_name << " bundle=config\n";
-            }
+  for (auto input_pair : input_types) {
+    string arg_name = input_pair.first;
+    hw_input_set[arg_name] = self->sel("in")->sel(arg_name);
+  }
+
+  if (is_header()) {
+    stream << ");\n";
+  } else {
+    stream << ")\n";
+    open_scope();
+
+    // add CoreIR pragma at function scope
+    stream << "#pragma CoreIR DATAFLOW\n"
+           << "#pragma CoreIR INLINE region\n"
+           << "#pragma CoreIR INTERFACE s_axilite port=return"
+           << " bundle=config\n";
+    for (size_t i = 0; i < args.size(); i++) {
+      string arg_name = "arg_" + std::to_string(i);
+      if (args[i].is_stencil) {
+        if (ends_with(args[i].name, ".stream")) {
+          // stream arguments use AXI-stream interface
+          stream << "#pragma CoreIR INTERFACE axis register "
+                 << "port=" << arg_name << "\n";
+        } else {
+          // stencil arguments use AXI-lite interface
+          stream << "#pragma CoreIR INTERFACE s_axilite "
+                 << "port=" << arg_name
+                 << " bundle=config\n";
+          stream << "#pragma CoreIR ARRAY_PARTITION "
+                 << "variable=" << arg_name << ".value complete dim=0\n";
         }
-        stream << "\n";
-
-        // create alias (references) of the arguments using the names in the IR
-        do_indent();
-        stream << "// alias the arguments\n";
-        for (size_t i = 0; i < args.size(); i++) {
-            string arg_name = "arg_" + std::to_string(i);
-            do_indent();
-            if (args[i].is_stencil) {
-                CodeGen_CoreIR_Base::Stencil_Type stype = args[i].stencil_type;
-                stream << print_stencil_type(args[i].stencil_type) << " &"
-                       << print_name(args[i].name) << " = " << arg_name << ";\n";
-
-                // add alias to coreir
-                if (is_input(arg_name)) {
-                  rename_wire(print_name(args[i].name), arg_name, Expr());
-                  //hw_input_set.insert(print_name(args[i].name));
-                }
-                if (is_output(arg_name) ) {
-                  hw_output_set.insert(print_name(args[i].name));
-                }                
-		
-            } else {
-                stream << print_type(args[i].scalar_type) << " &"
-                       << print_name(args[i].name) << " = " << arg_name << ";\n";
-                
-                // configurable taps are generated as constant registers
-                string const_name = print_name(args[i].name);
-                string tap_name = "tap" + const_name;
-                int const_bitwidth = args[i].scalar_type.bits();
-                int const_value = 0;
-                CoreIR::Wireable* const_inst;
-
-                if (const_bitwidth == 1) {
-                  //cout << "bitwidth 1 args are not supported yet" << endl;
-                  CoreIR::Values mod_args = {{"value",CoreIR::Const::make(context,(bool)const_value)}};
-                  //CoreIR_Inst_Args tap_args(const_name, arg_name, "out", gens["bitconst"], gen_args, CoreIR::Values());
-                  const_inst = def->addInstance(tap_name, gens["bitconst"], mod_args);
-                } else {
-                  CoreIR::Values gen_args = {{"width", CoreIR::Const::make(context,bitwidth)}};
-                  CoreIR::Values mod_args = {{"value",CoreIR::Const::make(context,BitVector(bitwidth,const_value))}};
-                  //CoreIR_Inst_Args tap_args(const_name, arg_name, "out", gens["const"], gen_args, mod_params);
-                  const_inst = def->addInstance(tap_name, gens["const"], gen_args, mod_args);
-                }
-                const_inst->getMetaData()["tap"] = "This constant is expected to be changed as a tap value.";
-                add_wire(const_name, const_inst->sel("out"));
-          
-            }
-
-
-        }
-	stream << "\n// hw_input_set contains: ";
-	for (const std::string& x : hw_input_set) {
-	  stream << " " << x;
-	}
-        stream << "\n";
-	stream << "\n// hw_output_set contains: ";
-	for (const std::string& x : hw_output_set) {
-	  stream << " " << x;
-	}
-        stream << "\n";
-
-        // print body
-        print(stmt);
-
-        close_scope("kernel hls_target" + print_name(name));
+      } else {
+        // scalar arguments use AXI-lite interface
+        stream << "#pragma CoreIR INTERFACE s_axilite "
+               << "port=" << arg_name << " bundle=config\n";
+      }
     }
     stream << "\n";
 
+    // create alias (references) of the arguments using the names in the IR
+    do_indent();
+    stream << "// alias the arguments\n";
     for (size_t i = 0; i < args.size(); i++) {
-        // Remove buffer arguments from allocation scope
-        if (args[i].stencil_type.type == Stencil_Type::StencilContainerType::Stream) {
-            allocations.pop(args[i].name);
-            stencils.pop(args[i].name);
+      string arg_name = "arg_" + std::to_string(i);
+      do_indent();
+      if (args[i].is_stencil) {
+        CodeGen_CoreIR_Base::Stencil_Type stype = args[i].stencil_type;
+        stream << print_stencil_type(args[i].stencil_type) << " &"
+               << print_name(args[i].name) << " = " << arg_name << ";\n";
+
+        // add alias to coreir
+        if (is_input(arg_name)) {
+          hw_input_set[print_name(args[i].name)] = self->sel("in")->sel(arg_name);
+          rename_wire(print_name(args[i].name), arg_name, Expr());
         }
+        if (is_output(arg_name) ) {
+          hw_output_set.insert(print_name(args[i].name));
+        }
+		
+      } else {
+        stream << print_type(args[i].scalar_type) << " &"
+               << print_name(args[i].name) << " = " << arg_name << ";\n";
+                
+        // configurable taps are generated as constant registers
+        string const_name = print_name(args[i].name);
+        string tap_name = "tap" + const_name;
+        int const_bitwidth = args[i].scalar_type.bits();
+        int const_value = 0;
+        CoreIR::Wireable* const_inst;
+
+        if (const_bitwidth == 1) {
+          //cout << "bitwidth 1 args are not supported yet" << endl;
+          CoreIR::Values mod_args = {{"value",CoreIR::Const::make(context,(bool)const_value)}};
+          //CoreIR_Inst_Args tap_args(const_name, arg_name, "out", gens["bitconst"], gen_args, CoreIR::Values());
+          const_inst = def->addInstance(tap_name, gens["bitconst"], mod_args);
+        } else {
+          // FIXME: use proper bitwidth
+          CoreIR::Values gen_args = {{"width", CoreIR::Const::make(context,bitwidth)}};
+          CoreIR::Values mod_args = {{"value",CoreIR::Const::make(context,BitVector(bitwidth,const_value))}};
+          //CoreIR_Inst_Args tap_args(const_name, arg_name, "out", gens["const"], gen_args, mod_params);
+          const_inst = def->addInstance(tap_name, gens["const"], gen_args, mod_args);
+        }
+        const_inst->getMetaData()["tap"] = "This constant is expected to be changed as a tap value.";
+        add_wire(const_name, const_inst->sel("out"));
+          
+      }
+
+
     }
+    stream << "\n// hw_input_set contains: ";
+    for (auto x : hw_input_set) {
+      stream << " " << x.first;
+    }
+    stream << "\n";
+    stream << "\n// hw_output_set contains: ";
+    //cout << "\n// hw_output_set contains: ";
+    for (const std::string& x : hw_output_set) {
+      stream << " " << x;
+      //cout << " " << x;
+    }
+    stream << "\n";
+    //cout << "\n";
+
+    // print body
+    print(stmt);
+
+    close_scope("kernel hls_target" + print_name(name));
+  }
+  stream << "\n";
+
+  for (size_t i = 0; i < args.size(); i++) {
+    // Remove buffer arguments from allocation scope
+    if (args[i].stencil_type.type == Stencil_Type::StencilContainerType::Stream) {
+      allocations.pop(args[i].name);
+      stencils.pop(args[i].name);
+    }
+  }
 }
 
 
@@ -529,9 +565,9 @@ bool CodeGen_CoreIR_Target::CodeGen_CoreIR_C::is_output(string var_name) {
 }
 
 
-  //////////////////////////////////////////////
-  // Functions to wire coreir things together //
-  //////////////////////////////////////////////
+//////////////////////////////////////////////
+// Functions to wire coreir things together //
+//////////////////////////////////////////////
 
 CoreIR::Wireable* index_wire(CoreIR::Wireable* in_wire, std::vector<uint> indices) {
 
@@ -545,8 +581,9 @@ CoreIR::Wireable* index_wire(CoreIR::Wireable* in_wire, std::vector<uint> indice
 }
 
 
-  // This function is used when the output is going to be connected to a useable wire
-  CoreIR::Wireable* CodeGen_CoreIR_Target::CodeGen_CoreIR_C::get_wire(string name, Expr e, std::vector<uint> indices) {
+// This function is used when the output is going to be connected to a useable wire
+CoreIR::Wireable* CodeGen_CoreIR_Target::CodeGen_CoreIR_C::get_wire(string name, Expr e, std::vector<uint> indices) {
+  //cout << "connect for " << name << "\n";
   if (is_const(e)) {
     int const_value = id_const_value(e);
     string const_name = unique_name("const" + std::to_string(const_value) + "_" + name);
@@ -556,8 +593,9 @@ CoreIR::Wireable* index_wire(CoreIR::Wireable* in_wire, std::vector<uint> indice
     if (const_bitwidth == 1) {
       const_inst = def->addInstance(const_name, gens["bitconst"], {{"value",CoreIR::Const::make(context,(bool)const_value)}});
     } else {
+      // FIXME: use proper bitwidth
       const_inst = def->addInstance(const_name, gens["const"], {{"width", CoreIR::Const::make(context,bitwidth)}},
-                              {{"value",CoreIR::Const::make(context,BitVector(bitwidth,const_value))}});
+                                    {{"value",CoreIR::Const::make(context,BitVector(bitwidth,const_value))}});
     }
 
     stream << "// created const: " << const_name << " with name " << name << "\n";
@@ -565,7 +603,7 @@ CoreIR::Wireable* index_wire(CoreIR::Wireable* in_wire, std::vector<uint> indice
 
   } else if (is_input(name)) {
     //cout << "trying to get input " << name << " from " << self->sel("in")->getType()->toString() << endl;
-    CoreIR::Wireable* input_wire = self->sel("in")->sel(name);
+    CoreIR::Wireable* input_wire = hw_input_set[name];
     internal_assert(input_wire);
     stream << "// " << name << " added as input " << name << endl;
     //cout << "// " << name << " added as input " << name << endl;
@@ -650,72 +688,76 @@ CoreIR::Wireable* index_wire(CoreIR::Wireable* in_wire, std::vector<uint> indice
   }
 }
 
-  void CodeGen_CoreIR_Target::CodeGen_CoreIR_C::add_wire(string out_name, CoreIR::Wireable* in_wire, vector<uint> out_indices) {
-    if (is_storage(out_name)) {
-      auto pt_struct = hw_store_set[out_name];
+void CodeGen_CoreIR_Target::CodeGen_CoreIR_C::add_wire(string out_name, CoreIR::Wireable* in_wire, vector<uint> out_indices) {
+  //cout << "add wire to " << out_name << "\n";
+  if (is_storage(out_name)) {
+    auto pt_struct = hw_store_set[out_name];
 
-      if (!pt_struct->was_read && !pt_struct->was_written && out_indices.empty() && !pt_struct->is_reg()) {
-        // this passthrough hasn't been used, so remove it
-        auto pt_wire = hw_store_set[out_name]->wire;
-        internal_assert(CoreIR::Instance::classof(pt_wire));
-        CoreIR::Instance* pt_inst = &(cast<CoreIR::Instance>(*pt_wire));
-        def->removeInstance(pt_inst);
-        hw_store_set.erase(out_name);
+    if (!pt_struct->was_read && !pt_struct->was_written && out_indices.empty() && !pt_struct->is_reg()) {
+      // this passthrough hasn't been used, so remove it
+      auto pt_wire = hw_store_set[out_name]->wire;
+      internal_assert(CoreIR::Instance::classof(pt_wire));
+      CoreIR::Instance* pt_inst = &(cast<CoreIR::Instance>(*pt_wire));
+      def->removeInstance(pt_inst);
+      hw_store_set.erase(out_name);
         
-        hw_wire_set[out_name] = in_wire;
-
-      } else {
-        // use the found passthrough
-        if (pt_struct->was_written && pt_struct->was_read) {
-          // create a new passthrough, since this one is already connected
-          string pt_name = unique_name("pt" + out_name);
-          CoreIR::Type* ptype = pt_struct->ptype;
-          stream << "// created passthrough with name " << pt_name << endl;
-
-          CoreIR::Wireable* pt = def->addInstance(pt_name, gens["passthrough"], {{"type",CoreIR::Const::make(context,ptype)}});
-          // FIXME: copy over all stores (since wire might not encompass entire passthrough)
-          pt_struct->wire = pt;
-        
-          pt_struct->was_read = false;
-        }
-
-        // disconnect associated wire in reg, and connect new wire
-        if (pt_struct->is_reg()) {
-          stream << "// disconnecting wire for reg " << out_name << endl;
-          CoreIR::Wireable* d_wire = pt_struct->reg->sel("in");
-          for (int i=out_indices.size()-1; i >= 0; --i) {
-            //cout << "selecting in reg add_wire: " << out_indices[i] << endl;
-            d_wire = d_wire->sel(out_indices[i]);
-          }
-          //cout << "select in add_wire done" << endl;
-          def->disconnect(d_wire);
-          def->connect(in_wire, d_wire);
-        }
-
-        pt_struct->was_written = true;
-        stream << "// added passthrough wire to " << out_name << endl;
-        //cout << "// added passthrough wire to " << out_name << endl;
-
-        // connect wire to passthrough
-        CoreIR::Wireable* current_wire = pt_struct->wire->sel("in");
-        for (int i=out_indices.size()-1; i >= 0; --i) {
-          //cout << "selecting in add_wire: " << out_indices[i] << endl;
-          current_wire = current_wire->sel(out_indices[i]);
-        }
-        def->connect(in_wire, current_wire);
-
-      }
-      
-    } else {
-      internal_assert(out_indices.empty());
-      // wire is being stored for use as an input
       hw_wire_set[out_name] = in_wire;
-    }
-  }
 
-  void CodeGen_CoreIR_Target::CodeGen_CoreIR_C::rename_wire(string new_name, string in_name, Expr in_expr, vector<uint> indices) {
+    } else {
+      // use the found passthrough
+      if (pt_struct->was_written && pt_struct->was_read) {
+        // create a new passthrough, since this one is already connected
+        string pt_name = unique_name("pt" + out_name);
+        CoreIR::Type* ptype = pt_struct->ptype;
+        stream << "// created passthrough with name " << pt_name << endl;
+
+        CoreIR::Wireable* pt = def->addInstance(pt_name, gens["passthrough"], {{"type",CoreIR::Const::make(context,ptype)}});
+        // FIXME: copy over all stores (since wire might not encompass entire passthrough)
+        pt_struct->wire = pt;
+        
+        pt_struct->was_read = false;
+      }
+
+      //cout << "// wiring to " << out_name << endl;
+      // disconnect associated wire in reg, and connect new wire
+      if (pt_struct->is_reg()) {
+        stream << "// disconnecting wire for reg " << out_name << endl;
+        CoreIR::Wireable* d_wire = pt_struct->reg->sel("in");
+        for (int i=out_indices.size()-1; i >= 0; --i) {
+          //cout << "selecting in reg add_wire: " << out_indices[i] << endl;
+          d_wire = d_wire->sel(out_indices[i]);
+        }
+        //cout << "select in add_wire done" << endl;
+        def->disconnect(d_wire);
+        def->connect(in_wire, d_wire);
+      }
+
+      pt_struct->was_written = true;
+      stream << "// added passthrough wire to " << out_name << endl;
+      //cout << "// added passthrough wire to " << out_name << endl;
+
+      // connect wire to passthrough
+      CoreIR::Wireable* current_wire = pt_struct->wire->sel("in");
+      for (int i=out_indices.size()-1; i >= 0; --i) {
+        //cout << "selecting in add_wire: " << out_indices[i] << endl;
+        current_wire = current_wire->sel(out_indices[i]);
+      }
+      def->connect(in_wire, current_wire);
+
+    }
+      
+  } else {
+    //cout << "not storage\n";
+    internal_assert(out_indices.empty());
+    // wire is being stored for use as an input
+    hw_wire_set[out_name] = in_wire;
+  }
+}
+
+void CodeGen_CoreIR_Target::CodeGen_CoreIR_C::rename_wire(string new_name, string in_name, Expr in_expr, vector<uint> indices) {
+  //cout << "rename wire for " << in_name << " to " << new_name << "\n";
   // if this is a definition, then just copy the pointer
-    //cout << "trying to add/modify: " << new_name << " = " << in_name << "\n";
+  //cout << "trying to add/modify: " << new_name << " = " << in_name << "\n";
   if (is_defined(in_name) && !is_wire(in_name)) { 
     assert(indices.empty());
     // wire is only defined but not created yet
@@ -742,6 +784,7 @@ CoreIR::Wireable* index_wire(CoreIR::Wireable* in_wire, std::vector<uint> indice
       args = {{"value",CoreIR::Const::make(context,const_value)}};
       genargs = CoreIR::Values();
     } else {
+      // FIXME: use proper bitwidth
       gen_const = "coreir.const";
       args = {{"width", CoreIR::Const::make(context,bitwidth)}};
       genargs = {{"value",CoreIR::Const::make(context,BitVector(bitwidth,const_value))}};
@@ -791,10 +834,10 @@ CoreIR::Wireable* index_wire(CoreIR::Wireable* in_wire, std::vector<uint> indice
   if (indices.size() > 0) {
     stream << "//   connecting with " << indices.size() << " indices: ";
   }
-  for (auto index : indices) {
-    stream << index << " ";
-  }
-  stream << endl;
+//  for (auto index : indices) {
+//    stream << index << " ";
+//  }
+//  stream << endl;
 
   CoreIR::Wireable* in_wire = temp_wire;
 
@@ -814,8 +857,93 @@ CoreIR::Wireable* index_wire(CoreIR::Wireable* in_wire, std::vector<uint> indice
   }
 }
 
+std::string strip_stream(std::string input) {
+  std::string output = input;
+  if (ends_with(input, "_stencil_update_stream")) {
+    output = input.substr(0, input.find("_stencil_update_stream"));
+  } else if (ends_with(input, "_stencil_stream")) {
+    output = input.substr(0, input.find("_stencil_stream"));
+  }
+  return output;
+}
+
+void CodeGen_CoreIR_Target::CodeGen_CoreIR_C::record_dispatch(std::string producer_name, std::string consumer_name) {
+  hw_dispatch_set[consumer_name].push_back(producer_name);
+  //cout << "// recording dispatch for " << producer_name << "\n";
+  stream << "// recording dispatch from " << producer_name 
+         << " to " << consumer_name << "\n";
+
+  // connect output valid if that is the consumer, and design has valid
+  if (has_valid) {
+    for (auto output : hw_output_set) {
+      if (strip_stream(output) == consumer_name) {
+        stream << "// connecting " << producer_name << " to output valid\n";
+        //cout << "// connecting " << producer_name << " to output valid\n";
+        connect_linebuffer(consumer_name, self->sel("valid"));
+        return;
+      }
+    }
+  }
+}
+
+void CodeGen_CoreIR_Target::CodeGen_CoreIR_C::record_linebuffer_valid(std::string producer_name, CoreIR::Wireable* wire) {
+  stream << "// added " << producer_name << " valid\n";
+  lb_valid_map[producer_name] = wire;
+}
+
+
+bool CodeGen_CoreIR_Target::CodeGen_CoreIR_C::connect_linebuffer(std::string consumer_name, CoreIR::Wireable* consumer_wen_wire) {
+  // strip off suffix to consumer name
+  std::string consumer = strip_stream(consumer_name);
+  stream << "// Using lb consumer " << consumer_name
+         << " (stripped " << consumer << ")\n";
+  //cout << "stripped name: " << consumer << std::endl;
+  std::string producer, producer_name;
+
+  // trace back consumers looking for one that is a linebuffer
+  std::string consumer_recurse = consumer;
+  while (hw_dispatch_set.count(consumer_recurse) > 0) {
+    consumer = consumer_recurse;
+    auto producer_list = hw_dispatch_set[consumer];
+
+    // FIXME: what about merges?
+    //internal_assert(producer_list.size() == 1);
+
+    // use the first producer (hopefully they all work equally)
+    producer_name = producer_list[0];
+    producer = strip_stream(producer_name);
+
+    // connect to upstream linebuffer valid
+    if (lb_valid_map.count(producer_name) > 0) {
+      stream << "// connected lb valid: connecting " << producer_name << " valid to " 
+             << consumer_name << " wen\n";
+      def->connect(lb_valid_map[producer_name], consumer_wen_wire);
+      return true;
+    }
+
+    stream << "// using producer " << producer << " for consumer " << consumer << "\n";
+    consumer_recurse = producer;
+  }
+
+  if (is_input(consumer_name)) {
+    // connect to self upstream valid
+    stream << "// TODO: connect to upstream valid here\n";
+    return false;
+  } else if (lb_valid_map.count(producer_name) > 0) {
+    // connect to upstream linebuffer valid
+    stream << "// connecting " << producer_name << " valid to " 
+           << consumer_name << " wen\n";
+    def->connect(lb_valid_map[producer_name], consumer_wen_wire);
+    return true;
+  } else {
+    return false;
+  }
+
+}
+
 void CodeGen_CoreIR_Target::CodeGen_CoreIR_C::visit_unaryop(Type t, Expr a, const char*  op_sym, string op_name) {
   string a_name = print_expr(a);
+  //stream << "// unary op for " << a_name << "\n";
   string print_sym = op_sym;
 
   string out_var = print_assignment(t, print_sym + "(" + a_name + ")");
@@ -828,9 +956,10 @@ void CodeGen_CoreIR_Target::CodeGen_CoreIR_C::visit_unaryop(Type t, Expr a, cons
     CoreIR::Wireable* coreir_inst;
 
     // properly cast to generator or module
-		internal_assert(gens.count(op_name) > 0) << op_name << " is not one of the names Halide recognizes\n";
+    internal_assert(gens.count(op_name) > 0) << op_name << " is not one of the names Halide recognizes\n";
     if (context->hasGenerator(gens[op_name])) {
       internal_assert(context->getGenerator(gens[op_name]));    
+      // FIXME: use proper bitwidth
       uint inst_bitwidth = a.type().bits() == 1 ? 1 : bitwidth;
       coreir_inst = def->addInstance(unaryop_name, gens[op_name], {{"width", CoreIR::Const::make(context,inst_bitwidth)}});
     } else {
@@ -856,6 +985,7 @@ void CodeGen_CoreIR_Target::CodeGen_CoreIR_C::visit_binop(Type t, Expr a, Expr b
   string a_name = print_expr(a);
   string b_name = print_expr(b);
   string out_var = print_assignment(t, a_name + " " + op_sym + " " + b_name);
+  //stream << "// binary op for " << a_name << " " << b_name << "\n";
   //cout << out_var << " is the output for unit " << op_name << a_name << b_name << endl;
   // return if this variable is cached
   if (is_wire(out_var)) { return; }
@@ -865,6 +995,7 @@ void CodeGen_CoreIR_Target::CodeGen_CoreIR_C::visit_binop(Type t, Expr a, Expr b
 
   if (a_wire != NULL && b_wire != NULL) {
     internal_assert(a.type().bits() == b.type().bits()) << "function " << op_name << " with " << a_name << " and " << b_name;
+    // FIXME: use proper bitwidth
     uint inst_bitwidth = a.type().bits() == 1 ? 1 : bitwidth;
     string binop_name = op_name + a_name + b_name + out_var;
     CoreIR::Wireable* coreir_inst;
@@ -873,7 +1004,7 @@ void CodeGen_CoreIR_Target::CodeGen_CoreIR_C::visit_binop(Type t, Expr a, Expr b
     //context->runPasses({"printer"},{"global","coreir"});
 
     //cout << "creating a hardware binop: " << op_name << endl;
-		internal_assert(gens.count(op_name) > 0) << op_name << " is not one of the names Halide recognizes\n";
+    internal_assert(gens.count(op_name) > 0) << op_name << " is not one of the names Halide recognizes\n";
     if (context->hasGenerator(gens[op_name])) {
       coreir_inst = def->addInstance(binop_name, gens[op_name], {{"width", CoreIR::Const::make(context,inst_bitwidth)}});
     } else {
@@ -912,12 +1043,13 @@ void CodeGen_CoreIR_Target::CodeGen_CoreIR_C::visit_ternop(Type t, Expr a, Expr 
 
   if (a_wire != NULL && b_wire != NULL && c_wire != NULL) {
     internal_assert(b.type().bits() == c.type().bits());
+    // FIXME: use proper bitwidth
     uint inst_bitwidth = b.type().bits() == 1 ? 1 : bitwidth;
     string ternop_name = op_name + a_name + b_name + c_name;
     CoreIR::Wireable* coreir_inst;
 
     // properly cast to generator or module
-		internal_assert(gens.count(op_name) > 0) << op_name << " is not one of the names Halide recognizes\n";
+    internal_assert(gens.count(op_name) > 0) << op_name << " is not one of the names Halide recognizes\n";
     if (context->hasGenerator(gens[op_name])) {
       coreir_inst = def->addInstance(ternop_name, gens[op_name], {{"width", CoreIR::Const::make(context,inst_bitwidth)}});
     } else {
@@ -958,13 +1090,13 @@ void CodeGen_CoreIR_Target::CodeGen_CoreIR_C::visit(const Add *op) {
   visit_binop(op->type, op->a, op->b, "+", "add");
   // check if we can instantiate a MAD instead
   /*
-  if (const Mul* mul = op->a.as<Mul>()) {
+    if (const Mul* mul = op->a.as<Mul>()) {
     visit_ternop(op->type, mul->a, mul->b, op->b, "*", "+", "MAD");
-  } else if (const Mul* mul = op->b.as<Mul>()) {
+    } else if (const Mul* mul = op->b.as<Mul>()) {
     visit_ternop(op->type, mul->a, mul->b, op->a, "*", "+", "MAD");
-  } else {
+    } else {
     visit_binop(op->type, op->a, op->b, "+", "add");
-  }
+    }
   */
 
 }
@@ -972,37 +1104,39 @@ void CodeGen_CoreIR_Target::CodeGen_CoreIR_C::visit(const Sub *op) {
   visit_binop(op->type, op->a, op->b, "-", "sub");
 }
 void CodeGen_CoreIR_Target::CodeGen_CoreIR_C::visit(const Div *op) {
-    int shift_amt;
-    if (is_const_power_of_two_integer(op->b, &shift_amt)) {
-      uint param_bitwidth = op->a.type().bits();
-      Expr shift_expr = UIntImm::make(UInt(param_bitwidth), shift_amt);
-      visit_binop(op->type, op->a, shift_expr, ">>", "ashr");
-    } else {
-      stream << "// divide is not fully supported" << endl;
-      user_warning << "divide is not fully supported\n";
-    }
+  int shift_amt;
+  if (is_const_power_of_two_integer(op->b, &shift_amt)) {
+    // FIXME: use proper bitwidth
+    uint param_bitwidth = op->a.type().bits();
+    Expr shift_expr = UIntImm::make(UInt(param_bitwidth), shift_amt);
+    visit_binop(op->type, op->a, shift_expr, ">>", "ashr");
+  } else {
+    stream << "// divide is not fully supported" << endl;
+    user_warning << "divide is not fully supported\n";
+  }
 }
-  void CodeGen_CoreIR_Target::CodeGen_CoreIR_C::visit(const Mod *op) {
-    int num_bits;
-    if (is_const_power_of_two_integer(op->b, &num_bits)) {
-      // equivalent to masking the bottom bits
-      uint param_bitwidth = op->a.type().bits();
-      uint mask = (1<<num_bits) - 1;
-      Expr mask_expr = UIntImm::make(UInt(param_bitwidth), mask);
-      visit_binop(op->type, op->a, mask_expr, "&", "and");
+void CodeGen_CoreIR_Target::CodeGen_CoreIR_C::visit(const Mod *op) {
+  int num_bits;
+  if (is_const_power_of_two_integer(op->b, &num_bits)) {
+    // equivalent to masking the bottom bits
+    // FIXME: use proper bitwidth
+    uint param_bitwidth = op->a.type().bits();
+    uint mask = (1<<num_bits) - 1;
+    Expr mask_expr = UIntImm::make(UInt(param_bitwidth), mask);
+    visit_binop(op->type, op->a, mask_expr, "&", "and");
 
 //        ostringstream oss;
 //        oss << print_expr(op->a) << " & " << ((1 << bits)-1);
 //        print_assignment(op->type, oss.str());
-    } else if (op->type.is_int()) {
-      stream << "// mod is not fully supported" << endl;
-      //print_expr(lower_euclidean_mod(op->a, op->b));
-    } else {
-      stream << "// mod is not fully supported" << endl;
-      //visit_binop(op->type, op->a, op->b, "%", "mod");
-    }
-
+  } else if (op->type.is_int()) {
+    stream << "// mod is not fully supported" << endl;
+    //print_expr(lower_euclidean_mod(op->a, op->b));
+  } else {
+    stream << "// mod is not fully supported" << endl;
+    //visit_binop(op->type, op->a, op->b, "%", "mod");
   }
+
+}
 
 void CodeGen_CoreIR_Target::CodeGen_CoreIR_C::visit(const And *op) {
   if (op->a.type().bits() == 1) {
@@ -1105,1167 +1239,1033 @@ void CodeGen_CoreIR_Target::CodeGen_CoreIR_C::visit(const Cast *op) {
 }
 
 void CodeGen_CoreIR_Target::CodeGen_CoreIR_C::visit(const Provide *op) {
-    if (ends_with(op->name, ".stencil") ||
-        ends_with(op->name, ".stencil_update")) {
-        // IR: buffered.stencil_update(1, 2, 3) =
-        // C: buffered_stencil_update(1, 2, 3) =
-        vector<string> args_indices(op->args.size());
-        vector<uint> indices;
-        for(size_t i = 0; i < op->args.size(); i++) {
-          args_indices[i] = print_expr(op->args[i]);
-          internal_assert(is_const(op->args[i])) << "variable store used. FIXME: Demux not yet implemented\n";
-          indices.push_back(id_const_value(op->args[i]));
-          stream << id_const_value(op->args[i]) << " ";
-        }
-
-        internal_assert(op->values.size() == 1);
-        string id_value = print_expr(op->values[0]);
-
-        do_indent();
-
-	stream << "[provide]" << " ";
-        stream << print_name(op->name) << "(";
-	string new_name = print_name(op->name);
-
-        for(size_t i = 0; i < op->args.size(); i++) {
-            stream << args_indices[i];
-            if (i != op->args.size() - 1)
-              {stream << ", "; }
-        }
-        stream << ") = " << id_value << ";\n";
-        //cout << "doing a provide\n ";
-        // FIXME: can we avoid clearing the cache? just ones where the end matches (for regs used multiple times)?
-        cache.clear();
-        
-	// generate coreir: add to wire_set
-        if (predicate) {
-          // produce a register for accumulation
-          stream << "// provide with a predicate\n";
-          // FIXME: support value that is not constant
-          //internal_assert(is_const(op->values[0])) << "FIXME: Only constant inits are suppported";
-          int const_value;
-          if (is_const(op->values[0])) {
-            const_value = id_const_value(op->values[0]);
-          } else {
-            const_value = 0;
-            stream << "// " << id_value << " is not a constant. Not yet supported for provides." << endl;
-            cout << id_value << " is not a constant. Not yet supported for provides." << endl;
-          }
-          internal_assert(const_value == 0) << "FIXME: we only supported arrays init at 0\n";
-
-          // hook up reset
-          // FIXME: shouldn't print out again
-          string cond_id = print_expr(predicate->condition);
-          auto pt_struct = hw_store_set[new_name];
-          if (is_storage(new_name) && !pt_struct->is_reg()) {
-            // add reg_array
-            CoreIR::Type* ptype = pt_struct->ptype;
-            string regs_name = "regs" + new_name;
-						stream << "// reg array created named " << new_name << "\n";
-            //FIXME: hooking up clr or rst?
-            CoreIR::Wireable* regs = def->addInstance(regs_name, gens["reg_array"], {{"type",CoreIR::Const::make(context,ptype)}, {"has_clr", CoreIR::Const::make(context,true)}});
-            pt_struct->reg = regs;
-
-						// connect input
-						string in_name = id_value;
-						CoreIR::Wireable* wire = get_wire(in_name, op->values[0]);
-						auto regs_wire = index_wire(regs->sel("in"), indices);
-						def->connect(wire, regs_wire);
-          }
-					
-          internal_assert(is_storage(new_name) && hw_store_set[new_name]->is_reg());
-          auto reg_struct = hw_store_set[new_name];
-          def->connect(get_wire(cond_id, predicate->condition), reg_struct->reg->sel("clr"));
-
-          stream << "// reg rst added to: " << new_name << endl;
-        } else {
-          string in_name = id_value;
-          CoreIR::Wireable* wire = get_wire(in_name, op->values[0]);
-          //cout << "where " << new_name << " = " << in_name << " with " << indices.size() << " indices" << endl;
-          add_wire(new_name, wire, indices);
-        }
-
-    } else {
-        CodeGen_CoreIR_Base::visit(op);
+  if (ends_with(op->name, ".stencil") ||
+      ends_with(op->name, ".stencil_update")) {
+    // IR: buffered.stencil_update(1, 2, 3) =
+    // C: buffered_stencil_update(1, 2, 3) =
+    vector<string> args_indices(op->args.size());
+    vector<uint> indices;
+    for(size_t i = 0; i < op->args.size(); i++) {
+      args_indices[i] = print_expr(op->args[i]);
+      internal_assert(is_const(op->args[i])) << "variable store used. FIXME: Demux not yet implemented\n";
+      indices.push_back(id_const_value(op->args[i]));
+      stream << id_const_value(op->args[i]) << " ";
     }
+
+    internal_assert(op->values.size() == 1);
+    string id_value = print_expr(op->values[0]);
+
+    do_indent();
+
+    stream << "[provide]" << " ";
+    stream << print_name(op->name) << "(";
+    string new_name = print_name(op->name);
+
+    for(size_t i = 0; i < op->args.size(); i++) {
+      stream << args_indices[i];
+      if (i != op->args.size() - 1)
+        {stream << ", "; }
+    }
+    stream << ") = " << id_value << ";\n";
+    //cout << "doing a provide\n ";
+    // FIXME: can we avoid clearing the entire cache? just ones where the end matches (for regs used multiple times)?
+    cache.clear();
+        
+    // generate coreir: add to wire_set
+    if (predicate) {
+      // produce a register for accumulation
+      stream << "// provide with a predicate\n";
+      // FIXME: support value that is not constant
+      //internal_assert(is_const(op->values[0])) << "FIXME: Only constant inits are suppported";
+      int const_value;
+      if (is_const(op->values[0])) {
+        const_value = id_const_value(op->values[0]);
+      } else {
+        const_value = 0;
+        stream << "// " << id_value << " is not a constant. Not yet supported for provides." << endl;
+        cout << id_value << " is not a constant. Not yet supported for provides." << endl;
+      }
+      internal_assert(const_value == 0) << "FIXME: we only supported arrays init at 0\n";
+
+      // hook up reset
+      // FIXME: shouldn't print out again
+      string cond_id = print_expr(predicate->condition);
+      auto pt_struct = hw_store_set[new_name];
+      if (is_storage(new_name) && !pt_struct->is_reg()) {
+        // add reg_array
+        CoreIR::Type* ptype = pt_struct->ptype;
+        string regs_name = "regs" + new_name;
+        stream << "// reg array created named " << new_name << "\n";
+        //FIXME: hooking up clr or rst?
+        CoreIR::Wireable* regs = def->addInstance(regs_name, gens["reg_array"], {{"type",CoreIR::Const::make(context,ptype)}, 
+              {"has_clr", CoreIR::Const::make(context,true)}});
+        pt_struct->reg = regs;
+
+        // connect input
+        string in_name = id_value;
+        CoreIR::Wireable* wire = get_wire(in_name, op->values[0]);
+        auto regs_wire = index_wire(regs->sel("in"), indices);
+        def->connect(wire, regs_wire);
+      }
+					
+      internal_assert(is_storage(new_name) && hw_store_set[new_name]->is_reg());
+      auto reg_struct = hw_store_set[new_name];
+      def->connect(get_wire(cond_id, predicate->condition), reg_struct->reg->sel("clr"));
+
+      stream << "// reg rst added to: " << new_name << endl;
+    } else {
+      string in_name = id_value;
+      CoreIR::Wireable* wire = get_wire(in_name, op->values[0]);
+      //cout << "where " << new_name << " = " << in_name << " with " << indices.size() << " indices" << endl;
+      add_wire(new_name, wire, indices);
+    }
+
+  } else {
+    CodeGen_CoreIR_Base::visit(op);
+  }
 }
 
 
 // almost that same as CodeGen_C::visit(const For *)
 // we just add a 'CoreIR PIPELINE' pragma after the 'for' statement
 void CodeGen_CoreIR_Target::CodeGen_CoreIR_C::visit(const For *op) {
-    internal_assert(op->for_type == ForType::Serial)
-        << "Can only emit serial for loops to CoreIR C\n";
+  internal_assert(op->for_type == ForType::Serial)
+    << "Can only emit serial for loops to CoreIR C\n";
 
-    string id_min = print_expr(op->min);
-    string id_extent = print_expr(op->extent);
+  string id_min = print_expr(op->min);
+  string id_extent = print_expr(op->extent);
 
-    do_indent();
-    stream << "for (int "
-           << print_name(op->name)
-           << " = " << id_min
-           << "; "
-           << print_name(op->name)
-           << " < " << id_min
-           << " + " << id_extent
-           << "; "
-           << print_name(op->name)
-           << "++)\n";
+  do_indent();
+  stream << "for (int "
+         << print_name(op->name)
+         << " = " << id_min
+         << "; "
+         << print_name(op->name)
+         << " < " << id_min
+         << " + " << id_extent
+         << "; "
+         << print_name(op->name)
+         << "++)\n";
 
-    open_scope();
-    // add a 'PIPELINE' pragma if it is an innermost loop
-    if (!contain_for_loop(op->body)) {
-        stream << "#pragma CoreIR PIPELINE II=1\n";
-    }
+  open_scope();
+  // add a 'PIPELINE' pragma if it is an innermost loop
+  if (!contain_for_loop(op->body)) {
+    stream << "#pragma CoreIR PIPELINE II=1\n";
+  }
 
-    // generate coreir: add counter module
-    internal_assert(is_const(op->min));
-    internal_assert(is_const(op->extent));
-    int min_value = id_const_value(op->min);
-    int max_value = min_value + id_const_value(op->extent);
-    int inc_value = 1;
-    string counter_name = "count_" + print_name(op->name);
-    /*
+  // generate coreir: add counter module
+  internal_assert(is_const(op->min));
+  internal_assert(is_const(op->extent));
+  int min_value = id_const_value(op->min);
+  int max_value = min_value + id_const_value(op->extent);
+  int inc_value = 1;
+  string counter_name = "count_" + print_name(op->name);
+  /*
     CoreIR::Wireable* counter_inst = def->addInstance(counter_name, gens["counter"], 
-                                                      {{"width",CoreIR::Const::make(context,bitwidth)},
-                                                          {"min",CoreIR::Const::make(context,min_value)},
-                                                            {"max",CoreIR::Const::make(context,max_value)},
-                                                              {"inc",CoreIR::Const::make(context,inc_value)}}
-                                                      );
+    {{"width",CoreIR::Const::make(context,bitwidth)},
+    {"min",CoreIR::Const::make(context,min_value)},
+    {"max",CoreIR::Const::make(context,max_value)},
+    {"inc",CoreIR::Const::make(context,inc_value)}}
+    );
     hw_wire_set[print_name(op->name)] = counter_inst->sel("out");
-    */
-    string wirename = print_name(op->name);
-    string selname = "out";
-    CoreIR::Values args = {{"width",CoreIR::Const::make(context,bitwidth)},
+  */
+  string wirename = print_name(op->name);
+  string selname = "out";
+  // FIXME: use proper bitwidth
+  CoreIR::Values args = {{"width",CoreIR::Const::make(context,bitwidth)},
                          {"min",CoreIR::Const::make(context,min_value)},
                          {"max",CoreIR::Const::make(context,max_value)},
                          {"inc",CoreIR::Const::make(context,inc_value)}};
-    CoreIR_Inst_Args counter_args(counter_name, wirename, selname, gens["counter"], args, CoreIR::Values()
-                                  );
-    hw_def_set[print_name(op->name)] = std::make_shared<CoreIR_Inst_Args>(counter_args);
-    //cout << "// counter created with name " << print_name(op->name) << endl;
-    stream << "// counter created with name " << print_name(op->name) << endl;
+  CoreIR_Inst_Args counter_args(counter_name, wirename, selname, gens["counter"], args, CoreIR::Values()
+    );
+  hw_def_set[print_name(op->name)] = std::make_shared<CoreIR_Inst_Args>(counter_args);
+  //cout << "// counter created with name " << print_name(op->name) << endl;
+  stream << "// counter created with name " << print_name(op->name) << endl;
 
 
-    op->body.accept(this);
-    close_scope("for " + print_name(op->name));
+  op->body.accept(this);
+  close_scope("for " + print_name(op->name));
 
 }
 
 class RenameAllocation : public IRMutator {
-    const string &orig_name;
-    const string &new_name;
+  const string &orig_name;
+  const string &new_name;
 
-    using IRMutator::visit;
+  using IRMutator::visit;
 
-    void visit(const Load *op) {
-        if (op->name == orig_name ) {
-            Expr index = mutate(op->index);
-            expr = Load::make(op->type, new_name, index, op->image, op->param);
-        } else {
-            IRMutator::visit(op);
-        }
+  void visit(const Load *op) {
+    if (op->name == orig_name ) {
+      Expr index = mutate(op->index);
+      expr = Load::make(op->type, new_name, index, op->image, op->param);
+    } else {
+      IRMutator::visit(op);
     }
+  }
 
-    void visit(const Store *op) {
-        if (op->name == orig_name ) {
-            Expr value = mutate(op->value);
-            Expr index = mutate(op->index);
-            stmt = Store::make(new_name, value, index, op->param);
-        } else {
-            IRMutator::visit(op);
-        }
+  void visit(const Store *op) {
+    if (op->name == orig_name ) {
+      Expr value = mutate(op->value);
+      Expr index = mutate(op->index);
+      stmt = Store::make(new_name, value, index, op->param);
+    } else {
+      IRMutator::visit(op);
     }
+  }
 
-    void visit(const Free *op) {
-        if (op->name == orig_name) {
-            stmt = Free::make(new_name);
-        } else {
-            IRMutator::visit(op);
-        }
+  void visit(const Free *op) {
+    if (op->name == orig_name) {
+      stmt = Free::make(new_name);
+    } else {
+      IRMutator::visit(op);
     }
+  }
 
 public:
-    RenameAllocation(const string &o, const string &n)
-        : orig_name(o), new_name(n) {}
+  RenameAllocation(const string &o, const string &n)
+    : orig_name(o), new_name(n) {}
 };
 
 // most code is copied from CodeGen_C::visit(const Allocate *)
 // we want to check that the allocation size is constant, and
 // add a 'CoreIR ARRAY_PARTITION' pragma to the allocation
 void CodeGen_CoreIR_Target::CodeGen_CoreIR_C::visit(const Allocate *op) {
-    // We don't add scopes, as it messes up the dataflow directives in CoreIR compiler.
-    // Instead, we rename the allocation to a unique name
-    //open_scope();
+  // We don't add scopes, as it messes up the dataflow directives in CoreIR compiler.
+  // Instead, we rename the allocation to a unique name
+  //open_scope();
 
-    internal_assert(!op->new_expr.defined());
-    internal_assert(!is_zero(op->condition));
-    int32_t constant_size;
-    constant_size = op->constant_allocation_size();
-    if (constant_size > 0) {
+  internal_assert(!op->new_expr.defined());
+  internal_assert(!is_zero(op->condition));
+  int32_t constant_size;
+  constant_size = op->constant_allocation_size();
+  if (constant_size > 0) {
 
-    } else {
-        internal_error << "Size for allocation " << op->name
-                       << " is not a constant.\n";
-    }
+  } else {
+    internal_error << "Size for allocation " << op->name
+                   << " is not a constant.\n";
+  }
 
-    // rename allocation to avoid name conflict due to unrolling
-    string alloc_name = print_name(op->name + unique_name('a'));
-    /*
+  // rename allocation to avoid name conflict due to unrolling
+  string alloc_name = print_name(op->name + unique_name('a'));
+  /*
     if (allocations.contains(alloc_name)) {
-      return;
+    return;
     } 
     stream << "// couldn't find allocation " << alloc_name << endl;*/
-    Stmt new_body = RenameAllocation(op->name, alloc_name).mutate(op->body);
+  Stmt new_body = RenameAllocation(op->name, alloc_name).mutate(op->body);
 
-    Allocation alloc;
-    alloc.type = op->type;
-    allocations.push(alloc_name, alloc);
+  Allocation alloc;
+  alloc.type = op->type;
+  allocations.push(alloc_name, alloc);
 
-    do_indent();
-    stream << print_type(op->type) << ' '
-           << print_name(alloc_name)
-           << "[" << constant_size << "]; [alloc]\n";
+  do_indent();
+  stream << print_type(op->type) << ' '
+         << print_name(alloc_name)
+         << "[" << constant_size << "]; [alloc]\n";
 
   //  CoreIR::Type* type_input = context->Bit()->Arr(bitwidth)->Arr(constant_size);
   //  CoreIR::Wireable* wire_array = def->addInstance("array", gens["passthrough"], {{"type", CoreIR::Const::make(context,type_input)}});
   //  hw_wire_set[print_name(alloc_name)] = wire_array;
 
-    // add a 'ARRAY_PARTITION" pragma
-    //stream << "#pragma CoreIR ARRAY_PARTITION variable=" << print_name(op->name) << " complete dim=0\n\n";
+  // add a 'ARRAY_PARTITION" pragma
+  //stream << "#pragma CoreIR ARRAY_PARTITION variable=" << print_name(op->name) << " complete dim=0\n\n";
 
-    new_body.accept(this);
+  new_body.accept(this);
 
-    // Should have been freed internally
-    internal_assert(!allocations.contains(alloc_name))
-        << "allocation " << alloc_name << " is not freed.\n";
-    stream << "// ending this allocation" << endl;
-    allocations.push(alloc_name, alloc);
+  // Should have been freed internally
+  internal_assert(!allocations.contains(alloc_name))
+    << "allocation " << alloc_name << " is not freed.\n";
+  stream << "// ending this allocation" << endl;
+  allocations.push(alloc_name, alloc);
 
-    //close_scope("alloc " + print_name(op->name));
+  //close_scope("alloc " + print_name(op->name));
 
 }
 
 
 void CodeGen_CoreIR_Target::CodeGen_CoreIR_C::visit(const Call *op) {
   // add bitand, bitor, bitxor, bitnot
-    if (op->is_intrinsic(Call::bitwise_and)) {
-        internal_assert(op->args.size() == 2);
-        Expr a = op->args[0];
-        Expr b = op->args[1];
-        if (op->type.bits() == 1) {
-          // use a special op for bitwidth 1
-          visit_binop(op->type, a, b, "&&", "bitand");
-        } else {
-          visit_binop(op->type, a, b, "&", "and");
-        }
-    } else if (op->is_intrinsic(Call::bitwise_or)) {
-        internal_assert(op->args.size() == 2);
-        Expr a = op->args[0];
-        Expr b = op->args[1];
-        if (op->type.bits() == 1) {
-          // use a special op for bitwidth 1
-          visit_binop(op->type, a, b, "||", "bitor");
-        } else {
-          visit_binop(op->type, a, b, "|", "or");
-        }
-    } else if (op->is_intrinsic(Call::bitwise_xor)) {
-        internal_assert(op->args.size() == 2);
-        Expr a = op->args[0];
-        Expr b = op->args[1];
-        if (op->type.bits() == 1) {
-          // use a special op for bitwidth 1
-          visit_binop(op->type, a, b, "^", "bitxor");
-        } else {
-          visit_binop(op->type, a, b, "^", "xor");
-        }
-    } else if (op->is_intrinsic(Call::bitwise_not)) {
-        internal_assert(op->args.size() == 1);
-        Expr a = op->args[0];
-        if (op->type.bits() == 1) {
-          // use a special op for bitwidth 1
-          visit_unaryop(op->type, a, "!", "bitnot");
-        } else {
-          visit_unaryop(op->type, a, "~", "not");
-        }
+  if (op->is_intrinsic(Call::bitwise_and)) {
+    internal_assert(op->args.size() == 2);
+    Expr a = op->args[0];
+    Expr b = op->args[1];
+    if (op->type.bits() == 1) {
+      // use a special op for bitwidth 1
+      visit_binop(op->type, a, b, "&&", "bitand");
+    } else {
+      visit_binop(op->type, a, b, "&", "and");
+    }
+  } else if (op->is_intrinsic(Call::bitwise_or)) {
+    internal_assert(op->args.size() == 2);
+    Expr a = op->args[0];
+    Expr b = op->args[1];
+    if (op->type.bits() == 1) {
+      // use a special op for bitwidth 1
+      visit_binop(op->type, a, b, "||", "bitor");
+    } else {
+      visit_binop(op->type, a, b, "|", "or");
+    }
+  } else if (op->is_intrinsic(Call::bitwise_xor)) {
+    internal_assert(op->args.size() == 2);
+    Expr a = op->args[0];
+    Expr b = op->args[1];
+    if (op->type.bits() == 1) {
+      // use a special op for bitwidth 1
+      visit_binop(op->type, a, b, "^", "bitxor");
+    } else {
+      visit_binop(op->type, a, b, "^", "xor");
+    }
+  } else if (op->is_intrinsic(Call::bitwise_not)) {
+    internal_assert(op->args.size() == 1);
+    Expr a = op->args[0];
+    if (op->type.bits() == 1) {
+      // use a special op for bitwidth 1
+      visit_unaryop(op->type, a, "!", "bitnot");
+    } else {
+      visit_unaryop(op->type, a, "~", "not");
+    }
 
-    } else if (op->is_intrinsic(Call::shift_left)) {
-        internal_assert(op->args.size() == 2);
-        Expr a = op->args[0];
-        Expr b = op->args[1];
-        stream << "[shift left] ";
-        visit_binop(op->type, a, b, "<<", "shl");
-    } else if (op->is_intrinsic(Call::shift_right)) {
-        internal_assert(op->args.size() == 2);
-        Expr a = op->args[0];
-        Expr b = op->args[1];
-        stream << "[shift right] ";
-        visit_binop(op->type, a, b, ">>", "ashr");
-    } else if (op->is_intrinsic(Call::abs)) {
-        internal_assert(op->args.size() == 1);
-        Expr a = op->args[0];
-        stream << "[abs] ";
-        visit_unaryop(op->type, a, "abs", "abs");
-    } else if (op->is_intrinsic(Call::absd)) {
-        internal_assert(op->args.size() == 2);
-        Expr a = op->args[0];
-        Expr b = op->args[1];
-        stream << "[absd] ";
-        visit_binop(op->type, a, b, "|-|", "absd");
+  } else if (op->is_intrinsic(Call::shift_left)) {
+    internal_assert(op->args.size() == 2);
+    Expr a = op->args[0];
+    Expr b = op->args[1];
+    stream << "[shift left] ";
+    visit_binop(op->type, a, b, "<<", "shl");
+  } else if (op->is_intrinsic(Call::shift_right)) {
+    internal_assert(op->args.size() == 2);
+    Expr a = op->args[0];
+    Expr b = op->args[1];
+    stream << "[shift right] ";
+    visit_binop(op->type, a, b, ">>", "ashr");
+  } else if (op->is_intrinsic(Call::abs)) {
+    internal_assert(op->args.size() == 1);
+    Expr a = op->args[0];
+    stream << "[abs] ";
+    visit_unaryop(op->type, a, "abs", "abs");
+  } else if (op->is_intrinsic(Call::absd)) {
+    internal_assert(op->args.size() == 2);
+    Expr a = op->args[0];
+    Expr b = op->args[1];
+    stream << "[absd] ";
+    visit_binop(op->type, a, b, "|-|", "absd");
 
-    } else if (op->is_intrinsic(Call::reinterpret)) {
-        string in_var = print_expr(op->args[0]);
-        print_reinterpret(op->type, op->args[0]);
+  } else if (op->is_intrinsic(Call::reinterpret)) {
+    string in_var = print_expr(op->args[0]);
+    print_reinterpret(op->type, op->args[0]);
 
-        stream << "// reinterpreting " << op->args[0] << " as " << in_var << endl;
+    stream << "// reinterpreting " << op->args[0] << " as " << in_var << endl;
 
-        // generate coreir: expecting to find the expr is a constant
-        rename_wire(in_var, in_var, op->args[0]);
+    // generate coreir: expecting to find the expr is a constant
+    rename_wire(in_var, in_var, op->args[0]);
 
-    } else if (op->is_intrinsic(Call::address_of)) {
-      user_warning << "ignoring address_of\n";
-      stream       << "ignoring address_of" << endl;
+  } else if (op->is_intrinsic(Call::address_of)) {
+    user_warning << "ignoring address_of\n";
+    stream       << "ignoring address_of" << endl;
 
-    } else if (op->name == "linebuffer") {
-        //IR: linebuffer(buffered.stencil_update.stream, buffered.stencil.stream, extent_0[, extent_1, ...])
-        //C: linebuffer<extent_0[, extent_1, ...]>(buffered.stencil_update.stream, buffered.stencil.stream)
-        internal_assert(op->args.size() >= 3);
-        string a0 = print_expr(op->args[0]);
-        string a1 = print_expr(op->args[1]);
-	const Variable *stencil_var = op->args[1].as<Variable>();
-	Stencil_Type stencil_type = stencils.get(stencil_var->name);
+  } else if (op->name == "linebuffer") {
+    //IR: linebuffer(buffered.stencil_update.stream, buffered.stencil.stream, extent_0[, extent_1, ...])
+    //C: linebuffer<extent_0[, extent_1, ...]>(buffered.stencil_update.stream, buffered.stencil.stream)
+    internal_assert(op->args.size() >= 3);
+    string a0 = print_expr(op->args[0]);
+    string a1 = print_expr(op->args[1]);
+    const Variable *stencil_var = op->args[1].as<Variable>();
+    Stencil_Type stencil_type = stencils.get(stencil_var->name);
+    const Variable *in_stencil_var = op->args[0].as<Variable>();
+    Stencil_Type in_stencil_type = stencils.get(in_stencil_var->name);
 
-        do_indent();
-        stream << "linebuffer<";
-        for(size_t i = 2; i < op->args.size(); i++) {
-            stream << print_expr(op->args[i]);
-            if (i != op->args.size() -1)
-                stream << ", ";
-        }
-        stream << ">(" << a0 << ", " << a1 << ");\n";
-        id = "0"; // skip evaluation
+    stream << in_stencil_var->name << "\n";
+
+    do_indent();
+    stream << "linebuffer<";
+    for(size_t i = 2; i < op->args.size(); i++) {
+      stream << print_expr(op->args[i]);
+      if (i != op->args.size() -1)
+        stream << ", ";
+    }
+    stream << ">(" << a0 << ", " << a1 << ");\n";
+    id = "0"; // skip evaluation
 	
-	// generate coreir: wire up to linebuffer
-	string lb_in_name = print_name(a0);
-	string lb_out_name = print_name(a1);
+    // generate coreir: wire up to linebuffer
+    string lb_in_name = print_name(a0);
+    string lb_out_name = print_name(a1);
 
-	// add linebuffer to coreir
-        uint num_dims = op->args.size() - 2;
-        uint lb_dims [num_dims];
-        for (uint i=0; i<num_dims; ++i) {
-          lb_dims[i] = id_const_value(stencil_type.bounds[i].extent);
-        }
+    // add linebuffer to coreir
+    uint num_dims = op->args.size() - 2;
+    uint lb_dims [num_dims];
+    for (uint i=0; i<num_dims; ++i) {
+      lb_dims[i] = id_const_value(stencil_type.bounds[i].extent);
+    }
 
-	string lb_name = "lb" + lb_in_name;
+    string lb_name = "lb" + lb_in_name;
+    CoreIR::Wireable* coreir_lb = NULL;
 
-        CoreIR::Wireable* coreir_lb = NULL;
-
-        if (num_dims == 2) {
-          int stencil_width = lb_dims[0];
-          int stencil_height = lb_dims[1];
-          int image_width = id_const_value(op->args[2]);
-          int fifo_depth = image_width;
-          internal_assert(fifo_depth > 0);
-          
-          stream << "// stencil size: " << stencil_width << " " << stencil_height << " and image width " << image_width << std::endl
-                 << "//  using fifo_depth " << fifo_depth << std::endl;
-
-          CoreIR::Values lb_args = {{"bitwidth",CoreIR::Const::make(context,bitwidth)}, 
-                          {"stencil_width", CoreIR::Const::make(context,stencil_width)},
-                          {"stencil_height", CoreIR::Const::make(context,stencil_height)},
-                          {"image_width", CoreIR::Const::make(context,fifo_depth)}};
-          coreir_lb = def->addInstance(lb_name, gens["linebuffer2d"], lb_args);
-        } else if (num_dims == 3) {
-          //cout << "created a 3d linebuffer!" << endl;
-          int stencil_depth = lb_dims[0];
-          int stencil_width = lb_dims[1];
-          int stencil_height = lb_dims[2];
-          int image_depth = id_const_value(op->args[2]);
-          int image_width = id_const_value(op->args[3]);
-          internal_assert(image_width > 0);
-          internal_assert(image_depth > 0);
-
-          
-          stream << "// stencil size: " << stencil_depth << " " << stencil_width << " " << stencil_height
-                 << " and image size " << image_depth << "x" << image_width << std::endl;
-          //cout << "// stencil size: " << stencil_depth << " " << stencil_width << " " << stencil_height
-          //<< " and image size " << image_depth << "x" << image_width << std::endl;
-
-          CoreIR::Values lb3_args = {{"bitwidth",CoreIR::Const::make(context,bitwidth)},
-                           {"stencil_d0", CoreIR::Const::make(context,stencil_depth)},
-                           {"stencil_d1", CoreIR::Const::make(context,stencil_width)},
-                           {"stencil_d2", CoreIR::Const::make(context,stencil_height)},
-                           {"image_d0", CoreIR::Const::make(context,image_depth)}, 
-                           {"image_d1", CoreIR::Const::make(context,image_width)}};
-
-          coreir_lb = def->addInstance(lb_name, gens["linebuffer3d"], lb3_args);
-
-        }
-
-          /*
-	int stencil_width = id_const_value(lb_dim0);
-	int stencil_height = id_const_value(lb_dim1);
-	int image_width = id_const_value(op->args[2]);
+    bool use_old_lb = false;
+    bool connected_wen = false;
+    if (use_old_lb) {
+      if (num_dims == 2) {
+        int stencil_width = lb_dims[0];
+        int stencil_height = lb_dims[1];
+        int image_width = id_const_value(op->args[2]);
         int fifo_depth = image_width;
         internal_assert(fifo_depth > 0);
-
-	stream << "// stencil size: " << stencil_width << " " << stencil_height << " and image width " << image_width << std::endl
-               << "//  using fifo_depth " << fifo_depth << std::endl;
-        
-	CoreIR::Wireable* coreir_lb = def->addInstance(lb_name, gens["Linebuffer"],
-  			         {{"bitwidth",CoreIR::Const::make(context,bitwidth)}, {"stencil_width", CoreIR::Const::make(context,stencil_width)},
-				  {"stencil_height", CoreIR::Const::make(context,stencil_height)}, {"image_width", CoreIR::Const::make(context,fifo_depth)}}
-						       );
-          */
-
-        // connect linebuffer
-        //CoreIR::Module* bc_gen = static_cast<CoreIR::Module*>(gens["bitconst"]);
-        CoreIR::Wireable* lb_wen = def->addInstance(lb_name+"_wen", gens["bitconst"], {{"value",CoreIR::Const::make(context,true)}});
-        CoreIR::Wireable* lb_in_wire = get_wire(lb_in_name, op->args[0]);
-        for (uint i=0; i<num_dims; ++i) {
-          // FIXME: assumes a single element for linebuffer input
-          /*
-          CoreIR::Type* wire_type = lb_in_wire->getType();
-          uint array_len = wire_type->getKind() == CoreIR::Type::TypeKind::TK_Array ?
-            static_cast<CoreIR::ArrayType*>(wire_type)->getLen() : 0;
-          internal_assert(array_len == 1) << "FIXME: we don't support multi-precision linebuffer inputs yet (" << array_len << ")\n";
-          */
-          lb_in_wire = lb_in_wire->sel(0);
-
-        }
-
-	def->connect(lb_in_wire, coreir_lb->sel("in"));
-	add_wire(lb_out_name, coreir_lb->sel("out"));
-        def->connect(lb_wen->sel("out"), coreir_lb->sel("wen"));
-	//hw_wire_set[lb_out_name] = coreir_lb->sel("out");
-
-
-    } else if (op->name == "write_stream") {
-        string printed_stream_name;
-	string input_name;
-        if (op->args.size() == 2) {
-            // normal case
-            // IR: write_stream(buffered.stencil_update.stream, buffered.stencil_update)
-            // C: buffered_stencil_update_stream.write(buffered_stencil_update);
-            string a0 = print_expr(op->args[0]);
-            string a1 = print_expr(op->args[1]);
-            do_indent();
-
-            stream << a0 << ".write(" << a1 << ");\n";
-            id = "0"; // skip evaluation 
-	    printed_stream_name = a0;
-	    input_name = a1;
-        } else {
-            // write stream call for the dag output kernel
-            // IR: write_stream(output.stencil.stream, output.stencil, loop_var_1, loop_max_1, ...)
-            // C:  AxiPackedStencil<uint8_t, 1, 1, 1> _output_stencil_packed = _output_stencil;
-            //     if (_loop_var_1 == loop_max_1 && ...)
-            //       _output_stencil_packed.last = 1;
-            //     else
-            //       _output_stencil_packed.last = 0;
-            //     _output_stencil_stream.write(_output_stencil_packed);
-            internal_assert(op->args.size() > 2 && op->args.size() % 2 == 0);
-            const Variable *stream_var = op->args[0].as<Variable>();
-            const Variable *stencil_var = op->args[1].as<Variable>();
-            internal_assert(stream_var && stencil_var);
-            string stream_name = stream_var->name;
-            string stencil_name = stencil_var->name;
-            string packed_stencil_name = stencil_name + "_packed";
-
-            internal_assert(stencils.contains(stencil_name));
-            Stencil_Type stencil_type = stencils.get(stencil_name);
-            internal_assert(stencil_type.type == Stencil_Type::StencilContainerType::Stencil);
-
-            // emit code declaring the packed stencil
-            do_indent();
-            stream << "AxiPacked" << print_stencil_type(stencil_type) << " "
-                   << print_name(packed_stencil_name) << " = "
-                   << print_name(stencil_name) << ";\n";
-
-            // emit code asserting TLAST
-            vector<string> loop_vars, loop_maxes;
-            for (size_t i = 2; i < op->args.size(); i += 2) {
-                loop_vars.push_back(print_expr(op->args[i]));
-                loop_maxes.push_back(print_expr(op->args[i+1]));
-            }
-            do_indent();
-            stream << "if (";
-            for (size_t i = 0; i < loop_vars.size(); i++) {
-                stream << loop_vars[i] << " == " << loop_maxes[i];
-                if (i < loop_vars.size() - 1)
-                    stream << " && ";
-            }
-            stream << ") {\n";
-            do_indent();
-            stream << ' ' << print_name(packed_stencil_name) << ".last = 1;\n";
-            do_indent();
-            stream << "} else {\n";
-            do_indent();
-            stream << ' ' << print_name(packed_stencil_name) << ".last = 0;\n";
-            do_indent();
-            stream << "}\n";
-
-            // emit code writing stream
-            do_indent();
-            stream << print_name(stream_name) << ".write("
-                   << print_name(packed_stencil_name) << ");\n";
-            id = "0"; // skip evaluation
-	    printed_stream_name = print_name(stream_name);
-	    input_name = print_name(stencil_name);
-        }
-
-				// generate coreir: wire with indices maybe
-        if (predicate) {
-          // FIXME: implement predicate
-          stream << "// writing stream with a predicate\n";
-        }
-
-        rename_wire(printed_stream_name, input_name, op->args[1]);
-
-    } else if (op->name == "read_stream") {
-        internal_assert(op->args.size() == 2 || op->args.size() == 3);
-        string a1 = print_expr(op->args[1]);
-
-        const Variable *stream_name_var = op->args[0].as<Variable>();
-        internal_assert(stream_name_var);
-        string stream_name = stream_name_var->name;
-        if (op->args.size() == 3) {
-            // stream name is maggled with the consumer name
-            const StringImm *consumer_imm = op->args[2].as<StringImm>();
-            internal_assert(consumer_imm);
-            stream_name += ".to." + consumer_imm->value;
-        }
-        do_indent();
-        stream << a1 << " = " << print_name(stream_name) << ".read();\n";
-        id = "0"; // skip evaluation
-
-	// generate coreir: add as coreir input
-	string stream_print_name = print_name(stream_name);
-        rename_wire(a1, stream_print_name, op->args[0]);
-
-        if (predicate) {
-          stream << "// reading stream with a predicate\n";
-          // hook up the enable
-          CoreIR::Wireable* stencil_wire = get_wire(stream_print_name, op->args[0]);
-          CoreIR::Wireable* lb_wire = stencil_wire->getTopParent();
-          // FIXME: assert that this is a linebuffer
-          // FIXME: shouldn't print out again
-          string cond_id = print_expr(predicate->condition);
-          def->disconnect(lb_wire->sel("wen"));
-          def->connect(lb_wire->sel("wen"), get_wire(cond_id, predicate->condition));
-        }
-
-    } else if (ends_with(op->name, ".stencil") ||
-               ends_with(op->name, ".stencil_update")) {
-        ostringstream rhs;
-        // IR: out.stencil_update(0, 0, 0)
-        // C: out_stencil_update(0, 0, 0)
-        vector<string> args_indices(op->args.size());
-        vector<uint> stencil_indices;
-        bool constant_indices = true;
-        for(size_t i = 0; i < op->args.size(); i++) {
-            args_indices[i] = print_expr(op->args[i]);
-            constant_indices = constant_indices && is_const(op->args[i]);
-            if (constant_indices) {
-              stencil_indices.push_back(id_const_value(op->args[i]));
-            }
-        }
-
-        rhs << print_name(op->name) << "(";
-	string stencil_print_name = print_name(op->name);
-        for(size_t i = 0; i < op->args.size(); i++) {
-            rhs << args_indices[i];
-	    //stencil_print_name += "_" + args_indices[i];
-            if (i != op->args.size() - 1)
-                rhs << ", ";
-        }
-        rhs << ")";
-	rhs << "[stencil]";
-
-        string out_var = print_assignment(op->type, rhs.str());
-        if (is_wire(out_var)) { return; }
-
-	// generate coreir
-
-        if (constant_indices) {// && (is_wire(stencil_print_name) || is_defined(stencil_print_name))) {
-	  //cout << "// added to set: " << out_var << " using stencil+idx\n";
-          rename_wire(out_var, stencil_print_name, op, stencil_indices);
-	  stream << "// added to set: " << out_var << " using stencil+idx\n";
-
-	} else if (is_wire(stencil_print_name) || is_defined(stencil_print_name) || is_storage(stencil_print_name)) {
-          stream << "// trying to hook up " << print_name(op->name) << endl;
-          //cout << "trying to hook up " << print_name(op->name) << endl;
-          /*
-        if (hw_wire_set.count(stencil_print_name)) {
-	  hw_wire_set[out_var] = hw_wire_set[stencil_print_name];
-	  stream << "// added to wire_set: " << out_var << " using stencil+idx\n";
-	} else if (hw_wire_set.count(print_name(op->name)) > 0) {
-          //stream << "// trying to hook up " << print_name(op->name) << endl;
-          */
-
-	  //CoreIR::Wireable* stencil_wire = hw_wire_set[print_name(op->name)]; // one example wire
-          CoreIR::Wireable* stencil_wire = get_wire(print_name(op->name), op);
-          CoreIR::Wireable* orig_stencil_wire = stencil_wire;
-          vector<std::pair<CoreIR::Wireable*, CoreIR::Wireable*>> stencil_mux_pairs;
-
-          CoreIR::Type* ptype;
-          if (op->type.bits() == 1) {
-            ptype = context->Bit();
-          } else {
-            ptype = context->Bit()->Arr(bitwidth);
-          }
-
-          string pt_name = unique_name("pt" + out_var);
-          stream << "// created passthrough with name " << pt_name << endl;
-
-          CoreIR::Wireable* pt = def->addInstance(pt_name, gens["passthrough"], {{"type",CoreIR::Const::make(context,ptype)}});
-          stencil_mux_pairs.push_back(std::make_pair(stencil_wire, pt->sel("in")));
-
-          // for every dim in the stencil, keep track of correct index and create muxes
-          for (size_t i = op->args.size(); i-- > 0 ;) { // count down from args-1 to 0
-            vector<std::pair<CoreIR::Wireable*, CoreIR::Wireable*>> new_pairs;
-            
-            CoreIR::Type* wire_type = stencil_wire->getType();
-            uint array_len = wire_type->getKind() == CoreIR::Type::TypeKind::TK_Array ?
-              //FIXME: CoreIR::isa<CoreIR::ArrayType>(wire_type) ? 
-              static_cast<CoreIR::ArrayType*>(wire_type)->getLen() : 0;
-            // cast<ArrayType>
-
-            // OR_ : dyn_cast<ArrayType>
-
-            if (is_const(op->args[i])) {
-              // constant index
-
-              //uint index = stoi(args_indices[i]);
-              uint index = id_const_value(op->args[i]);
-              //cout << "type is " << wire_type->getKind() << " and has length " << static_cast<CoreIR::ArrayType*>(wire_type)->getLen() << endl;
-
-              if (index < array_len) {
-                stream << "// using constant index " << std::to_string(index) << endl;
-                stencil_wire = stencil_wire->sel(index);
-
-                // keep track of corresponding stencil and mux inputs
-                for (auto sm_pair : stencil_mux_pairs) {
-                  CoreIR::Wireable* stencil_i = sm_pair.first;
-                  CoreIR::Wireable* mux_i = sm_pair.second;
-                  new_pairs.push_back(std::make_pair(stencil_i->sel(index), mux_i));
-                }
-                stencil_mux_pairs = new_pairs;
-
-              } else {
-                stream << "// couldn't find selectStr " << std::to_string(index) << endl;
-                //cout << "couldn't find selectStr " << to_string(index) << endl;
-                
-                stencil_mux_pairs.clear();
-                stencil_mux_pairs.push_back(std::make_pair(orig_stencil_wire, pt->sel("in")));
-                break;
-              }
-
-            } else {
-              // non-constant, variable index
-              // create muxes 
-              uint num_muxes = stencil_mux_pairs.size();
-              //cout << "  variable index creating " << num_muxes << " mux(es)" << endl;
-
-              stream << "// variable index creating " << num_muxes << " mux(es)" << endl;
-
-              // create mux for every input from previous layer
-              for (uint j = 0; j < num_muxes; j++) {
-                CoreIR::Wireable* stencil_i = stencil_mux_pairs[j].first;
-                CoreIR::Wireable* mux_i = stencil_mux_pairs[j].second;
-
-                string mux_name = unique_name(print_name(op->name) + std::to_string(i) + 
-                                              "_mux" + std::to_string(array_len) + "_" + std::to_string(j));
-
-                CoreIR::Values sliceArgs = {{"width", CoreIR::Const::make(context,bitwidth)},
-                                            {"lo", CoreIR::Const::make(context,0)},
-                                            {"hi", CoreIR::Const::make(context,num_bits(array_len-1))}};
-                CoreIR::Wireable* slice_inst = def->addInstance("selslice" + mux_name, "coreir.slice", sliceArgs); 
-
-
-                CoreIR::Wireable* mux_inst = def->addInstance(mux_name, gens["muxn"], 
-                                                              {{"width",CoreIR::Const::make(context,bitwidth)},{"N",CoreIR::Const::make(context,array_len)}});
-                
-                def->connect(mux_inst->sel("out"), mux_i);
-                stream << "// created mux called " << mux_name << endl;
-
-                // wire up select
-                def->connect(get_wire(args_indices[i], op->args[i]), slice_inst->sel("in"));
-                def->connect(slice_inst->sel("out"), mux_inst->sel("in")->sel("sel"));
-
-                // add each corresponding stencil and mux input to list
-                for (uint mux_i = 0; mux_i < array_len; ++mux_i) {
-                  CoreIR::Wireable* stencil_new = stencil_i->sel(mux_i);
-                  CoreIR::Wireable* mux_new = mux_inst->sel("in")->sel("data")->sel(mux_i);
-                  new_pairs.push_back(std::make_pair(stencil_new, mux_new));
-                } // for every mux input
-              } // for every mux
-              
-              //cout << "all muxes created" << endl;
-              stencil_wire = stencil_wire->sel(0);
-              stencil_mux_pairs = new_pairs;
-            }
-          } // for every dimension in stencil
-
-          // connect the passthrough output
-          add_wire(out_var, pt->sel("out"));
           
-          // wire up stencil to generated muxes
-          for (auto sm_pair : stencil_mux_pairs) {
-            CoreIR::Wireable* stencil_i = sm_pair.first;
-            CoreIR::Wireable* mux_i = sm_pair.second;
-            def->connect(stencil_i, mux_i);
+        stream << "// stencil size: " << stencil_width << " " << stencil_height << " and image width " << image_width << std::endl
+               << "//  using fifo_depth " << fifo_depth << std::endl;
+
+        // FIXME: use proper bitwidth
+        CoreIR::Values lb_args = {{"bitwidth",CoreIR::Const::make(context,bitwidth)}, 
+                                  {"stencil_width", CoreIR::Const::make(context,stencil_width)},
+                                  {"stencil_height", CoreIR::Const::make(context,stencil_height)},
+                                  {"image_width", CoreIR::Const::make(context,fifo_depth)}};
+        coreir_lb = def->addInstance(lb_name, gens["linebuffer2d"], lb_args);
+      } else if (num_dims == 3) {
+        //cout << "created a 3d linebuffer!" << endl;
+        int stencil_depth = lb_dims[0];
+        int stencil_width = lb_dims[1];
+        int stencil_height = lb_dims[2];
+        int image_depth = id_const_value(op->args[2]);
+        int image_width = id_const_value(op->args[3]);
+        internal_assert(image_width > 0);
+        internal_assert(image_depth > 0);
+
+          
+        stream << "// stencil size: " << stencil_depth << " " << stencil_width << " " << stencil_height
+               << " and image size " << image_depth << "x" << image_width << std::endl;
+        //cout << "// stencil size: " << stencil_depth << " " << stencil_width << " " << stencil_height
+        //<< " and image size " << image_depth << "x" << image_width << std::endl;
+
+        // FIXME: use proper bitwidth
+        CoreIR::Values lb3_args = {{"bitwidth",CoreIR::Const::make(context,bitwidth)},
+                                   {"stencil_d0", CoreIR::Const::make(context,stencil_depth)},
+                                   {"stencil_d1", CoreIR::Const::make(context,stencil_width)},
+                                   {"stencil_d2", CoreIR::Const::make(context,stencil_height)},
+                                   {"image_d0", CoreIR::Const::make(context,image_depth)}, 
+                                   {"image_d1", CoreIR::Const::make(context,image_width)}};
+
+        coreir_lb = def->addInstance(lb_name, gens["linebuffer3d"], lb3_args);
+
+      }
+    } else {
+      // FIXME: use proper bitwidth
+      CoreIR::Type* input_type = context->BitIn()->Arr(bitwidth);
+      CoreIR::Type* output_type = context->Bit()->Arr(bitwidth);
+      CoreIR::Type* image_type = context->Bit()->Arr(bitwidth);
+
+      stream << "// linebuffer created with ";
+
+      stream << "input=";
+      uint input_dims [num_dims];
+      for (uint i=0; i<num_dims; ++i) {
+        input_dims[i] = id_const_value(in_stencil_type.bounds[i].extent);
+        input_type = input_type->Arr(input_dims[i]);
+        stream << input_dims[i] << " ";
+      }
+
+      stream << " output=";
+      uint output_dims [num_dims];
+      for (uint i=0; i<num_dims; ++i) {
+        output_dims[i] = id_const_value(stencil_type.bounds[i].extent);
+        output_type = output_type->Arr(output_dims[i]);
+        stream << output_dims[i] << " ";
+      }
+
+      stream << " image=";
+      uint image_dims [num_dims];
+      for (uint i=0; i<num_dims; ++i) {
+        image_dims[i] = id_const_value(id_const_value(op->args[i+2]));
+        image_type = image_type->Arr(image_dims[i]);
+        stream << image_dims[i] << " ";
+      }
+      stream << "\n";
+
+      CoreIR::Values lb_args = {{"input_type", CoreIR::Const::make(context,input_type)},
+                                {"output_type", CoreIR::Const::make(context,output_type)},
+                                {"image_type", CoreIR::Const::make(context,image_type)},
+                                {"has_valid",CoreIR::Const::make(context,has_valid)}};
+
+      coreir_lb = def->addInstance(lb_name, gens["linebuffer"], lb_args);
+      if (has_valid) {
+        connected_wen = connect_linebuffer(lb_in_name, coreir_lb->sel("wen"));
+        record_linebuffer_valid(lb_out_name, coreir_lb->sel("valid"));
+      }
+					
+    }
+    /*
+      int stencil_width = id_const_value(lb_dim0);
+      int stencil_height = id_const_value(lb_dim1);
+      int image_width = id_const_value(op->args[2]);
+      int fifo_depth = image_width;
+      internal_assert(fifo_depth > 0);
+
+      stream << "// stencil size: " << stencil_width << " " << stencil_height << " and image width " << image_width << std::endl
+      << "//  using fifo_depth " << fifo_depth << std::endl;
+        
+      CoreIR::Wireable* coreir_lb = def->addInstance(lb_name, gens["Linebuffer"],
+      {{"bitwidth",CoreIR::Const::make(context,bitwidth)}, {"stencil_width", CoreIR::Const::make(context,stencil_width)},
+      {"stencil_height", CoreIR::Const::make(context,stencil_height)}, {"image_width", CoreIR::Const::make(context,fifo_depth)}}
+      );
+    */
+
+    // connect linebuffer
+    //CoreIR::Module* bc_gen = static_cast<CoreIR::Module*>(gens["bitconst"]);
+    CoreIR::Wireable* lb_in_wire = get_wire(lb_in_name, op->args[0]);
+    for (uint i=0; i<num_dims; ++i) {
+      // FIXME: assumes a single element for linebuffer input
+      /*
+        CoreIR::Type* wire_type = lb_in_wire->getType();
+        uint array_len = wire_type->getKind() == CoreIR::Type::TypeKind::TK_Array ?
+        static_cast<CoreIR::ArrayType*>(wire_type)->getLen() : 0;
+        internal_assert(array_len == 1) << "FIXME: we don't support multi-precision linebuffer inputs yet (" << array_len << ")\n";
+      */
+      if (use_old_lb) {
+        lb_in_wire = lb_in_wire->sel(0);
+      }
+
+    }
+
+
+    def->connect(lb_in_wire, coreir_lb->sel("in"));
+    add_wire(lb_out_name, coreir_lb->sel("out"));
+    if (!connected_wen) {
+      CoreIR::Wireable* lb_wen = def->addInstance(lb_name+"_wen", gens["bitconst"], {{"value",CoreIR::Const::make(context,true)}});
+      def->connect(lb_wen->sel("out"), coreir_lb->sel("wen"));
+    }
+    //hw_wire_set[lb_out_name] = coreir_lb->sel("out");
+				
+
+  } else if (op->name == "write_stream") {
+    string printed_stream_name;
+    string input_name;
+    if (op->args.size() == 2) {
+      // normal case
+      // IR: write_stream(buffered.stencil_update.stream, buffered.stencil_update)
+      // C: buffered_stencil_update_stream.write(buffered_stencil_update);
+      string a0 = print_expr(op->args[0]);
+      string a1 = print_expr(op->args[1]);
+      do_indent();
+
+      stream << a0 << ".write(" << a1 << ");\n";
+      id = "0"; // skip evaluation 
+      printed_stream_name = a0;
+      input_name = a1;
+    } else {
+      // write stream call for the dag output kernel
+      // IR: write_stream(output.stencil.stream, output.stencil, loop_var_1, loop_max_1, ...)
+      // C:  AxiPackedStencil<uint8_t, 1, 1, 1> _output_stencil_packed = _output_stencil;
+      //     if (_loop_var_1 == loop_max_1 && ...)
+      //       _output_stencil_packed.last = 1;
+      //     else
+      //       _output_stencil_packed.last = 0;
+      //     _output_stencil_stream.write(_output_stencil_packed);
+      internal_assert(op->args.size() > 2 && op->args.size() % 2 == 0);
+      const Variable *stream_var = op->args[0].as<Variable>();
+      const Variable *stencil_var = op->args[1].as<Variable>();
+      internal_assert(stream_var && stencil_var);
+      string stream_name = stream_var->name;
+      string stencil_name = stencil_var->name;
+      string packed_stencil_name = stencil_name + "_packed";
+
+      internal_assert(stencils.contains(stencil_name));
+      Stencil_Type stencil_type = stencils.get(stencil_name);
+      internal_assert(stencil_type.type == Stencil_Type::StencilContainerType::Stencil);
+
+      // emit code declaring the packed stencil
+      do_indent();
+      stream << "AxiPacked" << print_stencil_type(stencil_type) << " "
+             << print_name(packed_stencil_name) << " = "
+             << print_name(stencil_name) << ";\n";
+
+      // emit code asserting TLAST
+      vector<string> loop_vars, loop_maxes;
+      for (size_t i = 2; i < op->args.size(); i += 2) {
+        loop_vars.push_back(print_expr(op->args[i]));
+        loop_maxes.push_back(print_expr(op->args[i+1]));
+      }
+      do_indent();
+      stream << "if (";
+      for (size_t i = 0; i < loop_vars.size(); i++) {
+        stream << loop_vars[i] << " == " << loop_maxes[i];
+        if (i < loop_vars.size() - 1)
+          stream << " && ";
+      }
+      stream << ") {\n";
+      do_indent();
+      stream << ' ' << print_name(packed_stencil_name) << ".last = 1;\n";
+      do_indent();
+      stream << "} else {\n";
+      do_indent();
+      stream << ' ' << print_name(packed_stencil_name) << ".last = 0;\n";
+      do_indent();
+      stream << "}\n";
+
+      // emit code writing stream
+      do_indent();
+      stream << print_name(stream_name) << ".write("
+             << print_name(packed_stencil_name) << ");\n";
+      id = "0"; // skip evaluation
+      printed_stream_name = print_name(stream_name);
+      input_name = print_name(stencil_name);
+    }
+
+    // generate coreir: wire with indices maybe
+    if (predicate) {
+      // FIXME: implement predicate
+      stream << "// writing stream with a predicate\n";
+    }
+
+    rename_wire(printed_stream_name, input_name, op->args[1]);
+
+  } else if (op->name == "read_stream") {
+    internal_assert(op->args.size() == 2 || op->args.size() == 3);
+    string a1 = print_expr(op->args[1]);
+
+    const Variable *stream_name_var = op->args[0].as<Variable>();
+    internal_assert(stream_name_var);
+    string stream_name = stream_name_var->name;
+    if (op->args.size() == 3) {
+      // stream name is maggled with the consumer name
+      const StringImm *consumer_imm = op->args[2].as<StringImm>();
+      internal_assert(consumer_imm);
+      stream_name += ".to." + consumer_imm->value;
+    }
+    do_indent();
+    stream << a1 << " = " << print_name(stream_name) << ".read();\n";
+    id = "0"; // skip evaluation
+
+    // generate coreir: add as coreir input
+    string stream_print_name = print_name(stream_name);
+    rename_wire(a1, stream_print_name, op->args[0]);
+
+    if (predicate) {
+      stream << "// reading stream with a predicate\n";
+      // hook up the enable
+      CoreIR::Wireable* stencil_wire = get_wire(stream_print_name, op->args[0]);
+      CoreIR::Wireable* lb_wire = stencil_wire->getTopParent();
+      // FIXME: assert that this is a linebuffer
+      // FIXME: shouldn't print out again
+      string cond_id = print_expr(predicate->condition);
+      def->disconnect(lb_wire->sel("wen"));
+      def->connect(lb_wire->sel("wen"), get_wire(cond_id, predicate->condition));
+    }
+
+  } else if (ends_with(op->name, ".stencil") ||
+             ends_with(op->name, ".stencil_update")) {
+    ostringstream rhs;
+    // IR: out.stencil_update(0, 0, 0)
+    // C: out_stencil_update(0, 0, 0)
+    vector<string> args_indices(op->args.size());
+    vector<uint> stencil_indices;
+    bool constant_indices = true;
+    for(size_t i = 0; i < op->args.size(); i++) {
+      args_indices[i] = print_expr(op->args[i]);
+      constant_indices = constant_indices && is_const(op->args[i]);
+      if (constant_indices) {
+        stencil_indices.push_back(id_const_value(op->args[i]));
+      }
+    }
+
+    rhs << print_name(op->name) << "(";
+    string stencil_print_name = print_name(op->name);
+    for(size_t i = 0; i < op->args.size(); i++) {
+      rhs << args_indices[i];
+      //stencil_print_name += "_" + args_indices[i];
+      if (i != op->args.size() - 1)
+        rhs << ", ";
+    }
+    rhs << ")";
+    rhs << "[stencil]";
+
+    string out_var = print_assignment(op->type, rhs.str());
+    if (is_wire(out_var)) { return; }
+
+    // generate coreir
+
+    if (constant_indices) {// && (is_wire(stencil_print_name) || is_defined(stencil_print_name))) {
+      //cout << "// added to set: " << out_var << " using stencil+idx\n";
+      rename_wire(out_var, stencil_print_name, op, stencil_indices);
+      stream << "// added to set: " << out_var << " using stencil+idx\n";
+
+    } else if (is_wire(stencil_print_name) || is_defined(stencil_print_name) || is_storage(stencil_print_name)) {
+      stream << "// trying to hook up " << print_name(op->name) << endl;
+      //cout << "trying to hook up " << print_name(op->name) << endl;
+      /*
+        if (hw_wire_set.count(stencil_print_name)) {
+        hw_wire_set[out_var] = hw_wire_set[stencil_print_name];
+        stream << "// added to wire_set: " << out_var << " using stencil+idx\n";
+        } else if (hw_wire_set.count(print_name(op->name)) > 0) {
+        //stream << "// trying to hook up " << print_name(op->name) << endl;
+        */
+
+      //CoreIR::Wireable* stencil_wire = hw_wire_set[print_name(op->name)]; // one example wire
+      CoreIR::Wireable* stencil_wire = get_wire(print_name(op->name), op);
+      CoreIR::Wireable* orig_stencil_wire = stencil_wire;
+      vector<std::pair<CoreIR::Wireable*, CoreIR::Wireable*>> stencil_mux_pairs;
+
+      // FIXME: use proper bitwidth
+      CoreIR::Type* ptype;
+      if (op->type.bits() == 1) {
+        ptype = context->Bit();
+      } else {
+        ptype = context->Bit()->Arr(bitwidth);
+      }
+
+      string pt_name = unique_name("pt" + out_var);
+      stream << "// created passthrough with name " << pt_name << endl;
+
+      CoreIR::Wireable* pt = def->addInstance(pt_name, gens["passthrough"], {{"type",CoreIR::Const::make(context,ptype)}});
+      stencil_mux_pairs.push_back(std::make_pair(stencil_wire, pt->sel("in")));
+
+      // for every dim in the stencil, keep track of correct index and create muxes
+      for (size_t i = op->args.size(); i-- > 0 ;) { // count down from args-1 to 0
+        vector<std::pair<CoreIR::Wireable*, CoreIR::Wireable*>> new_pairs;
+            
+        CoreIR::Type* wire_type = stencil_wire->getType();
+        uint array_len = wire_type->getKind() == CoreIR::Type::TypeKind::TK_Array ?
+          //FIXME: CoreIR::isa<CoreIR::ArrayType>(wire_type) ? 
+          static_cast<CoreIR::ArrayType*>(wire_type)->getLen() : 0;
+        // cast<ArrayType>
+
+        // OR_ : dyn_cast<ArrayType>
+
+        if (is_const(op->args[i])) {
+          // constant index
+
+          //uint index = stoi(args_indices[i]);
+          uint index = id_const_value(op->args[i]);
+          //cout << "type is " << wire_type->getKind() << " and has length " << static_cast<CoreIR::ArrayType*>(wire_type)->getLen() << endl;
+
+          if (index < array_len) {
+            stream << "// using constant index " << std::to_string(index) << endl;
+            stencil_wire = stencil_wire->sel(index);
+
+            // keep track of corresponding stencil and mux inputs
+            for (auto sm_pair : stencil_mux_pairs) {
+              CoreIR::Wireable* stencil_i = sm_pair.first;
+              CoreIR::Wireable* mux_i = sm_pair.second;
+              new_pairs.push_back(std::make_pair(stencil_i->sel(index), mux_i));
+            }
+            stencil_mux_pairs = new_pairs;
+
+          } else {
+            stream << "// couldn't find selectStr " << std::to_string(index) << endl;
+            //cout << "couldn't find selectStr " << to_string(index) << endl;
+                
+            stencil_mux_pairs.clear();
+            stencil_mux_pairs.push_back(std::make_pair(orig_stencil_wire, pt->sel("in")));
+            break;
           }
 
+        } else {
+          // non-constant, variable index
+          // create muxes 
+          uint num_muxes = stencil_mux_pairs.size();
+          //cout << "  variable index creating " << num_muxes << " mux(es)" << endl;
 
-	  stream << "// added to wire_set: " << out_var << " using stencil\n";
-	  //cout << "// added to wire_set: " << out_var << " using stencil\n";
-	} else {
-          stream       << "// " << stencil_print_name << " not found so it's not going to work" << endl;
-          user_warning << "// " << stencil_print_name << " not found so it's not going to work\n";
-	}
+          stream << "// variable index creating " << num_muxes << " mux(es)" << endl;
+
+          // create mux for every input from previous layer
+          for (uint j = 0; j < num_muxes; j++) {
+            CoreIR::Wireable* stencil_i = stencil_mux_pairs[j].first;
+            CoreIR::Wireable* mux_i = stencil_mux_pairs[j].second;
+
+            string mux_name = unique_name(print_name(op->name) + std::to_string(i) + 
+                                          "_mux" + std::to_string(array_len) + "_" + std::to_string(j));
+
+            // FIXME: use proper bitwidth
+            CoreIR::Values sliceArgs = {{"width", CoreIR::Const::make(context,bitwidth)},
+                                        {"lo", CoreIR::Const::make(context,0)},
+                                        {"hi", CoreIR::Const::make(context,num_bits(array_len-1))}};
+            CoreIR::Wireable* slice_inst = def->addInstance("selslice" + mux_name, "coreir.slice", sliceArgs); 
+
+
+            CoreIR::Wireable* mux_inst = def->addInstance(mux_name, gens["muxn"], 
+                                                          {{"width",CoreIR::Const::make(context,bitwidth)},{"N",CoreIR::Const::make(context,array_len)}});
+                
+            def->connect(mux_inst->sel("out"), mux_i);
+            stream << "// created mux called " << mux_name << endl;
+
+            // wire up select
+            def->connect(get_wire(args_indices[i], op->args[i]), slice_inst->sel("in"));
+            def->connect(slice_inst->sel("out"), mux_inst->sel("in")->sel("sel"));
+
+            // add each corresponding stencil and mux input to list
+            for (uint mux_i = 0; mux_i < array_len; ++mux_i) {
+              CoreIR::Wireable* stencil_new = stencil_i->sel(mux_i);
+              CoreIR::Wireable* mux_new = mux_inst->sel("in")->sel("data")->sel(mux_i);
+              new_pairs.push_back(std::make_pair(stencil_new, mux_new));
+            } // for every mux input
+          } // for every mux
+              
+          //cout << "all muxes created" << endl;
+          stencil_wire = stencil_wire->sel(0);
+          stencil_mux_pairs = new_pairs;
+        }
+      } // for every dimension in stencil
+
+      // connect the passthrough output
+      add_wire(out_var, pt->sel("out"));
+          
+      // wire up stencil to generated muxes
+      for (auto sm_pair : stencil_mux_pairs) {
+        CoreIR::Wireable* stencil_i = sm_pair.first;
+        CoreIR::Wireable* mux_i = sm_pair.second;
+        def->connect(stencil_i, mux_i);
+      }
+
+
+      stream << "// added to wire_set: " << out_var << " using stencil\n";
+      //cout << "// added to wire_set: " << out_var << " using stencil\n";
+    } else {
+      stream       << "// " << stencil_print_name << " not found so it's not going to work" << endl;
+      user_warning << "// " << stencil_print_name << " not found so it's not going to work\n";
+    }
 
         
-    } else if (op->name == "dispatch_stream") {
-        // emits the calling arguments in comment
-        vector<string> args(op->args.size());
-        for(size_t i = 0; i < op->args.size(); i++)
-            args[i] = print_expr(op->args[i]);
+  } else if (op->name == "dispatch_stream") {
+    //cout << "doing a dispatch\n";
+    // emits the calling arguments in comment
+    vector<string> args(op->args.size());
+    for(size_t i = 0; i < op->args.size(); i++)
+      args[i] = print_expr(op->args[i]);
 
-        do_indent();
-        stream << "// dispatch_stream(";
-        for(size_t i = 0; i < args.size(); i++) {
-            stream << args[i];
+    do_indent();
+    stream << "// dispatch_stream(";
+    for(size_t i = 0; i < args.size(); i++) {
+      stream << args[i];
 
-            if (i != args.size() - 1)
-                stream << ", ";
-        }
-        stream << ");\n";
-        // syntax:
-        //   dispatch_stream(stream_name, num_of_dimensions,
-        //                   stencil_size_dim_0, stencil_step_dim_0, store_extent_dim_0,
-        //                   [stencil_size_dim_1, stencil_step_dim_1, store_extent_dim_1, ...]
-        //                   num_of_consumers,
-        //                   consumer_0_name, fifo_0_depth,
-        //                   consumer_0_offset_dim_0, consumer_0_extent_dim_0,
-        //                   [consumer_0_offset_dim_1, consumer_0_extent_dim_1, ...]
-        //                   [consumer_1_name, ...])
-
-        // recover the structed data from op->args
-        internal_assert(op->args.size() >= 2);
-        const Variable *stream_name_var = op->args[0].as<Variable>();
-        internal_assert(stream_name_var);
-        string stream_name = stream_name_var->name;
-        size_t num_of_demensions = *as_const_int(op->args[1]);
-        vector<int> stencil_sizes(num_of_demensions);
-        vector<int> stencil_steps(num_of_demensions);
-        vector<int> store_extents(num_of_demensions);
-
-        internal_assert(op->args.size() >= num_of_demensions*3 + 2);
-        for (size_t i = 0; i < num_of_demensions; i++) {
-            stencil_sizes[i] = *as_const_int(op->args[i*3 + 2]);
-            stencil_steps[i] = *as_const_int(op->args[i*3 + 3]);
-            store_extents[i] = *as_const_int(op->args[i*3 + 4]);
-        }
-
-        internal_assert(op->args.size() >= num_of_demensions*3 + 3);
-        size_t num_of_consumers = *as_const_int(op->args[num_of_demensions*3 + 2]);
-        vector<string> consumer_names(num_of_consumers);
-        vector<int> consumer_fifo_depth(num_of_consumers);
-        vector<vector<int> > consumer_offsets(num_of_consumers);
-        vector<vector<int> > consumer_extents(num_of_consumers);
-
-        internal_assert(op->args.size() >= num_of_demensions*3 + 3 + num_of_consumers*(2 + 2*num_of_demensions));
-        for (size_t i = 0; i < num_of_consumers; i++) {
-            const StringImm *string_imm = op->args[num_of_demensions*3 + 3 + (2 + 2*num_of_demensions)*i].as<StringImm>();
-            internal_assert(string_imm);
-            consumer_names[i] = string_imm->value;
-            const IntImm *int_imm = op->args[num_of_demensions*3 + 4 + (2 + 2*num_of_demensions)*i].as<IntImm>();
-            internal_assert(int_imm);
-            consumer_fifo_depth[i] = int_imm->value;
-            vector<int> offsets(num_of_demensions);
-            vector<int > extents(num_of_demensions);
-            for (size_t j = 0; j < num_of_demensions; j++) {
-                offsets[j] = *as_const_int(op->args[num_of_demensions*3 + 5 + (2 + 2*num_of_demensions)*i + 2*j]);
-                extents[j] = *as_const_int(op->args[num_of_demensions*3 + 6 + (2 + 2*num_of_demensions)*i + 2*j]);
-            }
-            consumer_offsets[i] = offsets;
-            consumer_extents[i] = extents;
-        }
-
-        // emits declarations of streams for each consumer
-        internal_assert(stencils.contains(stream_name));
-        Stencil_Type stream_type = stencils.get(stream_name);
-
-        // Optimization. if there is only one consumer and its fifo depth is zero
-        // , use C++ reference for the consumer stream
-        if (num_of_consumers == 1 && consumer_fifo_depth[0] == 0) {
-            string consumer_stream_name = stream_name + ".to." + consumer_names[0];
-            do_indent();
-            stream << print_stencil_type(stream_type) << " &"
-                   << print_name(consumer_stream_name) << " = "
-                   << print_name(stream_name) << ";\n";
-            id = "0"; // skip evaluation
-
-	    // generate coreir: update coreir structure
-	    string stream_in_name = print_name(stream_name);
-	    string stream_out_name = print_name(consumer_stream_name);
-            rename_wire(stream_out_name, stream_in_name, op->args[0]);
-            return;
-        }
-
-        for (size_t i = 0; i < num_of_consumers; i++) {
-            string consumer_stream_name = stream_name + ".to." + consumer_names[i];
-            Stencil_Type consumer_stream_type = stream_type;
-            consumer_stream_type.depth = std::max(consumer_fifo_depth[i], 1); // HLS tool doesn't support zero-depth FIFO yet
-            do_indent();
-            stream << print_stencil_type(consumer_stream_type) << ' '
-                   << print_name(consumer_stream_name) << ";\n";
-            // pragma
-            stencils.push(consumer_stream_name, consumer_stream_type);
-            stream << print_stencil_pragma(consumer_stream_name);
-            stencils.pop(consumer_stream_name);
-        }
-
-        // emits for a loop for each dimensions (larger dimension number, outer the loop)
-        for (int i = num_of_demensions - 1; i >= 0; i--) {
-            string dim_name = "_dim_" + std::to_string(i);
-            do_indent();
-            // HLS C: for(int dim = 0; dim <= store_extent - stencil.size; dim += stencil.step)
-            stream << "for (int " << dim_name <<" = 0; "
-                   << dim_name << " <= " << store_extents[i] - stencil_sizes[i] << "; "
-                   << dim_name << " += " << stencil_steps[i] << ")\n";
-
-            // generate coreir: counter
-            /*
-            internal_assert(is_const(op->min));
-            internal_assert(is_const(op->extent));
-            int min_value = id_const_value(op->min);
-            int max_value = min_value + id_const_value(op->extent);
-            int inc_value = 1;
-            string counter_name = "count_" + print_name(op->name);
-            CoreIR::Wireable* counter_inst = def->addInstance(counter_name, gens["counter"], 
-                                                              {{"width",CoreIR::Const::make(context,bitwidth)},
-                                                                  {"min",CoreIR::Const::make(context,min_value)},
-                                                                    {"max",CoreIR::Const::make(context,max_value)},
-                                                                      {"inc",CoreIR::Const::make(context,inc_value)}}
-                                                              );
-            hw_wire_set[print_name(op->name)] = counter_inst->sel("out");
-            cout << "counter added with name " << print_name(op->name) << endl;
-            */
-        }
-
-
-        open_scope();
-        // pragma
-        stream << "#pragma HLS PIPELINE\n";
-        // read stencil from stream
-        Stencil_Type stencil_type = stream_type;
-        stencil_type.type = Stencil_Type::StencilContainerType::Stencil;
-        string stencil_name = "tmp_stencil";
-        do_indent();
-        stream << "Packed" << print_stencil_type(stencil_type) << ' '
-               << print_name(stencil_name) << " = "
-               << print_name(stream_name) << ".read();\n";
-
-        // dispatch the stencil to each consumer stream
-        for (size_t i = 0; i < num_of_consumers; i++) {
-            string consumer_stream_name = stream_name + ".to." + consumer_names[i];
-            // emits the predicate for dispatching stencils
-            // HLS C: if(dim_0 >= consumer_offset_0 && dim_0 <= consumer_offset_0 + consumer_extent_0 - stencil_size_0
-            //           [&& dim_1 >= consumer_offset_1 && dim_1 <= consumer_offset_1 + consumer_extent_1 - stencil_size_1...])
-            do_indent();
-            stream << "if (";
-            for (size_t j = 0; j < num_of_demensions; j++) {
-                string dim_name = "_dim_" + std::to_string(j);
-                stream << dim_name << " >= " << consumer_offsets[i][j] << " && "
-                       << dim_name << " <= " << consumer_offsets[i][j] + consumer_extents[i][j] - stencil_sizes[j];
-                if (j != num_of_demensions - 1)
-                    stream << " && ";
-            }
-            stream << ")\n";
-
-            // emits the write call in the if body
-            open_scope();
-            do_indent();
-            stream << print_name(consumer_stream_name) << ".write("
-                   << print_name(stencil_name) << ");\n";
-            close_scope("");
-
-            // generate coreir
-            string stencil_print_name = print_name(stream_name);
-            string out_var = print_name(consumer_stream_name);
-            rename_wire(out_var, stencil_print_name, op->args[0]);
-        }
-
-        close_scope("");
-        id = "0"; // skip evaluation
-
-    } else {
-      stream << "couldn't find op named " << op->name << endl;
-      cout << "couldn't find op named " << op->name << endl;
-      CodeGen_CoreIR_Base::visit(op);
+      if (i != args.size() - 1)
+        stream << ", ";
     }
+    stream << ");\n";
+    // syntax:
+    //   dispatch_stream(stream_name, num_of_dimensions,
+    //                   stencil_size_dim_0, stencil_step_dim_0, store_extent_dim_0,
+    //                   [stencil_size_dim_1, stencil_step_dim_1, store_extent_dim_1, ...]
+    //                   num_of_consumers,
+    //                   consumer_0_name, fifo_0_depth,
+    //                   consumer_0_offset_dim_0, consumer_0_extent_dim_0,
+    //                   [consumer_0_offset_dim_1, consumer_0_extent_dim_1, ...]
+    //                   [consumer_1_name, ...])
+
+    // recover the structed data from op->args
+    internal_assert(op->args.size() >= 2);
+    const Variable *stream_name_var = op->args[0].as<Variable>();
+    internal_assert(stream_name_var);
+    string stream_name = stream_name_var->name;
+    size_t num_of_demensions = *as_const_int(op->args[1]);
+    vector<int> stencil_sizes(num_of_demensions);
+    vector<int> stencil_steps(num_of_demensions);
+    vector<int> store_extents(num_of_demensions);
+
+    internal_assert(op->args.size() >= num_of_demensions*3 + 2);
+    for (size_t i = 0; i < num_of_demensions; i++) {
+      stencil_sizes[i] = *as_const_int(op->args[i*3 + 2]);
+      stencil_steps[i] = *as_const_int(op->args[i*3 + 3]);
+      store_extents[i] = *as_const_int(op->args[i*3 + 4]);
+    }
+
+    internal_assert(op->args.size() >= num_of_demensions*3 + 3);
+    size_t num_of_consumers = *as_const_int(op->args[num_of_demensions*3 + 2]);
+    vector<string> consumer_names(num_of_consumers);
+    vector<int> consumer_fifo_depth(num_of_consumers);
+    vector<vector<int> > consumer_offsets(num_of_consumers);
+    vector<vector<int> > consumer_extents(num_of_consumers);
+
+    internal_assert(op->args.size() >= num_of_demensions*3 + 3 + num_of_consumers*(2 + 2*num_of_demensions));
+    for (size_t i = 0; i < num_of_consumers; i++) {
+      const StringImm *string_imm = op->args[num_of_demensions*3 + 3 + (2 + 2*num_of_demensions)*i].as<StringImm>();
+      internal_assert(string_imm);
+      consumer_names[i] = string_imm->value;
+      const IntImm *int_imm = op->args[num_of_demensions*3 + 4 + (2 + 2*num_of_demensions)*i].as<IntImm>();
+      internal_assert(int_imm);
+      consumer_fifo_depth[i] = int_imm->value;
+      vector<int> offsets(num_of_demensions);
+      vector<int > extents(num_of_demensions);
+      for (size_t j = 0; j < num_of_demensions; j++) {
+        offsets[j] = *as_const_int(op->args[num_of_demensions*3 + 5 + (2 + 2*num_of_demensions)*i + 2*j]);
+        extents[j] = *as_const_int(op->args[num_of_demensions*3 + 6 + (2 + 2*num_of_demensions)*i + 2*j]);
+      }
+      consumer_offsets[i] = offsets;
+      consumer_extents[i] = extents;
+    }
+
+    // emits declarations of streams for each consumer
+    internal_assert(stencils.contains(stream_name));
+    Stencil_Type stream_type = stencils.get(stream_name);
+
+    // Optimization. if there is only one consumer and its fifo depth is zero
+    // , use C++ reference for the consumer stream
+    if (num_of_consumers == 1 && consumer_fifo_depth[0] == 0) {
+      string consumer_stream_name = stream_name + ".to." + consumer_names[0];
+      do_indent();
+      stream << print_stencil_type(stream_type) << " &"
+             << print_name(consumer_stream_name) << " = "
+             << print_name(stream_name) << ";\n";
+      id = "0"; // skip evaluation
+
+      // generate coreir: update coreir structure
+      string stream_in_name = print_name(stream_name);
+      string stream_out_name = print_name(consumer_stream_name);
+      string next_lb_name = print_name(consumer_names[0]);
+
+      stream << "// connecting " << stream_in_name << " to " << next_lb_name << "\n";
+      //cout << "doing optimization of dispatch\n";
+      record_dispatch(stream_in_name, next_lb_name);
+      rename_wire(stream_out_name, stream_in_name, op->args[0]);
+      //cout << "finished optimization of dispatch\n";
+      //def->connect({stream_in_name,"valid"}, {next_lb_name, "wen"});
+      return;
+    }
+
+    for (size_t i = 0; i < num_of_consumers; i++) {
+      string consumer_stream_name = stream_name + ".to." + consumer_names[i];
+      Stencil_Type consumer_stream_type = stream_type;
+      consumer_stream_type.depth = std::max(consumer_fifo_depth[i], 1); // HLS tool doesn't support zero-depth FIFO yet
+      do_indent();
+      stream << print_stencil_type(consumer_stream_type) << ' '
+             << print_name(consumer_stream_name) << ";\n";
+      // pragma
+      stencils.push(consumer_stream_name, consumer_stream_type);
+      stream << print_stencil_pragma(consumer_stream_name);
+      stencils.pop(consumer_stream_name);
+
+      // record dispatch for coreir
+      string stream_in_name = print_name(stream_name);
+      string next_lb_name = print_name(consumer_names[i]);
+      record_dispatch(stream_in_name, next_lb_name);
+    }
+
+    // emits for a loop for each dimensions (larger dimension number, outer the loop)
+    for (int i = num_of_demensions - 1; i >= 0; i--) {
+      string dim_name = "_dim_" + std::to_string(i);
+      do_indent();
+      // HLS C: for(int dim = 0; dim <= store_extent - stencil.size; dim += stencil.step)
+      stream << "for (int " << dim_name <<" = 0; "
+             << dim_name << " <= " << store_extents[i] - stencil_sizes[i] << "; "
+             << dim_name << " += " << stencil_steps[i] << ")\n";
+
+    }
+
+
+    open_scope();
+    // pragma
+    stream << "#pragma HLS PIPELINE\n";
+    // read stencil from stream
+    Stencil_Type stencil_type = stream_type;
+    stencil_type.type = Stencil_Type::StencilContainerType::Stencil;
+    string stencil_name = "tmp_stencil";
+    do_indent();
+    stream << "Packed" << print_stencil_type(stencil_type) << ' '
+           << print_name(stencil_name) << " = "
+           << print_name(stream_name) << ".read();\n";
+
+    // dispatch the stencil to each consumer stream
+    for (size_t i = 0; i < num_of_consumers; i++) {
+      string consumer_stream_name = stream_name + ".to." + consumer_names[i];
+      // emits the predicate for dispatching stencils
+      // HLS C: if(dim_0 >= consumer_offset_0 && dim_0 <= consumer_offset_0 + consumer_extent_0 - stencil_size_0
+      //           [&& dim_1 >= consumer_offset_1 && dim_1 <= consumer_offset_1 + consumer_extent_1 - stencil_size_1...])
+      do_indent();
+      stream << "if (";
+      for (size_t j = 0; j < num_of_demensions; j++) {
+        string dim_name = "_dim_" + std::to_string(j);
+        stream << dim_name << " >= " << consumer_offsets[i][j] << " && "
+               << dim_name << " <= " << consumer_offsets[i][j] + consumer_extents[i][j] - stencil_sizes[j];
+        if (j != num_of_demensions - 1)
+          stream << " && ";
+      }
+      stream << ")\n";
+
+      // emits the write call in the if body
+      open_scope();
+      do_indent();
+      stream << print_name(consumer_stream_name) << ".write("
+             << print_name(stencil_name) << ");\n";
+      close_scope("");
+
+      // generate coreir
+      string stream_in_name = print_name(stream_name);
+      string stream_out_name = print_name(consumer_stream_name);
+      rename_wire(stream_out_name, stream_in_name, op->args[0]);
+      //def->connect({stream_in_name,"valid"}, {print_name(consumer_names[i]), "wen"});
+						
+    }
+
+    close_scope("");
+    id = "0"; // skip evaluation
+
+  } else {
+    stream << "couldn't find op named " << op->name << endl;
+    cout << "couldn't find op named " << op->name << endl;
+    CodeGen_CoreIR_Base::visit(op);
+  }
 }
 
 void CodeGen_CoreIR_Target::CodeGen_CoreIR_C::visit(const Realize *op) {
+  // This realized stream variable can be reused. Stream constructed as hierarchical array.
+  if (ends_with(op->name, ".stream") || 
+      ends_with(op->name, ".stencil") ||
+      ends_with(op->name, ".stencil_update")) {
+    // create a stream type
+    internal_assert(op->types.size() == 1);
+    allocations.push(op->name, {op->types[0], "null"});
+    Stencil_Type stream_type;
     if (ends_with(op->name, ".stream")) {
-
-        // create a stream type
-        internal_assert(op->types.size() == 1);
-        allocations.push(op->name, {op->types[0], "null"});
-        Stencil_Type stream_type({Stencil_Type::StencilContainerType::Stream,
-                    op->types[0], op->bounds, 1});
-        stencils.push(op->name, stream_type);
-
-        // emits the declaration for the stream
-        do_indent();
-        stream << "[realize stream] ";
-        stream << print_stencil_type(stream_type) << ' ' << print_name(op->name) << ";\n";
-        stream << print_stencil_pragma(op->name);
-
-        // generate coreir: add passthrough
-        vector<uint> indices;
-        for(const auto &range : stream_type.bounds) {
-          assert(is_const(range.extent));
-          indices.push_back(id_const_value(range.extent));
-        }
-
-        CoreIR::Type* ptype;
-        if (stream_type.elemType.bits() == 1) {
-          ptype = context->Bit();
-        } else {
-          ptype = context->Bit()->Arr(bitwidth);
-        }
-
-        for (uint i=0; i<indices.size(); ++i) {
-          ptype = ptype->Arr(indices[i]);
-        }
-        if (indices.size() > 4) {
-          internal_error << "provide stencil is too large=" << indices.size()
-                         << ". Sizes up to 4 are supported.\n";
-        }
-
-        stream << "// created a passthrough for " << print_name(op->name) << endl;
-        string pt_name = unique_name("pt" + print_name(op->name));
-
-        CoreIR::Wireable* pt = def->addInstance(pt_name, gens["passthrough"], {{"type",CoreIR::Const::make(context,ptype)}});
-        hw_store_set[print_name(op->name)] = std::make_shared<Storage_Def>(Storage_Def(ptype, pt));
-        stream << "created storage called " << op->name << endl;
-        //cout << "created storage called " << op->name << endl;
-
-        // traverse down
-        op->body.accept(this);
-
-        // We didn't generate free stmt inside for stream type
-        allocations.pop(op->name);
-        stencils.pop(op->name);
-
-    } else if (ends_with(op->name, ".stencil") ||
-               ends_with(op->name, ".stencil_update")) {
-        // create a stencil type
-        internal_assert(op->types.size() == 1);
-        allocations.push(op->name, {op->types[0], "null"});
-        Stencil_Type stype({Stencil_Type::StencilContainerType::Stencil, op->types[0], op->bounds, 1});
-        stencils.push(op->name, stype);
-
-        do_indent();
-        stream << "[realize stencil] ";
-        // Stencil<uint16_t, 1, 1, 1> conv1_stencil_update;
-        stream << print_stencil_type(stype) << ' ' << print_name(op->name) << ";\n";
-        stream << print_stencil_pragma(op->name);
-
-        // generate coreir: add passthrough
-        vector<uint> indices;
-        for(const auto &range : stype.bounds) {
-          internal_assert(is_const(range.extent));
-          indices.push_back(id_const_value(range.extent));
-        }
-
-        CoreIR::Type* ptype;
-        if (stype.elemType.bits() == 1) {
-          ptype = context->Bit();
-        } else {
-          ptype = context->Bit()->Arr(bitwidth);
-        }
-
-        for (uint i=0; i<indices.size(); ++i) {
-          ptype = ptype->Arr(indices[i]);
-        }
-        if (indices.size() > 4) {
-          internal_error << "provide stencil is too large=" << indices.size()
-                         << ". Sizes up to 4 are supported.\n";
-        }
-
-        stream << "// created a passthrough for " << print_name(op->name) << endl;
-        string pt_name = unique_name("pt" + print_name(op->name));
-
-        CoreIR::Wireable* pt = def->addInstance(pt_name, gens["passthrough"], {{"type",CoreIR::Const::make(context,ptype)}});
-        hw_store_set[print_name(op->name)] = std::make_shared<Storage_Def>(Storage_Def(ptype, pt));
-        stream << "// created storage called " << print_name(op->name) << endl;
-        //cout << "created storage called " << print_name(op->name) << endl;
-        
-        op->body.accept(this);
-
-        // We didn't generate free stmt inside for stream type
-        allocations.pop(op->name);
-        stencils.pop(op->name);
+      stream_type = Stencil_Type({Stencil_Type::StencilContainerType::Stream, op->types[0], op->bounds, 1});
     } else {
-        CodeGen_C::visit(op);
+      stream_type = Stencil_Type({Stencil_Type::StencilContainerType::Stencil, op->types[0], op->bounds, 1});
     }
-}
+    stencils.push(op->name, stream_type);
 
-void CodeGen_CoreIR_Target::CodeGen_CoreIR_C::visit(const Load *op) {
-    Type t = op->type;
-    bool type_cast_needed =
-        !allocations.contains(op->name) ||
-        allocations.get(op->name).type != t;
-
-    string id_index = print_expr(op->index);
-    string name = print_name(op->name);
-    ostringstream rhs;
-    if (type_cast_needed) {
-        rhs << "(("
-            << print_type(op->type)
-            << " *)"
-            << name
-            << ")";
-    } else {
-      rhs << name;
-    }
-    rhs << "["
-        << id_index
-        << "][load]";
-
-    string out_var = print_assignment(op->type, rhs.str());
-
-    // generate coreir
-    // FIXME: ugly way to create array of wireables
-
-    //const Variable* index_var = op->index.as<Variable>();
-    if (is_const(op->index)) {
-      string in_var = name + "_" + id_index;
-      rename_wire(out_var, in_var, Expr());      
-
-    } else {
-      std::vector<const Variable*> dep_vars = find_dep_vars(op->index);
-      stream << "// vars for " << name << ": ";
-      //cout << "// vars for " << name << ": ";
-      for (auto v : dep_vars) {
-        stream << v->name << ", ";
-        //cout << v->name << ", ";
-      }
-      stream << endl;
-      //cout << endl;
-
-      std::vector<VarValues> pts;
-      for (const Variable* v : dep_vars) {
-        string id_var = print_name(v->name);
-        internal_assert(is_defined(id_var)) << " didn't work for " << id_var << "\n";
-
-        std::shared_ptr<CoreIR_Inst_Args> counter_args = hw_def_set[id_var];
-        uint counter_max = counter_args->args.at("max")->get<int>();
-        uint counter_min = counter_args->args.at("min")->get<int>();
-        uint counter_inc = counter_args->args.at("inc")->get<int>();
-        internal_assert(counter_min == 0);
-        internal_assert(counter_inc == 1);
-
-        stream << "// found counter named " << id_var << " with max " << counter_max << endl;
-        
-        std::vector<VarValues> old_pts = pts;
-        pts.clear();
-        if (old_pts.empty()) {
-          // add all points from counter
-          for (uint count=0; count<counter_max; ++count) {
-            VarValues vvv;
-            vvv[id_var] = count;
-            stream << "//     pushed var,count: " << id_var << "," << count << endl;
-            pts.push_back(vvv);
-          }
-
-          std::vector<int> indices = eval_expr_with_vars(op->index, pts);
-
-          stream << "// found " << indices.size() << " indices for pts size " << pts.size()
-                 <<endl << "// ";
-          for (auto idx : indices) {
-            stream << idx << ", ";
-          }
-          stream << endl;
-
-          uint mux_size = indices.size();
-          string mux_name = unique_name(name + "_mux" + std::to_string(mux_size));
-
-          CoreIR::Values sliceArgs = {{"width", CoreIR::Const::make(context,bitwidth)},
-                                      {"lo", CoreIR::Const::make(context,0)},
-                                      {"hi", CoreIR::Const::make(context,num_bits(mux_size-1))}};
-          CoreIR::Wireable* slice_inst = def->addInstance("selslice" + mux_name, "coreir.slice", sliceArgs); 
-
-          
-          CoreIR::Wireable* mux_inst = def->addInstance(mux_name, gens["muxn"], 
-                                                        {{"width",CoreIR::Const::make(context,bitwidth)},{"N",CoreIR::Const::make(context,mux_size)}});
-
-          def->connect(get_wire(id_var, Expr()), slice_inst->sel("in"));
-          def->connect(mux_inst->sel("in")->sel("sel"), slice_inst->sel("out"));
-          for (uint i=0; i<mux_size; ++i) {
-            CoreIR::Wireable* wire_in = get_wire(name + "_" + std::to_string(indices[i]), Expr());
-            internal_assert(wire_in) << "Allocation " << name << " was not saved yet for index " << indices[i] << "\n";
-            def->connect(wire_in, mux_inst->sel("in")->sel("data")->sel(i));
-          }
-          add_wire(out_var, mux_inst->sel("out"));
-
-
-        } else {
-          for (uint count=0; count<counter_max; ++count) {
-            //FIXME: implement this
-            internal_error << "Multiple variable indexing into loads isn't implemented yet!\n";
-          }
-        }
-      }
-
-
-
-      //hw_wire_set[out_var] = self->sel("in");
-
-//    } else {
-//      cout << "we cannot index " << name << " with an expr yet!" << endl;
-//      stream << "// we cannot index " << name << " with an expr yet!" << endl;
-    } 
-}
-
-void CodeGen_CoreIR_Target::CodeGen_CoreIR_C::visit(const Store *op) {
-    Type t = op->value.type();
-
-    bool type_cast_needed =
-        t.is_handle() ||
-        !allocations.contains(op->name) ||
-        allocations.get(op->name).type != t;
-
-    string id_index = print_expr(op->index);
-    string id_value = print_expr(op->value);
-    string name = print_name(op->name);
+    // emits the declaration for the stream
     do_indent();
+    stream << "[realize] ";
+    stream << print_stencil_type(stream_type) << ' ' << print_name(op->name) << ";\n";
+    stream << print_stencil_pragma(op->name);
 
-    if (type_cast_needed) {
-        stream << "((const "
-               << print_type(t)
-               << " *)"
-               << name
-               << ")";
-    } else {
-        stream << name;
+    // generate coreir: add passthrough using vector of widths
+    vector<uint> indices;
+    for(const auto &range : stream_type.bounds) {
+      assert(is_const(range.extent));
+      indices.push_back(id_const_value(range.extent));
     }
-    stream << "["
-           << id_index
-           << "] = "
-           << id_value
-           << ";\n";
+       
+    // FIXME: use proper bitwidth
+    CoreIR::Type* ptype;
+    if (stream_type.elemType.bits() == 1) {
+      ptype = context->Bit();
+    } else {
+      ptype = context->Bit()->Arr(bitwidth);
+    }
 
-    // generate coreir
-    // FIXME: ugly way to create array of wireables
+    // create type for passthrough
+    for (uint i=0; i<indices.size(); ++i) {
+      ptype = ptype->Arr(indices[i]);
+    }
 
-    string out_var = name + "_" + id_index;
-    rename_wire(out_var, id_value, op->value);
+    if (indices.size() > 4) {
+      internal_error << "provide stencil is too large=" << indices.size()
+                     << ". Sizes up to 4 are supported.\n";
+    }
 
+    // create coreir instance
+    stream << "// created a passthrough for " << print_name(op->name) << endl;
+    string pt_name = unique_name("pt" + print_name(op->name));
+    CoreIR::Wireable* pt = def->addInstance(pt_name, gens["passthrough"], {{"type",CoreIR::Const::make(context,ptype)}});
+
+    // store passthrough in storage in case variable reused multiple times
+    hw_store_set[print_name(op->name)] = std::make_shared<Storage_Def>(Storage_Def(ptype, pt));
+    stream << "// created storage called " << op->name << endl;
+
+    // traverse down
+    op->body.accept(this);
+
+    // We didn't generate free stmt inside for stream/stencil type
+    allocations.pop(op->name);
+    stencils.pop(op->name);
+  } else {
+    CodeGen_C::visit(op);
+  }
 }
 
 void CodeGen_CoreIR_Target::CodeGen_CoreIR_C::visit(const IfThenElse *op) {
@@ -2277,6 +2277,7 @@ void CodeGen_CoreIR_Target::CodeGen_CoreIR_C::visit(const IfThenElse *op) {
 
   if (!op) {
     internal_error << "there is already a predicate set\n";
+    // FIXME: handle nested branches
   }
   predicate = op;
   op->then_case.accept(this);
@@ -2285,6 +2286,7 @@ void CodeGen_CoreIR_Target::CodeGen_CoreIR_C::visit(const IfThenElse *op) {
   close_scope("if " + cond_id);
 
   if (op->else_case.defined()) {
+    // FIXME: handle else case
     user_error << "we don't do else cases\n";
     do_indent();
     stream << "else\n";
@@ -2293,6 +2295,152 @@ void CodeGen_CoreIR_Target::CodeGen_CoreIR_C::visit(const IfThenElse *op) {
     close_scope("if " + cond_id + " else");
   }
 
+}
+
+void CodeGen_CoreIR_Target::CodeGen_CoreIR_C::visit(const Store *op) {
+  Type t = op->value.type();
+
+  bool type_cast_needed =
+    t.is_handle() ||
+    !allocations.contains(op->name) ||
+    allocations.get(op->name).type != t;
+
+  string id_index = print_expr(op->index);
+  string id_value = print_expr(op->value);
+  string name = print_name(op->name);
+  do_indent();
+
+  if (type_cast_needed) {
+    stream << "((const "
+           << print_type(t)
+           << " *)"
+           << name
+           << ")";
+  } else {
+    stream << name;
+  }
+  // FIXME: handle case that id_index is not a constant value
+  stream << "["
+         << id_index
+         << "] = "
+         << id_value
+         << ";\n";
+
+  // generate coreir
+  string out_var = name + "_" + id_index;
+  rename_wire(out_var, id_value, op->value);
+
+}
+
+// Load from an array. A variable load leads to a complicated mux
+//   with complicated wiring so variables not computed.
+void CodeGen_CoreIR_Target::CodeGen_CoreIR_C::visit(const Load *op) {
+  Type t = op->type;
+  bool type_cast_needed =
+    !allocations.contains(op->name) ||
+    allocations.get(op->name).type != t;
+
+  string id_index = print_expr(op->index);
+  string name = print_name(op->name);
+  ostringstream rhs;
+  if (type_cast_needed) {
+    rhs << "(("
+        << print_type(op->type)
+        << " *)"
+        << name
+        << ")";
+  } else {
+    rhs << name;
+  }
+  rhs << "["
+      << id_index
+      << "][load]";
+
+  string out_var = print_assignment(op->type, rhs.str());
+
+  // generate coreir
+  if (is_const(op->index)) {
+    string in_var = name + "_" + id_index;
+    rename_wire(out_var, in_var, Expr());      
+
+  } else { // variable load: use a mux for where data originates
+    std::vector<const Variable*> dep_vars = find_dep_vars(op->index);
+    stream << "// vars for " << name << ": ";
+    //cout << "// vars for " << name << ": ";
+    for (auto v : dep_vars) {
+      stream << v->name << ", ";
+      //cout << v->name << ", ";
+    }
+    stream << endl;
+    //cout << endl;
+
+    // Calculate variable expression values and wire up mux instead of calculating expr in hw.
+    std::vector<VarValues> pts;
+    for (const Variable* v : dep_vars) {
+      string id_var = print_name(v->name);
+      internal_assert(is_defined(id_var)) << " didn't work for " << id_var << "\n";
+
+      std::shared_ptr<CoreIR_Inst_Args> counter_args = hw_def_set[id_var];
+      uint counter_max = counter_args->args.at("max")->get<int>();
+      uint counter_min = counter_args->args.at("min")->get<int>();
+      uint counter_inc = counter_args->args.at("inc")->get<int>();
+      internal_assert(counter_min == 0);
+      internal_assert(counter_inc == 1);
+
+      stream << "// found counter named " << id_var << " with max " << counter_max << endl;
+        
+      std::vector<VarValues> old_pts = pts;
+      pts.clear();
+      if (old_pts.empty()) {
+        // add all points from counter
+        for (uint count=0; count<counter_max; ++count) {
+          VarValues vvv;
+          vvv[id_var] = count;
+          stream << "//     pushed var,count: " << id_var << "," << count << endl;
+          pts.push_back(vvv);
+        }
+
+        std::vector<int> indices = eval_expr_with_vars(op->index, pts);
+
+        stream << "// found " << indices.size() << " indices for pts size " << pts.size()
+               <<endl << "// ";
+        for (auto idx : indices) {
+          stream << idx << ", ";
+        }
+        stream << endl;
+
+        uint mux_size = indices.size();
+        string mux_name = unique_name(name + "_mux" + std::to_string(mux_size));
+
+        // FIXME: use proper bitwidth
+        CoreIR::Values sliceArgs = {{"width", CoreIR::Const::make(context,bitwidth)},
+                                    {"lo", CoreIR::Const::make(context,0)},
+                                    {"hi", CoreIR::Const::make(context,num_bits(mux_size-1))}};
+        CoreIR::Wireable* slice_inst = def->addInstance("selslice" + mux_name, "coreir.slice", sliceArgs); 
+
+          
+        CoreIR::Wireable* mux_inst = def->addInstance(mux_name, gens["muxn"], 
+                                                      {{"width",CoreIR::Const::make(context,bitwidth)},{"N",CoreIR::Const::make(context,mux_size)}});
+
+        def->connect(get_wire(id_var, Expr()), slice_inst->sel("in"));
+        def->connect(mux_inst->sel("in")->sel("sel"), slice_inst->sel("out"));
+        for (uint i=0; i<mux_size; ++i) {
+          CoreIR::Wireable* wire_in = get_wire(name + "_" + std::to_string(indices[i]), Expr());
+          internal_assert(wire_in) << "Allocation " << name << " was not saved yet for index " << indices[i] << "\n";
+          def->connect(wire_in, mux_inst->sel("in")->sel("data")->sel(i));
+        }
+        add_wire(out_var, mux_inst->sel("out"));
+
+
+      } else {
+        for (uint count=0; count<counter_max; ++count) {
+          //FIXME: implement this
+          internal_error << "Multiple variable indexing into loads isn't implemented yet!\n";
+        }
+      }
+    }
+
+  } 
 }
 
 // analysis passes structured in a similar fashion to those in Simplify.cpp const_int_bounds( )

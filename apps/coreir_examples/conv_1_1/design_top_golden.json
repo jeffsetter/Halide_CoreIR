@@ -1,0 +1,41 @@
+{"top":"global.DesignTop",
+"namespaces":{
+  "global":{
+    "modules":{
+      "DesignTop":{
+        "type":["Record",[
+          ["in",["Record",[["arg_1",["Array",1,["Array",1,["Array",16,"BitIn"]]]]]]],
+          ["out",["Array",1,["Array",1,["Array",16,"Bit"]]]]
+        ]],
+        "instances":{
+          "add_285_289_290":{
+            "genref":"coreir.add",
+            "genargs":{"width":["Int",16]}
+          },
+          "const0__284":{
+            "genref":"coreir.const",
+            "genargs":{"width":["Int",16]},
+            "modargs":{"value":[["BitVector",16],"16'h0000"]}
+          },
+          "const3__288":{
+            "genref":"coreir.const",
+            "genargs":{"width":["Int",16]},
+            "modargs":{"value":[["BitVector",16],"16'h0003"]}
+          },
+          "mul_287_288_289":{
+            "genref":"coreir.mul",
+            "genargs":{"width":["Int",16]}
+          }
+        },
+        "connections":[
+          ["const0__284.out","add_285_289_290.in0"],
+          ["mul_287_288_289.out","add_285_289_290.in1"],
+          ["self.out.0.0","add_285_289_290.out"],
+          ["mul_287_288_289.in1","const3__288.out"],
+          ["self.in.arg_1.0.0","mul_287_288_289.in0"]
+        ]
+      }
+    }
+  }
+}
+}
