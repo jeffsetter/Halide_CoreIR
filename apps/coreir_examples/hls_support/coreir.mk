@@ -1,4 +1,5 @@
 SHELL := /bin/bash
+OUTPUT_REDIRECTION ?= &>/dev/null
 
 APP_PATH := $(dir $(realpath $(firstword $(MAKEFILE_LIST))))
 APPNAME := $(notdir $(patsubst %/,%,$(dir $(APP_PATH))))
@@ -51,9 +52,9 @@ graph.png: design_top.txt
 
 # Test if app works, using cached result if json design matches golden.
 test:
-	@-$(MAKE) -s pipeline > /dev/null
-	@-$(MAKE) -s design_top.json &> /dev/null
-	@-$(MAKE) -s run > /dev/null
+	@-$(MAKE) -s pipeline $(OUTPUT_REDIRECTION)
+	@-$(MAKE) -s design_top.json $(OUTPUT_REDIRECTION)
+	@-$(MAKE) -s run $(OUTPUT_REDIRECTION)
 	@if [ -f "passed.md5" ]; then \
 		md5sum -c --status passed.md5; \
 		EXIT_CODE=$$?; \
@@ -78,7 +79,7 @@ test:
 
 # Run design on cpu and coreir interpreter, and print if it passes/fails.
 testrun:
-		@-$(MAKE) out.png > /dev/null; \
+		@-$(MAKE) out.png $(OUTPUT_REDIRECTION); \
 		EXIT_CODE=$$?; \
 		if [[ $$EXIT_CODE = "0" && -f "out.png" ]]; then \
 			printf "%-15s \033[1;33m%s\033[0m\n" $(APPNAME) "PASSED, but needs golden updated"; \
