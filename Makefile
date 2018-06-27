@@ -1213,9 +1213,9 @@ test_coreir:  $(LIB_DIR)/libHalide.a $(INCLUDE_DIR)/Halide.h $(INCLUDE_DIR)/Hali
 	$(MAKE) -C apps/coreir_tests cleanall test_all HALIDE_BIN_PATH=$(CURDIR) HALIDE_SRC_PATH=$(ROOT_DIR) || exit; \
 	$(MAKE) -C apps/coreir_examples cleanall test_travis HALIDE_BIN_PATH=$(CURDIR) HALIDE_SRC_PATH=$(ROOT_DIR) || exit; \
 
-# Test that does not build anything first
+# Test that does not build libHalide from scratch
 test_coreir_prebuilt:
-	$(MAKE) -C apps/coreir_examples cleanall test_all HALIDE_BIN_PATH=$(CURDIR) HALIDE_SRC_PATH=$(ROOT_DIR) || exit; \
+	$(MAKE) -C apps/coreir_examples cleanall test_travis HALIDE_BIN_PATH=$(CURDIR) HALIDE_SRC_PATH=$(ROOT_DIR) || exit; \
 
 fulltest_coreir:
 	$(MAKE) test_coreir test_correctness test_generators
