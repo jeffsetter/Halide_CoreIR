@@ -27,7 +27,7 @@ public:
     big(x,y) = clamped(x,y) >= 50;
     logic(x,y) = !((threshold(x,y) & ceiling(x,y)) | (big(x,y) ^ ceiling(x,y)));
     modified(x,y) = select(logic(x,y), logic(x,y), big(x,y));
-    modified16(x,y) = select(modified(x,y), 1, 0);
+    modified16(x,y) = cast<uint16_t>(select(modified(x,y), 1, 0));
 
     hw_output(x,y) = modified16(x,y);
     output(x, y) = hw_output(x, y);
