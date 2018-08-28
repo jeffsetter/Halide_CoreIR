@@ -1,7 +1,7 @@
 SHELL := /bin/bash
 
 # comment out this line to output when creating and testing designs
-OUTPUT = &>/dev/null
+OUTPUT_REDIRECTION ?= &>/dev/null
 
 WORKING_APPS = pointwise param \
 	conv_1_1 conv_1_2 conv_2_1 conv_3_1 conv_bw gaussian blur_1_4 \
@@ -36,11 +36,11 @@ $(WORKING_APPS):
 	$(MAKE) -C $@ -i test
 
 %-test:
-	$(MAKE) -C $* -si test $(OUTPUT)
+	$(MAKE) -C $* -si test $(OUTPUT_REDIRECTION)
 	@$(MAKE) -C $* -s check --no-print-directory
 
 %-update-golden:
-	$(MAKE) -C $* update_golden $(OUTPUT)
+	$(MAKE) -C $* update_golden $(OUTPUT_REDIRECTION)
 	@$(MAKE) -C $* -s check --no-print-directory
 
 %-check:
@@ -49,6 +49,8 @@ $(WORKING_APPS):
 test_conv: conv_1_2 conv_2_1 conv_3_1 conv_bw conv_nest
 
 test_onebit: onebit_comp onebit_and onebit_mux onebit_bool
+
+test_travis: pointwise conv_bw onebit_bool harris cascade
 
 test_all_apps: $(WORKING_APPS_TESTS)
 	$(MAKE) check_all_apps
