@@ -24,11 +24,12 @@ const unsigned char gaussian2d[5][5] = {
 };
 
 int main(int argc, char **argv) {
-    Image<uint8_t> in(62, 62, 1);
+  int stencil_size = 5;
+    Image<uint8_t> in(64, 64, 1);
     Image<uint8_t> weight(5,5);
 
-    Image<uint8_t> out_native(in.width(), in.height(), in.channels());
-    Image<uint8_t> out_hls(in.width(), in.height(), in.channels());
+    Image<uint8_t> out_native(in.width()-stencil_size, in.height()-stencil_size, in.channels());
+    Image<uint8_t> out_hls(in.width()-stencil_size, in.height()-stencil_size, in.channels());
     Image<uint8_t> out_coreir(in.width(), in.height(), in.channels());
 
     int l = 0;
@@ -51,13 +52,13 @@ int main(int argc, char **argv) {
     printf("start.\n");
 
     //    pipeline_native(in, weight, 0, out_native);
-    pipeline_native(in, 0, out_native);
+    pipeline_native(in, out_native);
     save_image(out_native, "out.png");
 
     printf("finish running native code\n");
 
     //    pipeline_hls(in, weight, 0, out_hls);
-    pipeline_hls(in, 0, out_hls);
+    pipeline_hls(in, out_hls);
 
     printf("finish running HLS code\n");
 
@@ -113,9 +114,9 @@ int main(int argc, char **argv) {
             
           // read output wire
           out_coreir(x,y,c) = state.getBitVec("self.out_0_0").to_type<uint16_t>();
-          if (x>=2 && y>=2 && out_native(x-2, y-2, c) != out_coreir(x, y, c)) {
+          if (x>=stencil_size && y>=stencil_size && out_native(x-stencil_size, y-stencil_size, c) != out_coreir(x, y, c)) {
             printf("out_native(%d, %d, %d) = %d, but out_coreir(%d, %d, %d) = %d\n",
-                   x-2, y-2, c, out_native(x-2, y-2, c),
+                   x-stencil_size, y-stencil_size, c, out_native(x-stencil_size, y-stencil_size, c),
                    x, y, c, out_coreir(x, y, c));
             success = false;
           }

@@ -122,17 +122,18 @@ public:
     }
 
   void compile_coreir() {
-        std::cout << "\ncompiling CoreIR code..." << std::endl;
-	clamped.compute_root();
-     	hw_output.compute_root();
-	conv1.linebuffer();
-	hw_output.tile(x, y, xo, yo, xi, yi, 256,256).reorder(c,xi,yi,xo,yo);
-	hw_output.accelerate({clamped}, xi, xo, {kernel});
-        hw_output.unroll(c);
+    std::cout << "\ncompiling CoreIR code..." << std::endl;
+    clamped.compute_root();
+    hw_output.compute_root();
+    conv1.linebuffer();
+  
+    hw_output.tile(x, y, xo, yo, xi, yi, 256,256).reorder(c,xi,yi,xo,yo);
+    hw_output.accelerate({clamped}, xi, xo, {kernel});
+    hw_output.unroll(c);
 
-        Target coreir_target = get_target_from_environment();
-        coreir_target.set_feature(Target::CPlusPlusMangling);
-        output.compile_to_lowered_stmt("pipeline_coreir.ir.html", args, HTML, coreir_target);
+    Target coreir_target = get_target_from_environment();
+    coreir_target.set_feature(Target::CPlusPlusMangling);
+    output.compile_to_lowered_stmt("pipeline_coreir.ir.html", args, HTML, coreir_target);
         output.compile_to_coreir("pipeline_coreir.cpp", args, "pipeline_coreir", coreir_target);
     }
 

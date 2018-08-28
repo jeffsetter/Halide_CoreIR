@@ -22,7 +22,7 @@ Expr clampcast_i16(Expr in) {
     return cast<int16_t>(clamp(in, -32767, 32767));
 }
 
-Func invert2x2 (Func matrix) {
+Func invert2x2(Func matrix) {
     Func res("invert"), denorm, det;
     denorm(x, y) = matrix(x, y)[0] * matrix(x, y)[3] - matrix(x, y)[1] * matrix(x, y)[2];
     det(x, y) = select(denorm(x, y) != 0, 1/denorm(x, y), 0);
@@ -33,9 +33,9 @@ Func invert2x2 (Func matrix) {
     return res;
 }
 
-Func invert2x2 (Func elem00, Func elem01, Func elem10, Func elem11) {
+Func invert2x2(Func elem00, Func elem01, Func elem10, Func elem11) {
     Func res("invert"), denorm, det;
-    denorm(x, y) = cast<float>(elem00(x, y) * elem11(x, y) - elem01(x, y) * elem01(x, y));
+    denorm(x, y) = cast<float>(elem00(x, y) * elem11(x, y) - elem01(x, y) * elem10(x, y));
     det(x, y) = select(denorm(x, y) != 0, 1/denorm(x, y), 0);
     res(x, y) = {det(x, y) * elem11(x, y),
                  -det(x, y) * elem01(x, y),
@@ -147,28 +147,35 @@ public:
         Iy(x, y) = cast<int16_t>((frame1_f(x, y+1) - frame1_f(x, y-1))); // -127:127
         It(x, y) = cast<int16_t>((frame2_f(x, y) - frame1_f(x, y))); // -127:127
 
+        // calculate b
+        b0(x, y) += cast<int32_t>(Ix(x+win.x, y+win.y)) * cast<int32_t>(It(x+win.x, y+win.y));
+        b1(x, y) += cast<int32_t>(Iy(x+win.x, y+win.y)) * cast<int32_t>(It(x+win.x, y+win.y));
+
         // calculate A
         A00(x, y) += cast<int32_t>(Ix(x+win.x, y+win.y)) * cast<int32_t>(Ix(x+win.x, y+win.y));
         A01(x, y) += cast<int32_t>(Ix(x+win.x, y+win.y)) * cast<int32_t>(Iy(x+win.x, y+win.y));
         A10(x, y) += cast<int32_t>(Ix(x+win.x, y+win.y)) * cast<int32_t>(Iy(x+win.x, y+win.y));
         A11(x, y) += cast<int32_t>(Iy(x+win.x, y+win.y)) * cast<int32_t>(Iy(x+win.x, y+win.y));
 
-        Ainv = invert2x2(A00, A01, A10, A11);
 
-        // calculate b
-        b0(x, y) += cast<int32_t>(Ix(x+win.x, y+win.y)) * cast<int32_t>(It(x+win.x, y+win.y));
-        b1(x, y) += cast<int32_t>(Iy(x+win.x, y+win.y)) * cast<int32_t>(It(x+win.x, y+win.y));
+        // Implement the inversion without floating point
+                //Ainv = invert2x2(A00, A01, A10, A11);
+        Expr det;
+        det = A00(x, y) * A11(x, y) - A01(x, y) * A10(x, y);
+        Ainv(x,y) = {A11(x,y), -A01(x,y), -A10(x,y), A00(x,y)};
 
         // optical flow field
-        u(x, y) = Ainv(x, y)[0]*(-b0(x, y)) + Ainv(x, y)[1]*(-b1(x, y));
-        v(x, y) = Ainv(x, y)[2]*(-b0(x, y)) + Ainv(x, y)[3]*(-b1(x, y));
+        int scale_factor = 2;
+        //u(x, y) = Ainv(x, y)[0]*(-b0(x, y)) + Ainv(x, y)[1]*(-b1(x, y));
+        u(x, y) = (Ainv(x, y)[0]*(-b0(x, y)) + Ainv(x, y)[1]*(-b1(x, y)) * scale_factor) / det;
+        //v(x, y) = Ainv(x, y)[2]*(-b0(x, y)) + Ainv(x, y)[3]*(-b1(x, y));
+        v(x, y) = (Ainv(x, y)[2]*(-b0(x, y)) + Ainv(x, y)[3]*(-b1(x, y)) * scale_factor) / det;
 
         // overlap flow field on the grayscale version of input frame 2
         Expr red, green, blue;
         Expr u_render, v_render;
-        int scale_factor = 2;
-        u_render =  clampcast_u8(abs(cast<int32_t>(u(x, y))) * scale_factor);  // may overlow here
-        v_render =  clampcast_u8(abs(cast<int32_t>(v(x, y))) * scale_factor);
+        u_render =  clampcast_u8(abs(cast<int32_t>(u(x, y))));  // may overflow here
+        v_render =  clampcast_u8(abs(cast<int32_t>(v(x, y))));
         red = clampcast_u8(cast<uint16_t>(gray2(x, y)/2) + u_render);
         green = clampcast_u8(cast<uint16_t>(gray2(x, y)/2) + v_render);
         blue = clampcast_u8(cast<uint16_t>(gray2(x, y)/2) + u_render);

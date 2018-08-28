@@ -53,13 +53,16 @@ bool contain_for_loop(Stmt s) {
 CodeGen_CoreIR_Target::CodeGen_CoreIR_Target(const string &name, bool has_valid)
   : target_name(name),
     hdrc(hdr_stream, CodeGen_CoreIR_C::CPlusPlusHeader, has_valid),
-    srcc(src_stream, CodeGen_CoreIR_C::CPlusPlusImplementation, has_valid) { }
+    srcc(std::cout, CodeGen_CoreIR_C::CPlusPlusImplementation, has_valid) { }
+//    srcc(src_stream, CodeGen_CoreIR_C::CPlusPlusImplementation, has_valid) { }
 
 CodeGen_CoreIR_Target::CodeGen_CoreIR_C::CodeGen_CoreIR_C(std::ostream &s, OutputKind output_kind, bool has_valid) : 
   CodeGen_CoreIR_Base(s, output_kind), has_valid(has_valid) {
   // set up coreir generation
   bitwidth = 16;
+  std::cout << "about to make coreir context\n";
   context = CoreIR::newContext();
+  std::cout << "made coreir context;\n";
   global_ns = context->getGlobal();
 
   // add all generators from coreirprims
@@ -88,10 +91,11 @@ CodeGen_CoreIR_Target::CodeGen_CoreIR_C::CodeGen_CoreIR_C(std::ostream &s, Outpu
 
   // add all generators from commonlib
   CoreIRLoadLibrary_commonlib(context);
-  std::vector<string> commonlib_gen_names = {"umin", "smin", "umax", "smax",
+  std::vector<string> commonlib_gen_names = {"umin", "smin", "umax", "smax", "div",
                                              "linebuffer2d", "linebuffer3d", "counter",
                                              "linebuffer",
-                                             "muxn", "abs", "absd", "reg_array"};
+                                             "muxn", "abs", "absd",
+                                             "reg_array", "const_array"};
   for (auto gen_name : commonlib_gen_names) {
     gens[gen_name] = "commonlib." + gen_name;
     assert(context->hasGenerator(gens[gen_name]));
@@ -286,6 +290,7 @@ void CodeGen_CoreIR_Target::CodeGen_CoreIR_C::add_kernel(Stmt stmt,
   //std::unordered_map<string,CoreIR::Type*> input_types;
   //CoreIR::RecordType input_types = CoreIR::RecordType(context, CoreIR::RecordParams({{"reset", context->BitIn()}}));
   std::vector<std::pair<string, CoreIR::Type*>> input_types;
+  std::map<string, CoreIR::Type*> tap_types;
   CoreIR::Type* output_type = context->Bit();
   //CodeGen_CoreIR_Base::Stencil_Type stype_first; // keeps track of the first stencil (output)
   stream << "void " << print_name(name) << "(\n";
@@ -312,7 +317,7 @@ void CodeGen_CoreIR_Target::CodeGen_CoreIR_C::add_kernel(Stmt stmt,
       }
 
 
-      if (args[i].is_output) {
+      if (args[i].is_output && args[i].stencil_type.type == Stencil_Type::StencilContainerType::AxiStream) {
         //cout << "output: " << arg_name << " added with type " << CodeGen_C::print_type(stype.elemType) << " and bitwidth " << stype.elemType.bits() << endl;
         //stream << "\n// output: " << arg_name << " added with type " << CodeGen_C::print_type(stype.elemType) << " and bitwidth " << stype.elemType.bits() << endl;
         // FIXME: use proper bitwidth
@@ -323,7 +328,7 @@ void CodeGen_CoreIR_Target::CodeGen_CoreIR_C::add_kernel(Stmt stmt,
         }
 
         hw_output_set.insert(arg_name);
-      } else {
+      } else if (!args[i].is_output && args[i].stencil_type.type == Stencil_Type::StencilContainerType::AxiStream) {
         //cout << "input: " << arg_name << " added with type " << CodeGen_C::print_type(stype.elemType) << " and bitwidth " << stype.elemType.bits() << endl;
         //stream << "\n// input: " << arg_name << " added with type " << CodeGen_C::print_type(stype.elemType) << " and bitwidth " << stype.elemType.bits() << endl;
         // FIXME: use proper bitwidth
@@ -332,9 +337,16 @@ void CodeGen_CoreIR_Target::CodeGen_CoreIR_C::add_kernel(Stmt stmt,
         for (uint i=0; i<indices.size(); ++i) {
           input_type = input_type->Arr(indices[i]);
         }
-        //input_types.appendField(arg_name, input_type);
         input_types.push_back({arg_name, input_type});
+          
         //cout << "  and its type is " << input_type->toString() << endl;
+      } else {
+        uint in_bitwidth = stype.elemType.bits() > 1 ? bitwidth : 1;
+        CoreIR::Type* tap_type = context->Bit()->Arr(in_bitwidth);
+        for (uint i=0; i<indices.size(); ++i) {
+          tap_type = tap_type->Arr(indices[i]);
+        }
+        tap_types[args[i].name] = tap_type;
       }
 
       num_inouts++;
@@ -344,8 +356,8 @@ void CodeGen_CoreIR_Target::CodeGen_CoreIR_C::add_kernel(Stmt stmt,
       stream << print_type(args[i].scalar_type) << " " << arg_name;
       // FIXME: use proper bitwidth
       uint in_bitwidth = args[i].scalar_type.bits() > 1 ? bitwidth : 1;
-      CoreIR::Type* input_type = context->BitIn()->Arr(in_bitwidth);
-      input_types.push_back({arg_name, input_type});
+      CoreIR::Type* tap_type = context->BitIn()->Arr(in_bitwidth);
+      tap_types[arg_name] = tap_type;
     }
 
     if (i < args.size()-1) stream << ",\n";
@@ -425,15 +437,30 @@ void CodeGen_CoreIR_Target::CodeGen_CoreIR_C::add_kernel(Stmt stmt,
         stream << print_stencil_type(args[i].stencil_type) << " &"
                << print_name(args[i].name) << " = " << arg_name << ";\n";
 
-        // add alias to coreir
-        if (is_input(arg_name)) {
-          hw_input_set[print_name(args[i].name)] = self->sel("in")->sel(arg_name);
-          rename_wire(print_name(args[i].name), arg_name, Expr());
-        }
-        if (is_output(arg_name) ) {
-          hw_output_set.insert(print_name(args[i].name));
-        }
+        // input arguments are only streams
+        if (ends_with(args[i].name, ".stream")) {
+          // add alias to coreir
+          if (is_input(arg_name)) {
+            hw_input_set[print_name(args[i].name)] = self->sel("in")->sel(arg_name);
+            rename_wire(print_name(args[i].name), arg_name, Expr());
+          }
+          if (is_output(arg_name) ) {
+            hw_output_set.insert(print_name(args[i].name));
+          }
 		
+        } else {
+          string taps_name = "taps" + print_name(args[i].name);
+          bool has_arg = (tap_types.count(args[i].name) > 0);
+          cout << "contains: " << args[i].name << "=" << has_arg << "\n";
+          auto tap_type = tap_types[args[i].name];
+          CoreIR::Wireable* taps_inst = def->addInstance(taps_name, gens["const_array"], {{"type",CoreIR::Const::make(context,tap_type)}});
+          taps_inst->getMetaData()["tap"] = "This array of constants is expected to be changed as tap values.";
+          
+          add_wire(print_name(args[i].name), taps_inst->sel("out"));
+
+        }
+
+        
       } else {
         stream << print_type(args[i].scalar_type) << " &"
                << print_name(args[i].name) << " = " << arg_name << ";\n";
@@ -607,6 +634,10 @@ CoreIR::Wireable* CodeGen_CoreIR_Target::CodeGen_CoreIR_C::get_wire(string name,
     internal_assert(input_wire);
     stream << "// " << name << " added as input " << name << endl;
     //cout << "// " << name << " added as input " << name << endl;
+    for (int i=indices.size()-1; i >= 0; --i) {
+      input_wire = input_wire->sel(indices[i]);
+    }
+
     return input_wire;
 
   } else if (is_storage(name)) {
@@ -833,11 +864,11 @@ void CodeGen_CoreIR_Target::CodeGen_CoreIR_C::rename_wire(string new_name, strin
   CoreIR::Wireable* temp_wire = get_wire(in_name, in_expr, indices);
   if (indices.size() > 0) {
     stream << "//   connecting with " << indices.size() << " indices: ";
+    for (auto index : indices) {
+      stream << index << " ";
+    }
+    stream << endl;
   }
-//  for (auto index : indices) {
-//    stream << index << " ";
-//  }
-//  stream << endl;
 
   CoreIR::Wireable* in_wire = temp_wire;
 
@@ -1112,7 +1143,8 @@ void CodeGen_CoreIR_Target::CodeGen_CoreIR_C::visit(const Div *op) {
     visit_binop(op->type, op->a, shift_expr, ">>", "ashr");
   } else {
     stream << "// divide is not fully supported" << endl;
-    user_warning << "divide is not fully supported\n";
+    user_warning << "WARNING: divide is not fully supported!!!!\n";
+    visit_binop(op->type, op->a, op->b, "/", "div");
   }
 }
 void CodeGen_CoreIR_Target::CodeGen_CoreIR_C::visit(const Mod *op) {
@@ -1248,6 +1280,7 @@ void CodeGen_CoreIR_Target::CodeGen_CoreIR_C::visit(const Provide *op) {
     for(size_t i = 0; i < op->args.size(); i++) {
       args_indices[i] = print_expr(op->args[i]);
       internal_assert(is_const(op->args[i])) << "variable store used. FIXME: Demux not yet implemented\n";
+      if (is_const(op->args[i])) { user_warning << "variable store used. FIXME: Demux not yet implemented\n"; }
       indices.push_back(id_const_value(op->args[i]));
       stream << id_const_value(op->args[i]) << " ";
     }
@@ -2320,14 +2353,20 @@ void CodeGen_CoreIR_Target::CodeGen_CoreIR_C::visit(const Store *op) {
     stream << name;
   }
   // FIXME: handle case that id_index is not a constant value
+//  internal_assert(is_const(op->index)) << "index is not a const (unsupported)";
+//  int index = id_const_value(op->index);
+//  internal_assert(index >= 0) << "should be non-negative";
+//  uint index_unsigned = (unsigned int) index;
+  
   stream << "["
          << id_index
          << "] = "
          << id_value
-         << ";\n";
+         << ";  [store]\n";
 
   // generate coreir
   string out_var = name + "_" + id_index;
+  //rename_wire(out_var, id_value, op->value, {index_unsigned});
   rename_wire(out_var, id_value, op->value);
 
 }
