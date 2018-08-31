@@ -38,7 +38,6 @@ class ContainForLoop : public IRVisitor {
 
 public:
   bool found;
-
   ContainForLoop() : found(false) {}
 };
 
@@ -48,13 +47,35 @@ bool contain_for_loop(Stmt s) {
   return cfl.found;
 }
 
+class UsesVariable : public IRVisitor {
+  using IRVisitor::visit;
+  void visit(const Variable *op) {
+    if (op->name == varname) {
+      used = true;
+    }
+    return;
+  }
+
+public:
+  bool used;
+  string varname;
+  UsesVariable(string varname) : used(false), varname(varname) {}
+};
+
+bool variable_used(Stmt s, string varname) {
+  UsesVariable uv(varname);
+  s.accept(&uv);
+  return uv.used;
+}
+
+
 }
 
 CodeGen_CoreIR_Target::CodeGen_CoreIR_Target(const string &name, bool has_valid)
   : target_name(name),
     hdrc(hdr_stream, CodeGen_CoreIR_C::CPlusPlusHeader, has_valid),
-    srcc(std::cout, CodeGen_CoreIR_C::CPlusPlusImplementation, has_valid) { }
-//    srcc(src_stream, CodeGen_CoreIR_C::CPlusPlusImplementation, has_valid) { }
+    //    srcc(std::cout, CodeGen_CoreIR_C::CPlusPlusImplementation, has_valid) { }
+    srcc(src_stream, CodeGen_CoreIR_C::CPlusPlusImplementation, has_valid) { }
 
 CodeGen_CoreIR_Target::CodeGen_CoreIR_C::CodeGen_CoreIR_C(std::ostream &s, OutputKind output_kind, bool has_valid) : 
   CodeGen_CoreIR_Base(s, output_kind), has_valid(has_valid) {
@@ -72,7 +93,7 @@ CodeGen_CoreIR_Target::CodeGen_CoreIR_C::CodeGen_CoreIR_C(std::ostream &s, Outpu
                                            "eq", "neq",
                                            "ult", "ugt", "ule", "uge",
                                            "slt", "sgt", "sle", "sge", 
-                                           "shl", "ashr",
+                                           "shl", "ashr", "lshr",
                                            "mux", "const", "wire"};
 
   for (auto gen_name : corelib_gen_names) {
@@ -85,6 +106,7 @@ CodeGen_CoreIR_Target::CodeGen_CoreIR_C::CodeGen_CoreIR_C(std::ostream &s, Outpu
   std::vector<string> corebitlib_mod_names = {"bitand", "bitor", "bitxor", "bitnot",
                                               "bitmux", "bitconst"};
   for (auto mod_name : corebitlib_mod_names) {
+    // these were renamed to using the corebit library
     gens[mod_name] = "corebit." + mod_name.substr(3);
     assert(context->hasModule(gens[mod_name]));
   }
@@ -101,6 +123,7 @@ CodeGen_CoreIR_Target::CodeGen_CoreIR_C::CodeGen_CoreIR_C(std::ostream &s, Outpu
     assert(context->hasGenerator(gens[gen_name]));
   }
 
+  // passthrough is now just a mantle wire
   gens["passthrough"] = "mantle.wire";
   assert(context->hasGenerator(gens["passthrough"]));
 
@@ -128,7 +151,6 @@ CodeGen_CoreIR_Target::CodeGen_CoreIR_C::~CodeGen_CoreIR_C() {
     context->checkerrors();
     design->print();
     
-    //bool err = false;
     std::string GREEN = "\033[0;32m";
     std::string RED = "\033[0;31m";
     std::string RESET = "\033[0m";
@@ -286,13 +308,14 @@ void CodeGen_CoreIR_Target::CodeGen_CoreIR_C::add_kernel(Stmt stmt,
                                                          const vector<CoreIR_Argument> &args) {
 
   // Emit the function prototype
+  // keep track of number of inputs/outputs to determine if file needed
   uint num_inouts = 0;
-  //std::unordered_map<string,CoreIR::Type*> input_types;
-  //CoreIR::RecordType input_types = CoreIR::RecordType(context, CoreIR::RecordParams({{"reset", context->BitIn()}}));
+
+  // Keep track of the inputs, output, and taps for this module
   std::vector<std::pair<string, CoreIR::Type*>> input_types;
   std::map<string, CoreIR::Type*> tap_types;
   CoreIR::Type* output_type = context->Bit();
-  //CodeGen_CoreIR_Base::Stencil_Type stype_first; // keeps track of the first stencil (output)
+
   stream << "void " << print_name(name) << "(\n";
   for (size_t i = 0; i < args.size(); i++) {
     string arg_name = "arg_" + std::to_string(i);
@@ -318,8 +341,7 @@ void CodeGen_CoreIR_Target::CodeGen_CoreIR_C::add_kernel(Stmt stmt,
 
 
       if (args[i].is_output && args[i].stencil_type.type == Stencil_Type::StencilContainerType::AxiStream) {
-        //cout << "output: " << arg_name << " added with type " << CodeGen_C::print_type(stype.elemType) << " and bitwidth " << stype.elemType.bits() << endl;
-        //stream << "\n// output: " << arg_name << " added with type " << CodeGen_C::print_type(stype.elemType) << " and bitwidth " << stype.elemType.bits() << endl;
+        // add as the output
         // FIXME: use proper bitwidth
         uint out_bitwidth = stype.elemType.bits() > 1 ? bitwidth : 1;
         if (out_bitwidth > 1) { output_type = output_type->Arr(out_bitwidth); }
@@ -329,8 +351,7 @@ void CodeGen_CoreIR_Target::CodeGen_CoreIR_C::add_kernel(Stmt stmt,
 
         hw_output_set.insert(arg_name);
       } else if (!args[i].is_output && args[i].stencil_type.type == Stencil_Type::StencilContainerType::AxiStream) {
-        //cout << "input: " << arg_name << " added with type " << CodeGen_C::print_type(stype.elemType) << " and bitwidth " << stype.elemType.bits() << endl;
-        //stream << "\n// input: " << arg_name << " added with type " << CodeGen_C::print_type(stype.elemType) << " and bitwidth " << stype.elemType.bits() << endl;
+        // add another input
         // FIXME: use proper bitwidth
         uint in_bitwidth = stype.elemType.bits() > 1 ? bitwidth : 1;
         CoreIR::Type* input_type = context->BitIn()->Arr(in_bitwidth);
@@ -339,8 +360,9 @@ void CodeGen_CoreIR_Target::CodeGen_CoreIR_C::add_kernel(Stmt stmt,
         }
         input_types.push_back({arg_name, input_type});
           
-        //cout << "  and its type is " << input_type->toString() << endl;
       } else {
+        // add another array of taps (configuration changes infrequently)
+        // FIXME: use proper bitwidth
         uint in_bitwidth = stype.elemType.bits() > 1 ? bitwidth : 1;
         CoreIR::Type* tap_type = context->Bit()->Arr(in_bitwidth);
         for (uint i=0; i<indices.size(); ++i) {
@@ -351,8 +373,8 @@ void CodeGen_CoreIR_Target::CodeGen_CoreIR_C::add_kernel(Stmt stmt,
 
       num_inouts++;
 
-      //        }
     } else {
+      // add another tap (single value)
       stream << print_type(args[i].scalar_type) << " " << arg_name;
       // FIXME: use proper bitwidth
       uint in_bitwidth = args[i].scalar_type.bits() > 1 ? bitwidth : 1;
@@ -367,12 +389,14 @@ void CodeGen_CoreIR_Target::CodeGen_CoreIR_C::add_kernel(Stmt stmt,
   create_json = (num_inouts > 0);
 
   //cout << "design has " << num_inputs << " inputs with bitwidth " << to_string(bitwidth) << " " <<endl;
-  // FIXME: can't distinguish bw output/input easily (assuming single output first)
 
+  // Create CoreIR design interface with input and output types.
+  //  Output a valid bit if that exists in the design.
   CoreIR::Type* design_type;
   if (has_valid) {
     design_type = context->Record({
       {"in", context->Record(input_types)},
+      {"reset", context->BitIn()},
       {"out", output_type},
       {"valid", context->Bit()}
     });
@@ -698,9 +722,15 @@ CoreIR::Wireable* CodeGen_CoreIR_Target::CodeGen_CoreIR_C::get_wire(string name,
 			def->addInstance(const_name, gens["bitconst"], {{"value",CoreIR::Const::make(context,true)}});
 			def->connect({const_name, "out"},{inst_name, "en"});
 
-			string reset_name = inst_name + "_reset";
-			def->addInstance(reset_name, gens["bitconst"], {{"value",CoreIR::Const::make(context,false)}});
-			def->connect({reset_name, "out"},{inst_name, "reset"});
+      if (has_valid) {
+        // Hook reset to the module's reset.
+        def->connect({"self", "reset"}, {inst_name, "reset"});
+      } else {
+        // This forces the reset to always be low.
+        string reset_name = inst_name + "_reset";
+        def->addInstance(reset_name, gens["bitconst"], {{"value",CoreIR::Const::make(context,false)}});
+        def->connect({reset_name, "out"},{inst_name, "reset"});
+      }
 
 		}
 
@@ -1140,7 +1170,13 @@ void CodeGen_CoreIR_Target::CodeGen_CoreIR_C::visit(const Div *op) {
     // FIXME: use proper bitwidth
     uint param_bitwidth = op->a.type().bits();
     Expr shift_expr = UIntImm::make(UInt(param_bitwidth), shift_amt);
-    visit_binop(op->type, op->a, shift_expr, ">>", "ashr");
+    if (op->a.type().is_uint()) {
+      internal_assert(op->b.type().is_uint());
+      visit_binop(op->type, op->a, shift_expr, ">>", "lshr");
+    } else {
+      internal_assert(!op->b.type().is_uint());
+      visit_binop(op->type, op->a, shift_expr, ">>", "ashr");
+    }
   } else {
     stream << "// divide is not fully supported" << endl;
     user_warning << "WARNING: divide is not fully supported!!!!\n";
@@ -1393,15 +1429,7 @@ void CodeGen_CoreIR_Target::CodeGen_CoreIR_C::visit(const For *op) {
   int max_value = min_value + id_const_value(op->extent);
   int inc_value = 1;
   string counter_name = "count_" + print_name(op->name);
-  /*
-    CoreIR::Wireable* counter_inst = def->addInstance(counter_name, gens["counter"], 
-    {{"width",CoreIR::Const::make(context,bitwidth)},
-    {"min",CoreIR::Const::make(context,min_value)},
-    {"max",CoreIR::Const::make(context,max_value)},
-    {"inc",CoreIR::Const::make(context,inc_value)}}
-    );
-    hw_wire_set[print_name(op->name)] = counter_inst->sel("out");
-  */
+
   string wirename = print_name(op->name);
   string selname = "out";
   // FIXME: use proper bitwidth
@@ -1569,7 +1597,13 @@ void CodeGen_CoreIR_Target::CodeGen_CoreIR_C::visit(const Call *op) {
     Expr a = op->args[0];
     Expr b = op->args[1];
     stream << "[shift right] ";
-    visit_binop(op->type, a, b, ">>", "ashr");
+    if (a.type().is_uint()) {
+      internal_assert(b.type().is_uint());
+      visit_binop(op->type, a, b, ">>", "lshr");
+    } else {
+      internal_assert(!b.type().is_uint());
+      visit_binop(op->type, a, b, ">>", "ashr");
+    }
   } else if (op->is_intrinsic(Call::abs)) {
     internal_assert(op->args.size() == 1);
     Expr a = op->args[0];
@@ -1720,6 +1754,7 @@ void CodeGen_CoreIR_Target::CodeGen_CoreIR_C::visit(const Call *op) {
       if (has_valid) {
         connected_wen = connect_linebuffer(lb_in_name, coreir_lb->sel("wen"));
         record_linebuffer_valid(lb_out_name, coreir_lb->sel("valid"));
+        def->connect({"self", "reset"}, {lb_name, "reset"});
       }
 					
     }

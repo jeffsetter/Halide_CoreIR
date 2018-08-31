@@ -5,6 +5,7 @@
       "DesignTop":{
         "type":["Record",[
           ["in",["Record",[["arg_1",["Array",1,["Array",1,["Array",16,"BitIn"]]]]]]],
+          ["reset","BitIn"],
           ["out",["Array",1,["Array",1,["Array",16,"Bit"]]]],
           ["valid","Bit"]
         ]],
@@ -60,6 +61,7 @@
           ["self.in.arg_1","lb_p4_clamped_stencil_update_stream.in"],
           ["mul_337_338_339.in0","lb_p4_clamped_stencil_update_stream.out.0.0"],
           ["mul_343_344_345.in0","lb_p4_clamped_stencil_update_stream.out.1.0"],
+          ["self.reset","lb_p4_clamped_stencil_update_stream.reset"],
           ["self.valid","lb_p4_clamped_stencil_update_stream.valid"],
           ["lb_p4_clamped_stencil_update_stream_wen.out","lb_p4_clamped_stencil_update_stream.wen"]
         ]

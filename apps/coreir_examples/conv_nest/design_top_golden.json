@@ -5,6 +5,7 @@
       "DesignTop":{
         "type":["Record",[
           ["in",["Record",[["arg_1",["Array",1,["Array",1,["Array",16,"BitIn"]]]]]]],
+          ["reset","BitIn"],
           ["out",["Array",1,["Array",1,["Array",16,"Bit"]]]],
           ["valid","Bit"]
         ]],
@@ -451,6 +452,7 @@
           ["mul_666_667_668.in0","lb_conv1_2_stencil_update_stream.out.3.1"],
           ["mul_671_672_673.in0","lb_conv1_2_stencil_update_stream.out.3.2"],
           ["mul_676_677_678.in0","lb_conv1_2_stencil_update_stream.out.3.3"],
+          ["self.reset","lb_conv1_2_stencil_update_stream.reset"],
           ["self.valid","lb_conv1_2_stencil_update_stream.valid"],
           ["lb_p4_clamped_stencil_update_stream.valid","lb_conv1_2_stencil_update_stream.wen"],
           ["self.in.arg_1","lb_p4_clamped_stencil_update_stream.in"],
@@ -463,6 +465,7 @@
           ["mul_584_585_586.in0","lb_p4_clamped_stencil_update_stream.out.2.0"],
           ["mul_590_591_592.in0","lb_p4_clamped_stencil_update_stream.out.2.1"],
           ["mul_596_597_598.in0","lb_p4_clamped_stencil_update_stream.out.2.2"],
+          ["self.reset","lb_p4_clamped_stencil_update_stream.reset"],
           ["lb_p4_clamped_stencil_update_stream_wen.out","lb_p4_clamped_stencil_update_stream.wen"]
         ]
       }

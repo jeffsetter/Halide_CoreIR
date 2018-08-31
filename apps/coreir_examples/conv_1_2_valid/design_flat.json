@@ -7,6 +7,7 @@
           ["clk",["Named","coreir.clkIn"]],
           ["in_arg_1_0_0",["Array",16,"BitIn"]],
           ["out_0_0",["Array",16,"Bit"]],
+          ["reset","BitIn"],
           ["valid","Bit"]
         ]],
         "instances":{
@@ -96,10 +97,6 @@
             "genref":"coreir.ult",
             "genargs":{"width":["Int",16]}
           },
-          "lb_p4_clamped_stencil_update_stream$valcounter_0_reset":{
-            "modref":"corebit.const",
-            "modargs":{"value":["Bool",false]}
-          },
           "lb_p4_clamped_stencil_update_stream$valcounter_1$add":{
             "genref":"coreir.add",
             "genargs":{"width":["Int",16]}
@@ -139,10 +136,6 @@
           "lb_p4_clamped_stencil_update_stream$valcounter_1$ult":{
             "genref":"coreir.ult",
             "genargs":{"width":["Int",16]}
-          },
-          "lb_p4_clamped_stencil_update_stream$valcounter_1_reset":{
-            "modref":"corebit.const",
-            "modargs":{"value":["Bool",false]}
           },
           "lb_p4_clamped_stencil_update_stream$valid_andr$join":{
             "modref":"corebit.and"
@@ -193,7 +186,7 @@
           ["self.clk","lb_p4_clamped_stencil_update_stream$valcounter_0$count$reg0.clk"],
           ["lb_p4_clamped_stencil_update_stream$valcounter_0$ult.in0","lb_p4_clamped_stencil_update_stream$valcounter_0$max.out"],
           ["lb_p4_clamped_stencil_update_stream$valcounter_0$ult.out","lb_p4_clamped_stencil_update_stream$valcounter_0$resetOr.in0.0"],
-          ["lb_p4_clamped_stencil_update_stream$valcounter_0_reset.out","lb_p4_clamped_stencil_update_stream$valcounter_0$resetOr.in1.0"],
+          ["self.reset","lb_p4_clamped_stencil_update_stream$valcounter_0$resetOr.in1.0"],
           ["lb_p4_clamped_stencil_update_stream$valcounter_1$count$enMux.sel","lb_p4_clamped_stencil_update_stream$valcounter_0$ult.out"],
           ["lb_p4_clamped_stencil_update_stream$valcounter_1$count$reg0.out","lb_p4_clamped_stencil_update_stream$valcounter_1$add.in0"],
           ["lb_p4_clamped_stencil_update_stream$valcounter_1$inc.out","lb_p4_clamped_stencil_update_stream$valcounter_1$add.in1"],
@@ -207,7 +200,7 @@
           ["self.clk","lb_p4_clamped_stencil_update_stream$valcounter_1$count$reg0.clk"],
           ["lb_p4_clamped_stencil_update_stream$valcounter_1$ult.in0","lb_p4_clamped_stencil_update_stream$valcounter_1$max.out"],
           ["lb_p4_clamped_stencil_update_stream$valcounter_1$ult.out","lb_p4_clamped_stencil_update_stream$valcounter_1$resetOr.in0.0"],
-          ["lb_p4_clamped_stencil_update_stream$valcounter_1_reset.out","lb_p4_clamped_stencil_update_stream$valcounter_1$resetOr.in1.0"],
+          ["self.reset","lb_p4_clamped_stencil_update_stream$valcounter_1$resetOr.in1.0"],
           ["lb_p4_clamped_stencil_update_stream$valid_andr$opN_0$join.out","lb_p4_clamped_stencil_update_stream$valid_andr$join.in0"],
           ["self.valid","lb_p4_clamped_stencil_update_stream$valid_andr$join.out"],
           ["lb_p4_clamped_stencil_update_stream_wen.out","lb_p4_clamped_stencil_update_stream$valid_andr$opN_0$join.in0"],

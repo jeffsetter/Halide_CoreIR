@@ -15,13 +15,13 @@ pipeline_hls.cpp pipeline_native.o pipeline_zynq.c hls_target.cpp: pipeline
 	HL_DEBUG_CODEGEN=0 ./pipeline
 
 run: run.cpp pipeline_hls.cpp hls_target.cpp pipeline_native.o
-	$(CXX) $(CXXFLAGS) -O1 -DNDEBUG $(HLS_CXXFLAGS) -g -Wall -Werror $^ -lpthread -ldl $(PNGFLAGS) -o $@
+	$(CXX) $(CXXFLAGS) -O3 -DNDEBUG $(HLS_CXXFLAGS) -g -Wall -Werror $^ -lpthread -ldl $(LIB_HALIDE) $(LDFLAGS) $(PNGFLAGS) -ltinfo -o $@
 
 run_downsample: run.cpp pipeline_hls_downsample.cpp hls_target_downsample.cpp pipeline_native.o
-	$(CXX) $(CXXFLAGS) -O1 -DNDEBUG $(HLS_CXXFLAGS) -g -Wall -Werror $^ -lpthread -ldl $(PNGFLAGS) -o $@
+	$(CXX) $(CXXFLAGS) -O1 -DNDEBUG $(HLS_CXXFLAGS) -g -Wall -Werror $^ -lpthread -ldl $(LIB_HALIDE) $(PNGFLAGS) $(LDFLAGS) -o $@
 
 out.png: run
-	./run ../../images/zynq_raw.png
+	./run input.png
 
 design_top.json: pipeline
 	HL_DEBUG_CODEGEN=0 ./pipeline
