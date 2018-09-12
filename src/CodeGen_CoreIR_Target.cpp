@@ -33,19 +33,37 @@ class ContainForLoop : public IRVisitor {
   using IRVisitor::visit;
   void visit(const For *op) {
     found = true;
-    return;
+    varnames.push_back(op->name);
   }
 
 public:
   bool found;
+  vector<string> varnames;
   ContainForLoop() : found(false) {}
 };
 
+// identifies for loops in code statement
 bool contain_for_loop(Stmt s) {
   ContainForLoop cfl;
   s.accept(&cfl);
   return cfl.found;
 }
+
+// Identifies for loop name in code statement.
+//  Gives name of first for loop
+string name_for_loop(Stmt s) {
+  ContainForLoop cfl;
+  s.accept(&cfl);
+  return cfl.varnames[0];
+}
+
+// Identifies all for loop names in code statement.
+vector<string> contained_for_loop_names(Stmt s) {
+  ContainForLoop cfl;
+  s.accept(&cfl);
+  return cfl.varnames;
+}
+
 
 class UsesVariable : public IRVisitor {
   using IRVisitor::visit;
@@ -56,12 +74,23 @@ class UsesVariable : public IRVisitor {
     return;
   }
 
+  void visit(const Call *op) {
+    // only go first two variables, not loop bound checks
+    if (op->name == "write_stream" && op->args.size() > 2) {
+      op->args[0].accept(this);
+      op->args[1].accept(this);
+    } else {
+      IRVisitor::visit(op);
+    }
+  }
+
 public:
   bool used;
   string varname;
   UsesVariable(string varname) : used(false), varname(varname) {}
 };
 
+// identifies target variable string in code statement
 bool variable_used(Stmt s, string varname) {
   UsesVariable uv(varname);
   s.accept(&uv);
@@ -69,13 +98,14 @@ bool variable_used(Stmt s, string varname) {
 }
 
 
+
 }
 
 CodeGen_CoreIR_Target::CodeGen_CoreIR_Target(const string &name, bool has_valid)
   : target_name(name),
     hdrc(hdr_stream, CodeGen_CoreIR_C::CPlusPlusHeader, has_valid),
-    //    srcc(std::cout, CodeGen_CoreIR_C::CPlusPlusImplementation, has_valid) { }
-    srcc(src_stream, CodeGen_CoreIR_C::CPlusPlusImplementation, has_valid) { }
+    srcc(std::cout, CodeGen_CoreIR_C::CPlusPlusImplementation, has_valid) { }
+//srcc(src_stream, CodeGen_CoreIR_C::CPlusPlusImplementation, has_valid) { }
 
 CodeGen_CoreIR_Target::CodeGen_CoreIR_C::CodeGen_CoreIR_C(std::ostream &s, OutputKind output_kind, bool has_valid) : 
   CodeGen_CoreIR_Base(s, output_kind), has_valid(has_valid) {
@@ -114,8 +144,7 @@ CodeGen_CoreIR_Target::CodeGen_CoreIR_C::CodeGen_CoreIR_C(std::ostream &s, Outpu
   // add all generators from commonlib
   CoreIRLoadLibrary_commonlib(context);
   std::vector<string> commonlib_gen_names = {"umin", "smin", "umax", "smax", "div",
-                                             "linebuffer2d", "linebuffer3d", "counter",
-                                             "linebuffer",
+                                             "counter", "linebuffer",
                                              "muxn", "abs", "absd",
                                              "reg_array", "const_array"};
   for (auto gen_name : commonlib_gen_names) {
@@ -164,7 +193,7 @@ CodeGen_CoreIR_Target::CodeGen_CoreIR_C::~CodeGen_CoreIR_C() {
     }
 
 
-    context->runPasses({"rungenerators","removepassthroughs"});
+    context->runPasses({"rungenerators","removewires"});
     //context->runPasses({"rungenerators"});
     if (!saveToFile(global_ns, "design_top.json", design)) {
       cout << RED << "Could not save to json!!" << RESET << endl;
@@ -176,8 +205,8 @@ CodeGen_CoreIR_Target::CodeGen_CoreIR_C::~CodeGen_CoreIR_C() {
       context->die();
     }
 
-    //context->runPasses({"rungenerators", "removepassthroughs"});
-		context->runPasses({"rungenerators","flatten","removepassthroughs"});
+    //context->runPasses({"rungenerators", "removewires"});
+		context->runPasses({"rungenerators","flatten","removewires"});
 		context->runPasses({"verifyconnectivity-onlyinputs-noclkrst"},{"global","commonlib","memory","mantle"});
 		//context->runPasses({"rungenerators", "flattentypes", "flatten", "wireclocks-coreir"});
 
@@ -209,7 +238,7 @@ CodeGen_CoreIR_Target::CodeGen_CoreIR_C::~CodeGen_CoreIR_C() {
       context->die();
     }
 
-		context->runPasses({"removepassthroughs"});
+		context->runPasses({"removewires"});
 //    if (!saveToDot(mod2, "design_top.txt")) {
 //      cout << RED << "Could not save to dot file :(" << RESET << endl;
 //      context->die();
@@ -233,6 +262,15 @@ const string hls_header_includes =
   "#include <stdlib.h>\n"
   "#include <hls_stream.h>\n"
   "#include \"Stencil.h\"\n";
+}
+
+int inst_bitwidth(int input_bitwidth) {
+  // FIXME: properly create bitwidths 1, 8, 16, 32
+  if (input_bitwidth == 1) {
+    return 1;
+  } else {
+    return 16;
+  }
 }
 
 void CodeGen_CoreIR_Target::init_module() {
@@ -342,8 +380,7 @@ void CodeGen_CoreIR_Target::CodeGen_CoreIR_C::add_kernel(Stmt stmt,
 
       if (args[i].is_output && args[i].stencil_type.type == Stencil_Type::StencilContainerType::AxiStream) {
         // add as the output
-        // FIXME: use proper bitwidth
-        uint out_bitwidth = stype.elemType.bits() > 1 ? bitwidth : 1;
+        uint out_bitwidth = inst_bitwidth(stype.elemType.bits());
         if (out_bitwidth > 1) { output_type = output_type->Arr(out_bitwidth); }
         for (uint i=0; i<indices.size(); ++i) {
           output_type = output_type->Arr(indices[i]);
@@ -352,8 +389,7 @@ void CodeGen_CoreIR_Target::CodeGen_CoreIR_C::add_kernel(Stmt stmt,
         hw_output_set.insert(arg_name);
       } else if (!args[i].is_output && args[i].stencil_type.type == Stencil_Type::StencilContainerType::AxiStream) {
         // add another input
-        // FIXME: use proper bitwidth
-        uint in_bitwidth = stype.elemType.bits() > 1 ? bitwidth : 1;
+        uint in_bitwidth = inst_bitwidth(stype.elemType.bits());
         CoreIR::Type* input_type = context->BitIn()->Arr(in_bitwidth);
         for (uint i=0; i<indices.size(); ++i) {
           input_type = input_type->Arr(indices[i]);
@@ -362,8 +398,7 @@ void CodeGen_CoreIR_Target::CodeGen_CoreIR_C::add_kernel(Stmt stmt,
           
       } else {
         // add another array of taps (configuration changes infrequently)
-        // FIXME: use proper bitwidth
-        uint in_bitwidth = stype.elemType.bits() > 1 ? bitwidth : 1;
+        uint in_bitwidth = inst_bitwidth(stype.elemType.bits());
         CoreIR::Type* tap_type = context->Bit()->Arr(in_bitwidth);
         for (uint i=0; i<indices.size(); ++i) {
           tap_type = tap_type->Arr(indices[i]);
@@ -376,8 +411,7 @@ void CodeGen_CoreIR_Target::CodeGen_CoreIR_C::add_kernel(Stmt stmt,
     } else {
       // add another tap (single value)
       stream << print_type(args[i].scalar_type) << " " << arg_name;
-      // FIXME: use proper bitwidth
-      uint in_bitwidth = args[i].scalar_type.bits() > 1 ? bitwidth : 1;
+      uint in_bitwidth = inst_bitwidth(args[i].scalar_type.bits());
       CoreIR::Type* tap_type = context->BitIn()->Arr(in_bitwidth);
       tap_types[arg_name] = tap_type;
     }
@@ -497,15 +531,13 @@ void CodeGen_CoreIR_Target::CodeGen_CoreIR_C::add_kernel(Stmt stmt,
         CoreIR::Wireable* const_inst;
 
         if (const_bitwidth == 1) {
-          //cout << "bitwidth 1 args are not supported yet" << endl;
           CoreIR::Values mod_args = {{"value",CoreIR::Const::make(context,(bool)const_value)}};
-          //CoreIR_Inst_Args tap_args(const_name, arg_name, "out", gens["bitconst"], gen_args, CoreIR::Values());
           const_inst = def->addInstance(tap_name, gens["bitconst"], mod_args);
         } else {
           // FIXME: use proper bitwidth
-          CoreIR::Values gen_args = {{"width", CoreIR::Const::make(context,bitwidth)}};
-          CoreIR::Values mod_args = {{"value",CoreIR::Const::make(context,BitVector(bitwidth,const_value))}};
-          //CoreIR_Inst_Args tap_args(const_name, arg_name, "out", gens["const"], gen_args, mod_params);
+          int bw = inst_bitwidth(const_bitwidth);
+          CoreIR::Values gen_args = {{"width", CoreIR::Const::make(context,bw)}};
+          CoreIR::Values mod_args = {{"value",CoreIR::Const::make(context,BitVector(bw,const_value))}};
           const_inst = def->addInstance(tap_name, gens["const"], gen_args, mod_args);
         }
         const_inst->getMetaData()["tap"] = "This constant is expected to be changed as a tap value.";
@@ -602,10 +634,7 @@ bool CodeGen_CoreIR_Target::CodeGen_CoreIR_C::is_defined(string var_name) {
   bool hardware_defined = hw_def_set.count(var_name) > 0;
   for (auto ele : hw_def_set) {
     assert(ele.second);
-    //    cout << ele.first << ", ";
   }
-  //  cout << endl;
-  //cout << "result of search for " << var_name << ": " << hardware_defined << endl;
 
   return hardware_defined;
 }
@@ -615,6 +644,15 @@ bool CodeGen_CoreIR_Target::CodeGen_CoreIR_C::is_output(string var_name) {
   return output_name_matches;
 }
 
+std::string strip_stream(std::string input) {
+  std::string output = input;
+  if (ends_with(input, "_stencil_update_stream")) {
+    output = input.substr(0, input.find("_stencil_update_stream"));
+  } else if (ends_with(input, "_stencil_stream")) {
+    output = input.substr(0, input.find("_stencil_stream"));
+  }
+  return output;
+}
 
 //////////////////////////////////////////////
 // Functions to wire coreir things together //
@@ -644,9 +682,9 @@ CoreIR::Wireable* CodeGen_CoreIR_Target::CodeGen_CoreIR_C::get_wire(string name,
     if (const_bitwidth == 1) {
       const_inst = def->addInstance(const_name, gens["bitconst"], {{"value",CoreIR::Const::make(context,(bool)const_value)}});
     } else {
-      // FIXME: use proper bitwidth
-      const_inst = def->addInstance(const_name, gens["const"], {{"width", CoreIR::Const::make(context,bitwidth)}},
-                                    {{"value",CoreIR::Const::make(context,BitVector(bitwidth,const_value))}});
+      int bw = inst_bitwidth(const_bitwidth);
+      const_inst = def->addInstance(const_name, gens["const"], {{"width", CoreIR::Const::make(context,bw)}},
+                                    {{"value",CoreIR::Const::make(context,BitVector(bw,const_value))}});
     }
 
     stream << "// created const: " << const_name << " with name " << name << "\n";
@@ -661,8 +699,14 @@ CoreIR::Wireable* CodeGen_CoreIR_Target::CodeGen_CoreIR_C::get_wire(string name,
     for (int i=indices.size()-1; i >= 0; --i) {
       input_wire = input_wire->sel(indices[i]);
     }
+    
+    CoreIR::Wireable* current_wire = input_wire;
+    for (int i=indices.size()-1; i >= 0; --i) {
+      //cout << "selecting storage in get_wire" << endl;
+      current_wire = current_wire->sel(indices[i]);
+    }
 
-    return input_wire;
+    return current_wire;
 
   } else if (is_storage(name)) {
     auto pt_struct = hw_store_set[name];
@@ -712,27 +756,7 @@ CoreIR::Wireable* CodeGen_CoreIR_Target::CodeGen_CoreIR_C::get_wire(string name,
     CoreIR::Wireable* inst = def->addInstance(inst_name, inst_args->gen, inst_args->args, inst_args->genargs);
     add_wire(name, inst->sel(inst_args->selname));
 
-
     auto ref_name = inst_args->ref_name;
-
-		// FIXME: counter should just be created beforehand (if loop body uses variable)
-		// if it is a counter, set wen to high
-		if (inst_args->gen.compare(gens["counter"]) == 0) {
-			string const_name = inst_name + "_wen";
-			def->addInstance(const_name, gens["bitconst"], {{"value",CoreIR::Const::make(context,true)}});
-			def->connect({const_name, "out"},{inst_name, "en"});
-
-      if (has_valid) {
-        // Hook reset to the module's reset.
-        def->connect({"self", "reset"}, {inst_name, "reset"});
-      } else {
-        // This forces the reset to always be low.
-        string reset_name = inst_name + "_reset";
-        def->addInstance(reset_name, gens["bitconst"], {{"value",CoreIR::Const::make(context,false)}});
-        def->connect({reset_name, "out"},{inst_name, "reset"});
-      }
-
-		}
 
     return inst->sel(inst_args->selname);
 
@@ -845,10 +869,10 @@ void CodeGen_CoreIR_Target::CodeGen_CoreIR_C::rename_wire(string new_name, strin
       args = {{"value",CoreIR::Const::make(context,const_value)}};
       genargs = CoreIR::Values();
     } else {
-      // FIXME: use proper bitwidth
+      int bw = inst_bitwidth(const_bitwidth);
       gen_const = "coreir.const";
-      args = {{"width", CoreIR::Const::make(context,bitwidth)}};
-      genargs = {{"value",CoreIR::Const::make(context,BitVector(bitwidth,const_value))}};
+      args = {{"width", CoreIR::Const::make(context,bw)}};
+      genargs = {{"value",CoreIR::Const::make(context,BitVector(bw,const_value))}};
     }
   
     CoreIR_Inst_Args const_args(const_name, in_name, "out", gen_const, args, genargs);
@@ -918,16 +942,6 @@ void CodeGen_CoreIR_Target::CodeGen_CoreIR_C::rename_wire(string new_name, strin
   }
 }
 
-std::string strip_stream(std::string input) {
-  std::string output = input;
-  if (ends_with(input, "_stencil_update_stream")) {
-    output = input.substr(0, input.find("_stencil_update_stream"));
-  } else if (ends_with(input, "_stencil_stream")) {
-    output = input.substr(0, input.find("_stencil_stream"));
-  }
-  return output;
-}
-
 void CodeGen_CoreIR_Target::CodeGen_CoreIR_C::record_dispatch(std::string producer_name, std::string consumer_name) {
   hw_dispatch_set[consumer_name].push_back(producer_name);
   //cout << "// recording dispatch for " << producer_name << "\n";
@@ -947,9 +961,13 @@ void CodeGen_CoreIR_Target::CodeGen_CoreIR_C::record_dispatch(std::string produc
   }
 }
 
-void CodeGen_CoreIR_Target::CodeGen_CoreIR_C::record_linebuffer_valid(std::string producer_name, CoreIR::Wireable* wire) {
-  stream << "// added " << producer_name << " valid\n";
-  lb_valid_map[producer_name] = wire;
+void CodeGen_CoreIR_Target::CodeGen_CoreIR_C::record_linebuffer(std::string producer_name, CoreIR::Wireable* wire) {
+  stream << "// added " << producer_name << " linebuffer to record map\n";
+  lb_map[producer_name] = wire;
+  for (auto pair_map : lb_map) {
+    cout << " key: " << pair_map.first;
+  }
+  cout << "\n";
 }
 
 
@@ -975,10 +993,17 @@ bool CodeGen_CoreIR_Target::CodeGen_CoreIR_C::connect_linebuffer(std::string con
     producer = strip_stream(producer_name);
 
     // connect to upstream linebuffer valid
-    if (lb_valid_map.count(producer_name) > 0) {
+    if (lb_map.count(producer_name) > 0) {
       stream << "// connected lb valid: connecting " << producer_name << " valid to " 
              << consumer_name << " wen\n";
-      def->connect(lb_valid_map[producer_name], consumer_wen_wire);
+      CoreIR::Wireable* linebuffer_wire = lb_map[producer_name];
+      if (linebuffer_wire == NULL) {
+        for (auto pair_map : lb_map) {
+          cout << " key: " << pair_map.first;
+        }
+        cout << "FOUND NULL LINEBUFFER" << endl;
+      }
+      def->connect(linebuffer_wire->sel("valid"), consumer_wen_wire);
       return true;
     }
 
@@ -990,11 +1015,13 @@ bool CodeGen_CoreIR_Target::CodeGen_CoreIR_C::connect_linebuffer(std::string con
     // connect to self upstream valid
     stream << "// TODO: connect to upstream valid here\n";
     return false;
-  } else if (lb_valid_map.count(producer_name) > 0) {
+  } else if (lb_map.count(producer_name) > 0) {
     // connect to upstream linebuffer valid
     stream << "// connecting " << producer_name << " valid to " 
            << consumer_name << " wen\n";
-    def->connect(lb_valid_map[producer_name], consumer_wen_wire);
+    CoreIR::Wireable* linebuffer_wire = lb_map[producer_name];
+    def->connect(linebuffer_wire->sel("valid"), consumer_wen_wire);
+
     return true;
   } else {
     return false;
@@ -1004,10 +1031,9 @@ bool CodeGen_CoreIR_Target::CodeGen_CoreIR_C::connect_linebuffer(std::string con
 
 void CodeGen_CoreIR_Target::CodeGen_CoreIR_C::visit_unaryop(Type t, Expr a, const char*  op_sym, string op_name) {
   string a_name = print_expr(a);
-  //stream << "// unary op for " << a_name << "\n";
   string print_sym = op_sym;
-
   string out_var = print_assignment(t, print_sym + "(" + a_name + ")");
+  
   // return if this variable is cached
   if (is_wire(out_var)) { return; }
 
@@ -1018,11 +1044,13 @@ void CodeGen_CoreIR_Target::CodeGen_CoreIR_C::visit_unaryop(Type t, Expr a, cons
 
     // properly cast to generator or module
     internal_assert(gens.count(op_name) > 0) << op_name << " is not one of the names Halide recognizes\n";
+
+    // check if it is a generator or module
     if (context->hasGenerator(gens[op_name])) {
       internal_assert(context->getGenerator(gens[op_name]));    
-      // FIXME: use proper bitwidth
-      uint inst_bitwidth = a.type().bits() == 1 ? 1 : bitwidth;
-      coreir_inst = def->addInstance(unaryop_name, gens[op_name], {{"width", CoreIR::Const::make(context,inst_bitwidth)}});
+      uint bw = inst_bitwidth(a.type().bits());
+      coreir_inst = def->addInstance(unaryop_name, gens[op_name], {{"width", CoreIR::Const::make(context,bw)}});
+      
     } else {
       internal_assert(context->getModule(gens[op_name]));
       coreir_inst = def->addInstance(unaryop_name, gens[op_name]);
@@ -1030,13 +1058,15 @@ void CodeGen_CoreIR_Target::CodeGen_CoreIR_C::visit_unaryop(Type t, Expr a, cons
 
     def->connect(a_wire, coreir_inst->sel("in"));
     add_wire(out_var, coreir_inst->sel("out"));
+    
   } else {
+    // invalid operand
     out_var = "";
     print_assignment(t, print_sym + "(" + a_name + ")");
     if (a_wire == NULL) { stream << "// input 'a' was invalid!!" << endl; }
-    //    stream << "tb-performed a << op_name<< :!!! " <<endl;//<< print_type(a.type()) << " " << print_type(b.type()) << endl;
   }
 
+  // print out operation
   if (is_input(a_name)) { stream << "// " << op_name <<"a: self.in "; } else { stream << "// " << op_name << "a: " << a_name << " "; }
   stream << "o: " << out_var << " with bitwidth:" << t.bits() << endl;
 }
@@ -1055,19 +1085,17 @@ void CodeGen_CoreIR_Target::CodeGen_CoreIR_C::visit_binop(Type t, Expr a, Expr b
   CoreIR::Wireable* b_wire = get_wire(b_name, b);
 
   if (a_wire != NULL && b_wire != NULL) {
-    internal_assert(a.type().bits() == b.type().bits()) << "function " << op_name << " with " << a_name << " and " << b_name;
-    // FIXME: use proper bitwidth
-    uint inst_bitwidth = a.type().bits() == 1 ? 1 : bitwidth;
+    internal_assert(a.type().bits() == b.type().bits()) << "function " << op_name << " with "
+                                                        << a_name << "(" << a.type().bits() << "bits) and "
+                                                        << b_name << "(" << b.type().bits() << "bits\n";
+    uint bw = inst_bitwidth(a.type().bits());
     string binop_name = op_name + a_name + b_name + out_var;
     CoreIR::Wireable* coreir_inst;
 
     // properly cast to generator or module
-    //context->runPasses({"printer"},{"global","coreir"});
-
-    //cout << "creating a hardware binop: " << op_name << endl;
     internal_assert(gens.count(op_name) > 0) << op_name << " is not one of the names Halide recognizes\n";
     if (context->hasGenerator(gens[op_name])) {
-      coreir_inst = def->addInstance(binop_name, gens[op_name], {{"width", CoreIR::Const::make(context,inst_bitwidth)}});
+      coreir_inst = def->addInstance(binop_name, gens[op_name], {{"width", CoreIR::Const::make(context,bw)}});
     } else {
       coreir_inst = def->addInstance(binop_name, gens[op_name]);
     }
@@ -1104,15 +1132,14 @@ void CodeGen_CoreIR_Target::CodeGen_CoreIR_C::visit_ternop(Type t, Expr a, Expr 
 
   if (a_wire != NULL && b_wire != NULL && c_wire != NULL) {
     internal_assert(b.type().bits() == c.type().bits());
-    // FIXME: use proper bitwidth
-    uint inst_bitwidth = b.type().bits() == 1 ? 1 : bitwidth;
+    uint inst_bw = inst_bitwidth(b.type().bits());
     string ternop_name = op_name + a_name + b_name + c_name;
     CoreIR::Wireable* coreir_inst;
 
     // properly cast to generator or module
     internal_assert(gens.count(op_name) > 0) << op_name << " is not one of the names Halide recognizes\n";
     if (context->hasGenerator(gens[op_name])) {
-      coreir_inst = def->addInstance(ternop_name, gens[op_name], {{"width", CoreIR::Const::make(context,inst_bitwidth)}});
+      coreir_inst = def->addInstance(ternop_name, gens[op_name], {{"width", CoreIR::Const::make(context,inst_bw)}});
     } else {
       coreir_inst = def->addInstance(ternop_name, gens[op_name]);
     }
@@ -1167,7 +1194,6 @@ void CodeGen_CoreIR_Target::CodeGen_CoreIR_C::visit(const Sub *op) {
 void CodeGen_CoreIR_Target::CodeGen_CoreIR_C::visit(const Div *op) {
   int shift_amt;
   if (is_const_power_of_two_integer(op->b, &shift_amt)) {
-    // FIXME: use proper bitwidth
     uint param_bitwidth = op->a.type().bits();
     Expr shift_expr = UIntImm::make(UInt(param_bitwidth), shift_amt);
     if (op->a.type().is_uint()) {
@@ -1187,7 +1213,6 @@ void CodeGen_CoreIR_Target::CodeGen_CoreIR_C::visit(const Mod *op) {
   int num_bits;
   if (is_const_power_of_two_integer(op->b, &num_bits)) {
     // equivalent to masking the bottom bits
-    // FIXME: use proper bitwidth
     uint param_bitwidth = op->a.type().bits();
     uint mask = (1<<num_bits) - 1;
     Expr mask_expr = UIntImm::make(UInt(param_bitwidth), mask);
@@ -1306,6 +1331,42 @@ void CodeGen_CoreIR_Target::CodeGen_CoreIR_C::visit(const Cast *op) {
   }
 }
 
+void CodeGen_CoreIR_Target::CodeGen_CoreIR_C::visit(const ProducerConsumer *op) {
+    do_indent();
+    stream << "// produce " << op->name << '\n';
+
+    stream << "//  using " << strip_stream(print_name(op->name)) << '\n';
+    // FIXME: only looking at the first linebuffer
+    string lb_name = hw_dispatch_set[strip_stream(print_name(op->name))][0];
+    stream << "//    and lb " << lb_name << '\n';
+
+    if (lb_map.count(lb_name) > 0) {
+      stream << "// found the linebuffer\n";
+      CoreIR::Wireable* lb_wire = lb_map[lb_name];
+
+      vector<string> for_loop_names = contained_for_loop_names(op->produce);
+      for (string for_loop_name : for_loop_names) {
+        lb_kernel_map[for_loop_name] = lb_wire;
+        stream << "// adding linebuffer target for loop " << for_loop_name << "\n";
+      }
+
+    }
+    
+
+    
+    print_stmt(op->produce);
+
+    if (op->update.defined()) {
+        do_indent();
+        stream << "// update " << op->name << '\n';
+        print_stmt(op->update);
+    }
+
+    do_indent();
+    stream << "// consume " << op->name << '\n';
+    print_stmt(op->consume);
+}
+
 void CodeGen_CoreIR_Target::CodeGen_CoreIR_C::visit(const Provide *op) {
   if (ends_with(op->name, ".stencil") ||
       ends_with(op->name, ".stencil_update")) {
@@ -1316,7 +1377,7 @@ void CodeGen_CoreIR_Target::CodeGen_CoreIR_C::visit(const Provide *op) {
     for(size_t i = 0; i < op->args.size(); i++) {
       args_indices[i] = print_expr(op->args[i]);
       internal_assert(is_const(op->args[i])) << "variable store used. FIXME: Demux not yet implemented\n";
-      if (is_const(op->args[i])) { user_warning << "variable store used. FIXME: Demux not yet implemented\n"; }
+      if (!is_const(op->args[i])) { user_warning << "variable store used. FIXME: Demux not yet implemented\n"; }
       indices.push_back(id_const_value(op->args[i]));
       stream << id_const_value(op->args[i]) << " ";
     }
@@ -1394,9 +1455,6 @@ void CodeGen_CoreIR_Target::CodeGen_CoreIR_C::visit(const Provide *op) {
   }
 }
 
-
-// almost that same as CodeGen_C::visit(const For *)
-// we just add a 'CoreIR PIPELINE' pragma after the 'for' statement
 void CodeGen_CoreIR_Target::CodeGen_CoreIR_C::visit(const For *op) {
   internal_assert(op->for_type == ForType::Serial)
     << "Can only emit serial for loops to CoreIR C\n";
@@ -1417,32 +1475,79 @@ void CodeGen_CoreIR_Target::CodeGen_CoreIR_C::visit(const For *op) {
          << "++)\n";
 
   open_scope();
+  
   // add a 'PIPELINE' pragma if it is an innermost loop
   if (!contain_for_loop(op->body)) {
     stream << "#pragma CoreIR PIPELINE II=1\n";
   }
 
-  // generate coreir: add counter module
-  internal_assert(is_const(op->min));
-  internal_assert(is_const(op->extent));
-  int min_value = id_const_value(op->min);
-  int max_value = min_value + id_const_value(op->extent);
-  int inc_value = 1;
-  string counter_name = "count_" + print_name(op->name);
+  // pass down linebuffer
+  // FIXME: do this a better way
+  if (lb_kernel_map.count(op->name) && contain_for_loop(op->body)) {
+    string varname = name_for_loop(op->body);
+    lb_kernel_map[varname] = lb_kernel_map[op->name];
+    stream << "// added " << varname << " with a linebuffer\n";
+  }
 
-  string wirename = print_name(op->name);
-  string selname = "out";
-  // FIXME: use proper bitwidth
-  CoreIR::Values args = {{"width",CoreIR::Const::make(context,bitwidth)},
-                         {"min",CoreIR::Const::make(context,min_value)},
-                         {"max",CoreIR::Const::make(context,max_value)},
-                         {"inc",CoreIR::Const::make(context,inc_value)}};
-  CoreIR_Inst_Args counter_args(counter_name, wirename, selname, gens["counter"], args, CoreIR::Values()
-    );
-  hw_def_set[print_name(op->name)] = std::make_shared<CoreIR_Inst_Args>(counter_args);
-  //cout << "// counter created with name " << print_name(op->name) << endl;
-  stream << "// counter created with name " << print_name(op->name) << endl;
+  // generate coreir: add counter module if variable used
+  if (variable_used(op->body, op->name)) {
+    string wirename = print_name(op->name);
+    stream << "// creating counter for " << wirename << "\n";
+    
+    internal_assert(is_const(op->min));
+    internal_assert(is_const(op->extent));
+    int min_value = id_const_value(op->min);
+    int max_value = min_value + id_const_value(op->extent) - 1;
+    int inc_value = 1;
+    string counter_name = "count_" + wirename;
 
+    // FIXME: use proper bitwidth
+    CoreIR::Values args = {{"width",CoreIR::Const::make(context,bitwidth)},
+                           {"min",CoreIR::Const::make(context,min_value)},
+                           {"max",CoreIR::Const::make(context,max_value)},
+                           {"inc",CoreIR::Const::make(context,inc_value)}};
+
+    CoreIR::Wireable* counter_inst = def->addInstance(counter_name, gens["counter"], args);
+    add_wire(wirename, counter_inst->sel("out"));
+    
+    // connect reset wire
+    if (has_valid) {
+      // Hook reset to the module's reset.
+      def->connect({"self", "reset"}, {counter_name, "reset"});
+    } else {
+      // This forces the reset to always be low.
+      string reset_name = counter_name + "_reset";
+      def->addInstance(reset_name, gens["bitconst"], {{"value",CoreIR::Const::make(context,false)}});
+      def->connect({reset_name, "out"},{counter_name, "reset"});
+    }
+
+    // connect wen wire
+    if (contain_for_loop(op->body)) {
+      string varname = print_name(name_for_loop(op->body));
+      op->body.accept(this);
+      close_scope("for " + print_name(op->name));
+      
+      // connect inner for loop overflow to wen
+      //  FIXME: assumes inner counter is used and created
+      CoreIR::Select* inner_for_loop = static_cast<CoreIR::Select*>(get_wire(varname, Expr()));
+      CoreIR::Wireable* inner_overflow = inner_for_loop->getParent()->sel("overflow");
+      def->connect(inner_overflow, counter_inst->sel("en"));
+      return;
+      
+    } else if (lb_kernel_map.count(op->name)) {
+      stream << "// connected to lb valid" << "\n";
+      def->connect(lb_kernel_map[op->name]->sel("valid"), counter_inst->sel("en"));
+    } else {
+      // connect wen wire
+      string const_name = counter_name + "_wen";
+      def->addInstance(const_name, gens["bitconst"], {{"value",CoreIR::Const::make(context,true)}});
+      def->connect({const_name, "out"},{counter_name, "en"});
+    }
+
+    
+  } else {
+    stream << "// no counter created for " << print_name(op->name) << endl;
+  }
 
   op->body.accept(this);
   close_scope("for " + print_name(op->name));
@@ -1658,139 +1763,60 @@ void CodeGen_CoreIR_Target::CodeGen_CoreIR_C::visit(const Call *op) {
 
     // add linebuffer to coreir
     uint num_dims = op->args.size() - 2;
-    uint lb_dims [num_dims];
-    for (uint i=0; i<num_dims; ++i) {
-      lb_dims[i] = id_const_value(stencil_type.bounds[i].extent);
-    }
-
     string lb_name = "lb" + lb_in_name;
-    CoreIR::Wireable* coreir_lb = NULL;
 
-    bool use_old_lb = false;
     bool connected_wen = false;
-    if (use_old_lb) {
-      if (num_dims == 2) {
-        int stencil_width = lb_dims[0];
-        int stencil_height = lb_dims[1];
-        int image_width = id_const_value(op->args[2]);
-        int fifo_depth = image_width;
-        internal_assert(fifo_depth > 0);
-          
-        stream << "// stencil size: " << stencil_width << " " << stencil_height << " and image width " << image_width << std::endl
-               << "//  using fifo_depth " << fifo_depth << std::endl;
+    // FIXME: use proper bitwidth
+    CoreIR::Type* input_type = context->BitIn()->Arr(bitwidth);
+    CoreIR::Type* output_type = context->Bit()->Arr(bitwidth);
+    CoreIR::Type* image_type = context->Bit()->Arr(bitwidth);
 
-        // FIXME: use proper bitwidth
-        CoreIR::Values lb_args = {{"bitwidth",CoreIR::Const::make(context,bitwidth)}, 
-                                  {"stencil_width", CoreIR::Const::make(context,stencil_width)},
-                                  {"stencil_height", CoreIR::Const::make(context,stencil_height)},
-                                  {"image_width", CoreIR::Const::make(context,fifo_depth)}};
-        coreir_lb = def->addInstance(lb_name, gens["linebuffer2d"], lb_args);
-      } else if (num_dims == 3) {
-        //cout << "created a 3d linebuffer!" << endl;
-        int stencil_depth = lb_dims[0];
-        int stencil_width = lb_dims[1];
-        int stencil_height = lb_dims[2];
-        int image_depth = id_const_value(op->args[2]);
-        int image_width = id_const_value(op->args[3]);
-        internal_assert(image_width > 0);
-        internal_assert(image_depth > 0);
+    stream << "// linebuffer " << lb_name << " created with ";
 
-          
-        stream << "// stencil size: " << stencil_depth << " " << stencil_width << " " << stencil_height
-               << " and image size " << image_depth << "x" << image_width << std::endl;
-        //cout << "// stencil size: " << stencil_depth << " " << stencil_width << " " << stencil_height
-        //<< " and image size " << image_depth << "x" << image_width << std::endl;
-
-        // FIXME: use proper bitwidth
-        CoreIR::Values lb3_args = {{"bitwidth",CoreIR::Const::make(context,bitwidth)},
-                                   {"stencil_d0", CoreIR::Const::make(context,stencil_depth)},
-                                   {"stencil_d1", CoreIR::Const::make(context,stencil_width)},
-                                   {"stencil_d2", CoreIR::Const::make(context,stencil_height)},
-                                   {"image_d0", CoreIR::Const::make(context,image_depth)}, 
-                                   {"image_d1", CoreIR::Const::make(context,image_width)}};
-
-        coreir_lb = def->addInstance(lb_name, gens["linebuffer3d"], lb3_args);
-
-      }
-    } else {
-      // FIXME: use proper bitwidth
-      CoreIR::Type* input_type = context->BitIn()->Arr(bitwidth);
-      CoreIR::Type* output_type = context->Bit()->Arr(bitwidth);
-      CoreIR::Type* image_type = context->Bit()->Arr(bitwidth);
-
-      stream << "// linebuffer created with ";
-
-      stream << "input=";
-      uint input_dims [num_dims];
-      for (uint i=0; i<num_dims; ++i) {
-        input_dims[i] = id_const_value(in_stencil_type.bounds[i].extent);
-        input_type = input_type->Arr(input_dims[i]);
-        stream << input_dims[i] << " ";
-      }
-
-      stream << " output=";
-      uint output_dims [num_dims];
-      for (uint i=0; i<num_dims; ++i) {
-        output_dims[i] = id_const_value(stencil_type.bounds[i].extent);
-        output_type = output_type->Arr(output_dims[i]);
-        stream << output_dims[i] << " ";
-      }
-
-      stream << " image=";
-      uint image_dims [num_dims];
-      for (uint i=0; i<num_dims; ++i) {
-        image_dims[i] = id_const_value(id_const_value(op->args[i+2]));
-        image_type = image_type->Arr(image_dims[i]);
-        stream << image_dims[i] << " ";
-      }
-      stream << "\n";
-
-      CoreIR::Values lb_args = {{"input_type", CoreIR::Const::make(context,input_type)},
-                                {"output_type", CoreIR::Const::make(context,output_type)},
-                                {"image_type", CoreIR::Const::make(context,image_type)},
-                                {"has_valid",CoreIR::Const::make(context,has_valid)}};
-
-      coreir_lb = def->addInstance(lb_name, gens["linebuffer"], lb_args);
-      if (has_valid) {
-        connected_wen = connect_linebuffer(lb_in_name, coreir_lb->sel("wen"));
-        record_linebuffer_valid(lb_out_name, coreir_lb->sel("valid"));
-        def->connect({"self", "reset"}, {lb_name, "reset"});
-      }
-					
+    stream << "input=";
+    uint input_dims [num_dims];
+    for (uint i=0; i<num_dims; ++i) {
+      input_dims[i] = id_const_value(in_stencil_type.bounds[i].extent);
+      input_type = input_type->Arr(input_dims[i]);
+      stream << input_dims[i] << " ";
     }
-    /*
-      int stencil_width = id_const_value(lb_dim0);
-      int stencil_height = id_const_value(lb_dim1);
-      int image_width = id_const_value(op->args[2]);
-      int fifo_depth = image_width;
-      internal_assert(fifo_depth > 0);
 
-      stream << "// stencil size: " << stencil_width << " " << stencil_height << " and image width " << image_width << std::endl
-      << "//  using fifo_depth " << fifo_depth << std::endl;
-        
-      CoreIR::Wireable* coreir_lb = def->addInstance(lb_name, gens["Linebuffer"],
-      {{"bitwidth",CoreIR::Const::make(context,bitwidth)}, {"stencil_width", CoreIR::Const::make(context,stencil_width)},
-      {"stencil_height", CoreIR::Const::make(context,stencil_height)}, {"image_width", CoreIR::Const::make(context,fifo_depth)}}
-      );
-    */
+    stream << " output=";
+    uint output_dims [num_dims];
+    for (uint i=0; i<num_dims; ++i) {
+      output_dims[i] = id_const_value(stencil_type.bounds[i].extent);
+      output_type = output_type->Arr(output_dims[i]);
+      stream << output_dims[i] << " ";
+    }
 
+    stream << " image=";
+    uint image_dims [num_dims];
+    for (uint i=0; i<num_dims; ++i) {
+      image_dims[i] = id_const_value(id_const_value(op->args[i+2]));
+      image_type = image_type->Arr(image_dims[i]);
+      stream << image_dims[i] << " ";
+    }
+    stream << "\n";
+
+    CoreIR::Values lb_args = {{"input_type", CoreIR::Const::make(context,input_type)},
+                              {"output_type", CoreIR::Const::make(context,output_type)},
+                              {"image_type", CoreIR::Const::make(context,image_type)},
+                              {"has_valid",CoreIR::Const::make(context,has_valid)}};
+
+    CoreIR::Wireable* coreir_lb = def->addInstance(lb_name, gens["linebuffer"], lb_args);
+    if (has_valid) {
+      if (coreir_lb == NULL) {
+        std::cout << "NULL LINEBUFFER before recording" << endl;
+      }
+      record_linebuffer(lb_out_name, coreir_lb);
+      connected_wen = connect_linebuffer(lb_in_name, coreir_lb->sel("wen"));
+
+      def->connect({"self", "reset"}, {lb_name, "reset"});
+    }
+					
     // connect linebuffer
     //CoreIR::Module* bc_gen = static_cast<CoreIR::Module*>(gens["bitconst"]);
     CoreIR::Wireable* lb_in_wire = get_wire(lb_in_name, op->args[0]);
-    for (uint i=0; i<num_dims; ++i) {
-      // FIXME: assumes a single element for linebuffer input
-      /*
-        CoreIR::Type* wire_type = lb_in_wire->getType();
-        uint array_len = wire_type->getKind() == CoreIR::Type::TypeKind::TK_Array ?
-        static_cast<CoreIR::ArrayType*>(wire_type)->getLen() : 0;
-        internal_assert(array_len == 1) << "FIXME: we don't support multi-precision linebuffer inputs yet (" << array_len << ")\n";
-      */
-      if (use_old_lb) {
-        lb_in_wire = lb_in_wire->sel(0);
-      }
-
-    }
-
 
     def->connect(lb_in_wire, coreir_lb->sel("in"));
     add_wire(lb_out_name, coreir_lb->sel("out"));

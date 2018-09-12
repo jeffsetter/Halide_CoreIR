@@ -6,9 +6,9 @@ OUTPUT_REDIRECTION ?= &>/dev/null
 WORKING_APPS = pointwise param \
 	conv_1_1 conv_1_2 conv_2_1 conv_3_1 conv_bw gaussian blur_1_4 \
 	conv_1_2_valid conv_2_1_valid conv_3_1_valid conv_bw_valid cascade \
-	conv_nest conv_chain \
+	threshold_conv conv_nest conv_chain \
 	onebit_comp onebit_and onebit_mux onebit_bool \
-	harris harris_valid
+	harris harris_valid demosaic
 
 NOT_WORKING_APPS = \
 	conv_rgb demosaic stereo camera_pipe simpleCNN unsharp \

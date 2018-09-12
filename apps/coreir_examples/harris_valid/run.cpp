@@ -74,7 +74,7 @@ int main(int argc, char **argv) {
 
   Image<uint8_t> in(64,64,1);
   Image<uint8_t> out_native(in.width()-6, in.height()-6);
-  //Image<uint8_t> out_hls(out_native.width(), out_native.height());
+  Image<uint8_t> out_hls(out_native.width(), out_native.height());
   Image<uint8_t> out_coreir(out_native.width(), out_native.height());
   ImageWriter<uint8_t> *coreir_writer = new ImageWriter<uint8_t>(out_coreir);
   Image<uint8_t> coreir_image(in.width(), in.height());
@@ -87,24 +87,24 @@ int main(int argc, char **argv) {
   printf("finished running native code\n");
   bool success = true;
 
-  //pipeline_hls(in, out_hls);
-  //save_image(out_hls, "out_hls.png");
-//
-//  printf("finished running HLS code\n");
-//
-//
-//  for (int y = 0; y < out_hls.height(); y++) {
-//    for (int x = 0; x < out_hls.width(); x++) {
-//      if (fabs(out_native(x, y) - out_hls(x, y)) > 1e-4) {
-//        printf("out_native(%d, %d) = %d, but out_hls(%d, %d) = %d\n",
-//               x, y, out_native(x, y),
-//               x, y, out_hls(x, y));
-//        success = false;
-//      }
-//    }
-//  }
-//
-  // New context for coreir test
+  pipeline_hls(in, out_hls);
+  save_image(out_hls, "out_hls.png");
+
+  printf("finished running HLS code\n");
+
+
+  for (int y = 0; y < out_hls.height(); y++) {
+    for (int x = 0; x < out_hls.width(); x++) {
+      if (fabs(out_native(x, y) - out_hls(x, y)) > 1e-4) {
+        printf("out_native(%d, %d) = %d, but out_hls(%d, %d) = %d\n",
+               x, y, out_native(x, y),
+               x, y, out_hls(x, y));
+        success = false;
+      }
+    }
+  }
+
+  // // New context for coreir test
   Context* c = newContext();
   Namespace* g = c->getGlobal();
 
@@ -112,7 +112,7 @@ int main(int argc, char **argv) {
   if (!loadFromFile(c,"./design_prepass.json")) {
     std::cout << "Could not Load from json!!" << std::endl;
     c->die();
-  }
+   }
 
   c->runPasses({"rungenerators", "flattentypes", "flatten", "wireclocks-coreir"});
 
@@ -121,7 +121,9 @@ int main(int argc, char **argv) {
   SimulatorState state(m);
 
   state.setValue("self.in_arg_1_0_0", BitVector(16));
+  state.setValue("self.reset", BitVector(1, 1));
   state.resetCircuit();
+  state.setValue("self.reset", BitVector(1, 0));
   state.setClock("self.clk", 0, 1);
 
   std::cout << "Starting coreir simulation" << std::endl;
@@ -147,6 +149,7 @@ int main(int argc, char **argv) {
         }
 
         bool valid = state.getBitVec("self.valid").to_type<bool>();
+        printf("x=%d, y=%d, valid=%d\n", x, y, valid);
 //        if (x>=4 && y>=4 && !valid) {
 //          printf("out_native(%d, %d, %d) = %d and coreir_image(%d, %d, %d) = %d, but valid = %d\n",
 //                 x-4, y-4, c, out_native(x-4, y-4, c),

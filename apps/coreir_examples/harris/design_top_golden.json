@@ -227,7 +227,7 @@
           },
           "lb_grad_xx_2_stencil_update_stream":{
             "genref":"commonlib.linebuffer",
-            "genargs":{"has_valid":["Bool",false], "image_type":["CoreIRType",["Array",644,["Array",484,["Array",16,"Bit"]]]], "input_type":["CoreIRType",["Array",1,["Array",1,["Array",16,"BitIn"]]]], "is_last_lb":["Bool",true], "output_type":["CoreIRType",["Array",3,["Array",3,["Array",16,"Bit"]]]]}
+            "genargs":{"has_valid":["Bool",false], "image_type":["CoreIRType",["Array",644,["Array",484,["Array",16,"Bit"]]]], "input_type":["CoreIRType",["Array",1,["Array",1,["Array",16,"BitIn"]]]], "output_type":["CoreIRType",["Array",3,["Array",3,["Array",16,"Bit"]]]]}
           },
           "lb_grad_xx_2_stencil_update_stream_wen":{
             "modref":"corebit.const",
@@ -235,7 +235,7 @@
           },
           "lb_grad_xy_2_stencil_update_stream":{
             "genref":"commonlib.linebuffer",
-            "genargs":{"has_valid":["Bool",false], "image_type":["CoreIRType",["Array",644,["Array",484,["Array",16,"Bit"]]]], "input_type":["CoreIRType",["Array",1,["Array",1,["Array",16,"BitIn"]]]], "is_last_lb":["Bool",true], "output_type":["CoreIRType",["Array",3,["Array",3,["Array",16,"Bit"]]]]}
+            "genargs":{"has_valid":["Bool",false], "image_type":["CoreIRType",["Array",644,["Array",484,["Array",16,"Bit"]]]], "input_type":["CoreIRType",["Array",1,["Array",1,["Array",16,"BitIn"]]]], "output_type":["CoreIRType",["Array",3,["Array",3,["Array",16,"Bit"]]]]}
           },
           "lb_grad_xy_2_stencil_update_stream_wen":{
             "modref":"corebit.const",
@@ -243,7 +243,7 @@
           },
           "lb_grad_yy_2_stencil_update_stream":{
             "genref":"commonlib.linebuffer",
-            "genargs":{"has_valid":["Bool",false], "image_type":["CoreIRType",["Array",644,["Array",484,["Array",16,"Bit"]]]], "input_type":["CoreIRType",["Array",1,["Array",1,["Array",16,"BitIn"]]]], "is_last_lb":["Bool",true], "output_type":["CoreIRType",["Array",3,["Array",3,["Array",16,"Bit"]]]]}
+            "genargs":{"has_valid":["Bool",false], "image_type":["CoreIRType",["Array",644,["Array",484,["Array",16,"Bit"]]]], "input_type":["CoreIRType",["Array",1,["Array",1,["Array",16,"BitIn"]]]], "output_type":["CoreIRType",["Array",3,["Array",3,["Array",16,"Bit"]]]]}
           },
           "lb_grad_yy_2_stencil_update_stream_wen":{
             "modref":"corebit.const",
@@ -251,7 +251,7 @@
           },
           "lb_p3_cim_stencil_update_stream":{
             "genref":"commonlib.linebuffer",
-            "genargs":{"has_valid":["Bool",false], "image_type":["CoreIRType",["Array",642,["Array",482,["Array",16,"Bit"]]]], "input_type":["CoreIRType",["Array",1,["Array",1,["Array",16,"BitIn"]]]], "is_last_lb":["Bool",true], "output_type":["CoreIRType",["Array",3,["Array",3,["Array",16,"Bit"]]]]}
+            "genargs":{"has_valid":["Bool",false], "image_type":["CoreIRType",["Array",642,["Array",482,["Array",16,"Bit"]]]], "input_type":["CoreIRType",["Array",1,["Array",1,["Array",16,"BitIn"]]]], "output_type":["CoreIRType",["Array",3,["Array",3,["Array",16,"Bit"]]]]}
           },
           "lb_p3_cim_stencil_update_stream_wen":{
             "modref":"corebit.const",
@@ -259,7 +259,7 @@
           },
           "lb_padded_2_stencil_update_stream":{
             "genref":"commonlib.linebuffer",
-            "genargs":{"has_valid":["Bool",false], "image_type":["CoreIRType",["Array",646,["Array",486,["Array",16,"Bit"]]]], "input_type":["CoreIRType",["Array",1,["Array",1,["Array",16,"BitIn"]]]], "is_last_lb":["Bool",true], "output_type":["CoreIRType",["Array",3,["Array",3,["Array",16,"Bit"]]]]}
+            "genargs":{"has_valid":["Bool",false], "image_type":["CoreIRType",["Array",646,["Array",486,["Array",16,"Bit"]]]], "input_type":["CoreIRType",["Array",1,["Array",1,["Array",16,"BitIn"]]]], "output_type":["CoreIRType",["Array",3,["Array",3,["Array",16,"Bit"]]]]}
           },
           "lb_padded_2_stencil_update_stream_wen":{
             "modref":"corebit.const",

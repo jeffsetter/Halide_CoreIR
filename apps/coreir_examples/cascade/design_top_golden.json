@@ -234,11 +234,11 @@
           },
           "lb_conv1_2_stencil_update_stream":{
             "genref":"commonlib.linebuffer",
-            "genargs":{"has_valid":["Bool",true], "image_type":["CoreIRType",["Array",62,["Array",62,["Array",16,"Bit"]]]], "input_type":["CoreIRType",["Array",1,["Array",1,["Array",16,"BitIn"]]]], "is_last_lb":["Bool",true], "output_type":["CoreIRType",["Array",3,["Array",3,["Array",16,"Bit"]]]]}
+            "genargs":{"has_valid":["Bool",true], "image_type":["CoreIRType",["Array",62,["Array",62,["Array",16,"Bit"]]]], "input_type":["CoreIRType",["Array",1,["Array",1,["Array",16,"BitIn"]]]], "output_type":["CoreIRType",["Array",3,["Array",3,["Array",16,"Bit"]]]]}
           },
           "lb_p4_clamped_stencil_update_stream":{
             "genref":"commonlib.linebuffer",
-            "genargs":{"has_valid":["Bool",true], "image_type":["CoreIRType",["Array",64,["Array",64,["Array",16,"Bit"]]]], "input_type":["CoreIRType",["Array",1,["Array",1,["Array",16,"BitIn"]]]], "is_last_lb":["Bool",true], "output_type":["CoreIRType",["Array",3,["Array",3,["Array",16,"Bit"]]]]}
+            "genargs":{"has_valid":["Bool",true], "image_type":["CoreIRType",["Array",64,["Array",64,["Array",16,"Bit"]]]], "input_type":["CoreIRType",["Array",1,["Array",1,["Array",16,"BitIn"]]]], "output_type":["CoreIRType",["Array",3,["Array",3,["Array",16,"Bit"]]]]}
           },
           "lb_p4_clamped_stencil_update_stream_wen":{
             "modref":"corebit.const",
@@ -360,7 +360,6 @@
           ["mul_5554_556.in1","const4_4$1.out"],
           ["mul_5174_518.in1","const4_4.out"],
           ["self.reset","lb_conv1_2_stencil_update_stream.reset"],
-          ["self.valid","lb_conv1_2_stencil_update_stream.valid"],
           ["lb_p4_clamped_stencil_update_stream.valid","lb_conv1_2_stencil_update_stream.wen"],
           ["self.in.arg_1","lb_p4_clamped_stencil_update_stream.in"],
           ["mul_5032_504.in0","lb_p4_clamped_stencil_update_stream.out.0.1"],
@@ -369,6 +368,7 @@
           ["mul_5222_523.in0","lb_p4_clamped_stencil_update_stream.out.1.2"],
           ["mul_5312_532.in0","lb_p4_clamped_stencil_update_stream.out.2.1"],
           ["self.reset","lb_p4_clamped_stencil_update_stream.reset"],
+          ["self.valid","lb_p4_clamped_stencil_update_stream.valid"],
           ["lb_p4_clamped_stencil_update_stream_wen.out","lb_p4_clamped_stencil_update_stream.wen"]
         ]
       }

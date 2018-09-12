@@ -22,7 +22,7 @@ public:
   MyPipeline() : input(UInt(8), 2, "input"),
                  kernel("kernel"), conv1("conv1"),
                  output("output"), hw_output("hw_output"),
-                 win(0, 6, 0, 6) {
+                 win(0, 3, 0, 3) {
     // Define a 3x3 blur
     kernel(x,y) = 3;
     kernel(0,0) = 11;      kernel(0,1) = 12;      kernel(0,2) = 13;
@@ -102,7 +102,7 @@ public:
     clamped.compute_root();
     hw_output.compute_root();
     conv1.linebuffer();
-    hw_output.tile(x, y, xo, yo, xi, yi, 64-5,64-5).reorder(xi,yi,xo,yo);
+    hw_output.tile(x, y, xo, yo, xi, yi, 64-2,64-2).reorder(xi,yi,xo,yo);
     hw_output.accelerate({clamped}, xi, xo, {});
 
     Target coreir_target = get_target_from_environment();

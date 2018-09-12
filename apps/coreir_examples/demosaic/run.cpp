@@ -93,11 +93,12 @@ int main(int argc, char **argv) {
   Halide::Image<uint8_t> in_crop = input_cropped.realize(64, 64);
   save_image(in_crop, "input.png");
   */
-  Image<uint8_t> in = load_image(argv[1]);
-  Image<uint8_t> out_native(61, 61, 3);
-  Image<uint8_t> out_hls(61, 61, 3);
+  Image<uint8_t> in(64,64,3);
+  in = load_image(argv[1]);
+  Image<uint8_t> out_native(62, 62, 3);
+  Image<uint8_t> out_hls(62, 62, 3);
   Image<uint8_t> out_coreir(64, 64, 3);
-  ImageWriter<uint8_t> *coreir_writer = new ImageWriter<uint8_t>(out_coreir);
+  //ImageWriter<uint8_t> *coreir_writer = new ImageWriter<uint8_t>(out_coreir);
   Image<uint8_t> coreir_image(64, 64, 3);
 
   printf("start.\n");
@@ -105,11 +106,11 @@ int main(int argc, char **argv) {
   pipeline_native(in, out_native);
   save_image(out_native, "out.png");
 
-  printf("finish running native code\n");
+  printf("finished running native code\n");
 
   pipeline_hls(in, out_hls);
 
-  printf("finish running HLS code\n");
+  printf("finished running HLS code\n");
 
   bool success = true;
   for (int y = 0; y < out_native.height(); y++) {
@@ -135,11 +136,14 @@ int main(int argc, char **argv) {
 
   c->runPasses({"rungenerators", "flattentypes", "flatten", "wireclocks-coreir"});
 
+  std::cout << "finished passes" << std::endl;
   Module* m = g->getModule("DesignTop");
   assert(m != nullptr);
   SimulatorState state(m);
 
   state.setValue("self.in_arg_3_0_0", BitVector(16));
+  state.setValue("self.reset", BitVector(1));
+  std::cout << "starting reset" << std::endl;
   state.resetCircuit();
   state.setClock("self.clk", 0, 1);
 
@@ -156,57 +160,41 @@ int main(int argc, char **argv) {
 
             
         // read output wire
-        coreir_image(x,y,0) = state.getBitVec("self.out_0_0_0").to_type<uint8_t>();
-        coreir_image(x,y,1) = state.getBitVec("self.out_1_0_0").to_type<uint8_t>();
         coreir_image(x,y,2) = state.getBitVec("self.out_2_0_0").to_type<uint8_t>();
+        coreir_image(x,y,1) = state.getBitVec("self.out_1_0_0").to_type<uint8_t>();
+        coreir_image(x,y,0) = state.getBitVec("self.out_0_0_0").to_type<uint8_t>();
+        state.getBitVec("self.valid").to_type<bool>();
 
-        uint16_t r00 = state.getBitVec("add_1141_1143_1144.in0").to_type<uint16_t>();
-        uint16_t r10 = state.getBitVec("add_1150_1152_1153.in0").to_type<uint16_t>();
-        uint16_t r01 = state.getBitVec("add_1141_1143_1144.in1").to_type<uint16_t>();
-        uint16_t r11 = state.getBitVec("add_1150_1152_1153.in1").to_type<uint16_t>();
-
-        uint16_t in00 = state.getBitVec("add_1108_1110_1111.in0").to_type<uint16_t>();
-        uint16_t in01 = state.getBitVec("add_1053_1055_1056.in0").to_type<uint16_t>();
-        uint16_t in02 = state.getBitVec("add_1060_1062_1063.in1").to_type<uint16_t>();
-        uint16_t in10 = state.getBitVec("add_1081_1083_1084.in0").to_type<uint16_t>();
-        uint16_t in11 = state.getBitVec("mux_1038_1042_1050.in1").to_type<uint16_t>();
-        uint16_t in12 = state.getBitVec("add_1081_1083_1084.in1").to_type<uint16_t>();
-        uint16_t in20 = state.getBitVec("add_1063_1065_1066.in1").to_type<uint16_t>();
-        uint16_t in21 = state.getBitVec("add_1053_1055_1056.in1").to_type<uint16_t>();
-        uint16_t in22 = state.getBitVec("add_1066_1068_1069.in1").to_type<uint16_t>();
-
-        uint16_t lb0 = state.getBitVec("mux_1041_1051_1073.out").to_type<uint16_t>();
-        uint16_t lb1 = state.getBitVec("mux_1093_1097_1098.out").to_type<uint16_t>();
-        uint16_t lb2 = state.getBitVec("mux_1106_1129_1138.out").to_type<uint16_t>();
+        //uint16_t input= state.getBitVec("self.in_arg_3_0_0").to_type<uint16_t>();
+        //uint16_t lb00 = state.getBitVec("add_934_936_937.in0").to_type<uint16_t>();
+        //uint16_t lb01 = state.getBitVec("add_910_912_913.in1").to_type<uint16_t>();
+        //uint16_t lb02 = state.getBitVec("add_934_936_937.in1").to_type<uint16_t>();
+        //uint16_t lb10 = state.getBitVec("add_907_909_910.in0").to_type<uint16_t>();
+        //uint16_t lb11 = state.getBitVec("mux_864_868_876.in1").to_type<uint16_t>();
+        //uint16_t lb12 = state.getBitVec("add_870_872_873.in1").to_type<uint16_t>();
+        //uint16_t lb20 = state.getBitVec("add_889_891_892.in1").to_type<uint16_t>();
+        //uint16_t lb21 = state.getBitVec("add_913_915_916.in1").to_type<uint16_t>();
+        //uint16_t lb22 = state.getBitVec("add_940_942_943.in1").to_type<uint16_t>();
+        //printf("y=%d,x=%d  in=%x  lb00=%x,lb01=%x,lb02=%x lb10=%x,lb11=%x,lb12=%x lb20=%x,lb21=%x,lb22=%x\n",
+        //       y,x,input,
+        //       lb00,lb01,lb02,
+        //       lb10,lb11,lb12,
+        //       lb20,lb21,lb22);
         
         //uint16_t coreir_value = state.getBitVec("self.out_0_0").to_type<uint16_t>();
-        if (x>=3 && y>=3 && out_native(x-3, y-3, c) != coreir_image(x,y,c)) {
+        if (x>=2 && y>=2 && out_native(x-2, y-2, c) != coreir_image(x,y,c)) {
           printf("out_native(%d, %d, %d) = %x, but coreir_image(%d, %d, %d) = %x\n",
-                 x-3, y-3, c, out_native(x-3, y-3, c),
+                 x-2, y-2, c, out_native(x-2, y-2, c),
                  x, y, c, coreir_image(x,y,c));
           success = false;
-          printf("x=%d,y=%d, native={%x,%x,%x}, coreir={%x,%x,%x} r00=%x,r01=%x,r10=%x,r11=%x\n",
-                 x-3, y-3,
-                 out_native(x-3,y-3,0), out_native(x-3,y-3,1), out_native(x-3,y-3,2),
-                 coreir_image(x,y,0),   coreir_image(x,y,1),   coreir_image(x,y,2),
-                 //                 0,0,0,0);
-                 r00,r01,r10,r11);
                  
         }
-        printf("x=%d,y=%d p00=%x,p01=%x,p02=%x, p10=%x,p11=%x,p12=%x, p20=%x,p21=%x,p22=%x  lb0=%x,lb1=%x,lb2=%x\n",
-               x,y,
-               in00,in01,in02, in10,in11,in12, in20,in21,in22,
-               lb0,lb1,lb2);
 
-        bool valid = true;//state.getBitVec("self.valid").to_type<bool>();
 //        if (x>=4 && y>=4 && !valid) {
 //          printf("out_native(%d, %d, %d) = %d and coreir_image(%d, %d, %d) = %d, but valid = %d\n",
 //                 x-4, y-4, c, out_native(x-4, y-4, c),
 //                 x, y, c, coreir_image(x,y,c), valid);
 //        }
-        if (valid) {
-          coreir_writer->write(coreir_image(x,y,c));
-        }
         //printf("out_coreir(%d, %d, %d) = %d,  valid=%d\n",x,y,c,out_coreir(x,y,c), valid);
 
         //printf("out_coreir(%d,%d,%d) = %d\n",  x,y,c,out_coreir(x,y,c));
@@ -231,20 +219,6 @@ int main(int argc, char **argv) {
     }
   }
 
-  coreir_writer->save_image("out_coreir.png");
-  coreir_writer->print_coords();
-
-
-  for (int y = 0; y < out_coreir.height(); y++) {
-    for (int x = 0; x < out_coreir.width(); x++) {
-      if (fabs(out_native(x, y) - out_coreir(x, y)) > 1e-4) {
-        printf("out_native(%d, %d) = %d, but out_coreir(%d, %d) = %d\n",
-               x, y, out_native(x, y),
-               x, y, out_coreir(x, y));
-        success = false;
-      }
-    }
-  }
   std::cout << "CoreIR image comparison complete!" << std::endl;
 
   

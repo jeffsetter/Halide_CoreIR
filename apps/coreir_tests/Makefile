@@ -18,7 +18,7 @@ testall test_all: $(ALL_APPS)
 #		fi \
 #	done
 
-update_goldens:
+updategoldens update_goldens:
 	@echo ""
 	@for app in $(ALL_APPS); do \
 		$(MAKE) -sC $$app update_golden; \
@@ -31,7 +31,7 @@ checkall check_all:
 	done
 
 
-cleanall:
+cleanall clean_all:
 	for app in $(ALL_APPS); do \
 	  $(MAKE) -C $$app clean > /dev/null; \
 	done
