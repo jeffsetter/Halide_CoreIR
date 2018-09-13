@@ -8,7 +8,8 @@ WORKING_APPS = pointwise param \
 	conv_1_2_valid conv_2_1_valid conv_3_1_valid conv_bw_valid cascade \
 	threshold_conv conv_nest conv_chain \
 	onebit_comp onebit_and onebit_mux onebit_bool \
-	harris harris_valid demosaic
+	harris harris_valid \
+	demosaic demosaic_blur
 
 NOT_WORKING_APPS = \
 	conv_rgb demosaic stereo camera_pipe simpleCNN unsharp \

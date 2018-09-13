@@ -964,10 +964,6 @@ void CodeGen_CoreIR_Target::CodeGen_CoreIR_C::record_dispatch(std::string produc
 void CodeGen_CoreIR_Target::CodeGen_CoreIR_C::record_linebuffer(std::string producer_name, CoreIR::Wireable* wire) {
   stream << "// added " << producer_name << " linebuffer to record map\n";
   lb_map[producer_name] = wire;
-  for (auto pair_map : lb_map) {
-    cout << " key: " << pair_map.first;
-  }
-  cout << "\n";
 }
 
 
@@ -997,12 +993,6 @@ bool CodeGen_CoreIR_Target::CodeGen_CoreIR_C::connect_linebuffer(std::string con
       stream << "// connected lb valid: connecting " << producer_name << " valid to " 
              << consumer_name << " wen\n";
       CoreIR::Wireable* linebuffer_wire = lb_map[producer_name];
-      if (linebuffer_wire == NULL) {
-        for (auto pair_map : lb_map) {
-          cout << " key: " << pair_map.first;
-        }
-        cout << "FOUND NULL LINEBUFFER" << endl;
-      }
       def->connect(linebuffer_wire->sel("valid"), consumer_wen_wire);
       return true;
     }
@@ -1335,25 +1325,27 @@ void CodeGen_CoreIR_Target::CodeGen_CoreIR_C::visit(const ProducerConsumer *op) 
     do_indent();
     stream << "// produce " << op->name << '\n';
 
-    stream << "//  using " << strip_stream(print_name(op->name)) << '\n';
+    string target_var = strip_stream(print_name(op->name));
+    stream << "//  using " << target_var << '\n';
     // FIXME: only looking at the first linebuffer
-    string lb_name = hw_dispatch_set[strip_stream(print_name(op->name))][0];
-    stream << "//    and lb " << lb_name << '\n';
+    if (hw_dispatch_set.count(target_var) > 0) {
+      string lb_name = hw_dispatch_set[target_var][0];
+      stream << "//    and lb " << lb_name << '\n';
 
-    if (lb_map.count(lb_name) > 0) {
-      stream << "// found the linebuffer\n";
-      CoreIR::Wireable* lb_wire = lb_map[lb_name];
+      if (lb_map.count(lb_name) > 0) {
+        stream << "// found the linebuffer\n";
+        CoreIR::Wireable* lb_wire = lb_map[lb_name];
 
-      vector<string> for_loop_names = contained_for_loop_names(op->produce);
-      for (string for_loop_name : for_loop_names) {
-        lb_kernel_map[for_loop_name] = lb_wire;
-        stream << "// adding linebuffer target for loop " << for_loop_name << "\n";
+        vector<string> for_loop_names = contained_for_loop_names(op->produce);
+        for (string for_loop_name : for_loop_names) {
+          lb_kernel_map[for_loop_name] = lb_wire;
+          stream << "// adding linebuffer target for loop " << for_loop_name << "\n";
+        }
+
       }
-
     }
-    
 
-    
+    stream << "// emitting produce\n";
     print_stmt(op->produce);
 
     if (op->update.defined()) {
@@ -1376,10 +1368,13 @@ void CodeGen_CoreIR_Target::CodeGen_CoreIR_C::visit(const Provide *op) {
     vector<uint> indices;
     for(size_t i = 0; i < op->args.size(); i++) {
       args_indices[i] = print_expr(op->args[i]);
-      internal_assert(is_const(op->args[i])) << "variable store used. FIXME: Demux not yet implemented\n";
-      if (!is_const(op->args[i])) { user_warning << "variable store used. FIXME: Demux not yet implemented\n"; }
-      indices.push_back(id_const_value(op->args[i]));
-      stream << id_const_value(op->args[i]) << " ";
+      //internal_assert(is_const(op->args[i])) << "variable store used. FIXME: Demux not yet implemented\n";
+      if (!is_const(op->args[i])) {
+        user_warning << "variable store used. FIXME: Demux not yet implemented\n";
+        indices.push_back(0);
+      } else {
+        indices.push_back(id_const_value(op->args[i]));
+      }
     }
 
     internal_assert(op->values.size() == 1);
@@ -1806,7 +1801,7 @@ void CodeGen_CoreIR_Target::CodeGen_CoreIR_C::visit(const Call *op) {
     CoreIR::Wireable* coreir_lb = def->addInstance(lb_name, gens["linebuffer"], lb_args);
     if (has_valid) {
       if (coreir_lb == NULL) {
-        std::cout << "NULL LINEBUFFER before recording" << endl;
+        internal_assert(false) << "NULL LINEBUFFER before recording\n";
       }
       record_linebuffer(lb_out_name, coreir_lb);
       connected_wen = connect_linebuffer(lb_in_name, coreir_lb->sel("wen"));
@@ -1933,13 +1928,13 @@ void CodeGen_CoreIR_Target::CodeGen_CoreIR_C::visit(const Call *op) {
     if (predicate) {
       stream << "// reading stream with a predicate\n";
       // hook up the enable
-      CoreIR::Wireable* stencil_wire = get_wire(stream_print_name, op->args[0]);
-      CoreIR::Wireable* lb_wire = stencil_wire->getTopParent();
-      // FIXME: assert that this is a linebuffer
+      //CoreIR::Wireable* stencil_wire = get_wire(stream_print_name, op->args[0]);
+      //CoreIR::Wireable* lb_wire = stencil_wire->getTopParent();
+      // FIXME: assert that this is a linebuffer (rgb)
       // FIXME: shouldn't print out again
       string cond_id = print_expr(predicate->condition);
-      def->disconnect(lb_wire->sel("wen"));
-      def->connect(lb_wire->sel("wen"), get_wire(cond_id, predicate->condition));
+      //def->disconnect(lb_wire->sel("wen"));
+      //def->connect(lb_wire->sel("wen"), get_wire(cond_id, predicate->condition));
     }
 
   } else if (ends_with(op->name, ".stencil") ||

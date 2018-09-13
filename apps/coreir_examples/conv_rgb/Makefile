@@ -28,6 +28,9 @@ run_cuda: pipeline_native.o pipeline_cuda.o run_cuda.cpp
 out.png: run
 	./run
 
+graph.png: design_top.txt
+	dot -Tpng design_top.txt > graph.png
+
 $(HLS_LOG): ../hls_support/run_hls.tcl pipeline_hls.cpp run.cpp
 	RUN_PATH=$(realpath ./) \
 	RUN_ARGS= \
