@@ -342,6 +342,10 @@
             "genref":"commonlib.linebuffer",
             "genargs":{"has_valid":["Bool",false], "image_type":["CoreIRType",["Array",64,["Array",64,["Array",16,"Bit"]]]], "input_type":["CoreIRType",["Array",1,["Array",1,["Array",16,"BitIn"]]]], "output_type":["CoreIRType",["Array",3,["Array",3,["Array",16,"Bit"]]]]}
           },
+          "lb_p4_clamped_stencil_update_stream_reset":{
+            "modref":"corebit.const",
+            "modargs":{"value":["Bool",false]}
+          },
           "lb_p4_clamped_stencil_update_stream_wen":{
             "modref":"corebit.const",
             "modargs":{"value":["Bool",true]}
@@ -349,6 +353,10 @@
           "lb_p4_conv_0__stencil_update_stream":{
             "genref":"commonlib.linebuffer",
             "genargs":{"has_valid":["Bool",false], "image_type":["CoreIRType",["Array",62,["Array",62,["Array",16,"Bit"]]]], "input_type":["CoreIRType",["Array",1,["Array",1,["Array",16,"BitIn"]]]], "output_type":["CoreIRType",["Array",3,["Array",3,["Array",16,"Bit"]]]]}
+          },
+          "lb_p4_conv_0__stencil_update_stream_reset":{
+            "modref":"corebit.const",
+            "modargs":{"value":["Bool",false]}
           },
           "lb_p4_conv_0__stencil_update_stream_wen":{
             "modref":"corebit.const",
@@ -358,6 +366,10 @@
             "genref":"commonlib.linebuffer",
             "genargs":{"has_valid":["Bool",false], "image_type":["CoreIRType",["Array",60,["Array",60,["Array",16,"Bit"]]]], "input_type":["CoreIRType",["Array",1,["Array",1,["Array",16,"BitIn"]]]], "output_type":["CoreIRType",["Array",3,["Array",3,["Array",16,"Bit"]]]]}
           },
+          "lb_p4_conv_1__stencil_update_stream_reset":{
+            "modref":"corebit.const",
+            "modargs":{"value":["Bool",false]}
+          },
           "lb_p4_conv_1__stencil_update_stream_wen":{
             "modref":"corebit.const",
             "modargs":{"value":["Bool",true]}
@@ -366,6 +378,10 @@
             "genref":"commonlib.linebuffer",
             "genargs":{"has_valid":["Bool",false], "image_type":["CoreIRType",["Array",58,["Array",58,["Array",16,"Bit"]]]], "input_type":["CoreIRType",["Array",1,["Array",1,["Array",16,"BitIn"]]]], "output_type":["CoreIRType",["Array",3,["Array",3,["Array",16,"Bit"]]]]}
           },
+          "lb_p4_conv_2__stencil_update_stream_reset":{
+            "modref":"corebit.const",
+            "modargs":{"value":["Bool",false]}
+          },
           "lb_p4_conv_2__stencil_update_stream_wen":{
             "modref":"corebit.const",
             "modargs":{"value":["Bool",true]}
@@ -373,6 +389,10 @@
           "lb_p4_conv_3__stencil_update_stream":{
             "genref":"commonlib.linebuffer",
             "genargs":{"has_valid":["Bool",false], "image_type":["CoreIRType",["Array",56,["Array",56,["Array",16,"Bit"]]]], "input_type":["CoreIRType",["Array",1,["Array",1,["Array",16,"BitIn"]]]], "output_type":["CoreIRType",["Array",3,["Array",3,["Array",16,"Bit"]]]]}
+          },
+          "lb_p4_conv_3__stencil_update_stream_reset":{
+            "modref":"corebit.const",
+            "modargs":{"value":["Bool",false]}
           },
           "lb_p4_conv_3__stencil_update_stream_wen":{
             "modref":"corebit.const",
@@ -606,30 +626,35 @@
           ["mul_5954_596.in0","lb_p4_clamped_stencil_update_stream.out.1.1"],
           ["mul_6002_601.in0","lb_p4_clamped_stencil_update_stream.out.1.2"],
           ["mul_6092_610.in0","lb_p4_clamped_stencil_update_stream.out.2.1"],
+          ["lb_p4_clamped_stencil_update_stream_reset.out","lb_p4_clamped_stencil_update_stream.reset"],
           ["lb_p4_clamped_stencil_update_stream_wen.out","lb_p4_clamped_stencil_update_stream.wen"],
           ["mul_6202_621.in0","lb_p4_conv_0__stencil_update_stream.out.0.1"],
           ["mul_6272_628.in0","lb_p4_conv_0__stencil_update_stream.out.1.0"],
           ["mul_6314_632.in0","lb_p4_conv_0__stencil_update_stream.out.1.1"],
           ["mul_6352_636.in0","lb_p4_conv_0__stencil_update_stream.out.1.2"],
           ["mul_6422_643.in0","lb_p4_conv_0__stencil_update_stream.out.2.1"],
+          ["lb_p4_conv_0__stencil_update_stream_reset.out","lb_p4_conv_0__stencil_update_stream.reset"],
           ["lb_p4_conv_0__stencil_update_stream_wen.out","lb_p4_conv_0__stencil_update_stream.wen"],
           ["mul_6522_653.in0","lb_p4_conv_1__stencil_update_stream.out.0.1"],
           ["mul_6592_660.in0","lb_p4_conv_1__stencil_update_stream.out.1.0"],
           ["mul_6634_664.in0","lb_p4_conv_1__stencil_update_stream.out.1.1"],
           ["mul_6672_668.in0","lb_p4_conv_1__stencil_update_stream.out.1.2"],
           ["mul_6742_675.in0","lb_p4_conv_1__stencil_update_stream.out.2.1"],
+          ["lb_p4_conv_1__stencil_update_stream_reset.out","lb_p4_conv_1__stencil_update_stream.reset"],
           ["lb_p4_conv_1__stencil_update_stream_wen.out","lb_p4_conv_1__stencil_update_stream.wen"],
           ["mul_6842_685.in0","lb_p4_conv_2__stencil_update_stream.out.0.1"],
           ["mul_6912_692.in0","lb_p4_conv_2__stencil_update_stream.out.1.0"],
           ["mul_6954_696.in0","lb_p4_conv_2__stencil_update_stream.out.1.1"],
           ["mul_6992_700.in0","lb_p4_conv_2__stencil_update_stream.out.1.2"],
           ["mul_7062_707.in0","lb_p4_conv_2__stencil_update_stream.out.2.1"],
+          ["lb_p4_conv_2__stencil_update_stream_reset.out","lb_p4_conv_2__stencil_update_stream.reset"],
           ["lb_p4_conv_2__stencil_update_stream_wen.out","lb_p4_conv_2__stencil_update_stream.wen"],
           ["mul_7162_717.in0","lb_p4_conv_3__stencil_update_stream.out.0.1"],
           ["mul_7232_724.in0","lb_p4_conv_3__stencil_update_stream.out.1.0"],
           ["mul_7274_728.in0","lb_p4_conv_3__stencil_update_stream.out.1.1"],
           ["mul_7312_732.in0","lb_p4_conv_3__stencil_update_stream.out.1.2"],
           ["mul_7382_739.in0","lb_p4_conv_3__stencil_update_stream.out.2.1"],
+          ["lb_p4_conv_3__stencil_update_stream_reset.out","lb_p4_conv_3__stencil_update_stream.reset"],
           ["lb_p4_conv_3__stencil_update_stream_wen.out","lb_p4_conv_3__stencil_update_stream.wen"]
         ]
       }

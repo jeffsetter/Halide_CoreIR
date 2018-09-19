@@ -97,6 +97,52 @@ bool variable_used(Stmt s, string varname) {
   return uv.used;
 }
 
+class AllocationUsage : public IRVisitor {
+  using IRVisitor::visit;
+  void visit(const Load *op) {
+    if (op->name == alloc_name) {
+      if (!is_const(op->index)) {
+        uses_variable_load = true;
+      }
+    }
+  }
+
+  void visit(const Store *op) {
+    if (op->name == alloc_name) {
+      if (!is_const(op->index)) {
+        uses_variable_store_index = true;
+      }
+      if (!is_const(op->value)) {
+        uses_variable_store_value = true;
+      }
+    }
+  }
+
+
+ public:
+  bool uses_variable_load;
+  bool uses_variable_store_index;
+  bool uses_variable_store_value;
+  string alloc_name;
+  
+  AllocationUsage(string allocname) : uses_variable_load(false),
+                                      uses_variable_store_index(false),
+                                      uses_variable_store_value(false),
+                                      alloc_name(allocname) {}
+};
+
+bool variable_index_load(Stmt s, string allocname) {
+  AllocationUsage au(allocname);
+  s.accept(&au);
+  return au.uses_variable_load;
+}
+
+bool can_use_rom(Stmt s, string allocname) {
+  AllocationUsage au(allocname);
+  s.accept(&au);
+  return (!au.uses_variable_store_index &&
+          !au.uses_variable_store_value);
+}
 
 
 }
@@ -152,6 +198,16 @@ CodeGen_CoreIR_Target::CodeGen_CoreIR_C::CodeGen_CoreIR_C(std::ostream &s, Outpu
     assert(context->hasGenerator(gens[gen_name]));
   }
 
+
+  // add all modules from memory
+  context->getNamespace("memory");
+  std::vector<string> memorylib_gen_names = {"ram", "rom2", "fifo"};
+
+  for (auto gen_name : memorylib_gen_names) {
+    gens[gen_name] = "memory." + gen_name;
+    assert(context->hasGenerator(gens[gen_name]));
+  }
+  
   // passthrough is now just a mantle wire
   gens["passthrough"] = "mantle.wire";
   assert(context->hasGenerator(gens["passthrough"]));
@@ -632,9 +688,9 @@ bool CodeGen_CoreIR_Target::CodeGen_CoreIR_C::is_storage(string var_name) {
 
 bool CodeGen_CoreIR_Target::CodeGen_CoreIR_C::is_defined(string var_name) {
   bool hardware_defined = hw_def_set.count(var_name) > 0;
-  for (auto ele : hw_def_set) {
-    assert(ele.second);
-  }
+  //for (auto ele : hw_def_set) {
+  //  assert(ele.second);
+  //}
 
   return hardware_defined;
 }
@@ -865,12 +921,12 @@ void CodeGen_CoreIR_Target::CodeGen_CoreIR_C::rename_wire(string new_name, strin
  
     uint const_bitwidth = get_const_bitwidth(in_expr);
     if (const_bitwidth == 1) {
-      gen_const = "coreir.bitconst";
+      gen_const = gens["bitconst"];
       args = {{"value",CoreIR::Const::make(context,const_value)}};
       genargs = CoreIR::Values();
     } else {
       int bw = inst_bitwidth(const_bitwidth);
-      gen_const = "coreir.const";
+      gen_const = gens["const"];
       args = {{"width", CoreIR::Const::make(context,bw)}};
       genargs = {{"value",CoreIR::Const::make(context,BitVector(bw,const_value))}};
     }
@@ -1327,8 +1383,9 @@ void CodeGen_CoreIR_Target::CodeGen_CoreIR_C::visit(const ProducerConsumer *op) 
 
     string target_var = strip_stream(print_name(op->name));
     stream << "//  using " << target_var << '\n';
-    // FIXME: only looking at the first linebuffer
+
     if (hw_dispatch_set.count(target_var) > 0) {
+      // FIXME: only looking at the first linebuffer
       string lb_name = hw_dispatch_set[target_var][0];
       stream << "//    and lb " << lb_name << '\n';
 
@@ -1485,7 +1542,7 @@ void CodeGen_CoreIR_Target::CodeGen_CoreIR_C::visit(const For *op) {
   }
 
   // generate coreir: add counter module if variable used
-  if (variable_used(op->body, op->name)) {
+  if (variable_used(op->body, op->name) || is_defined(print_name(op->name))) {
     string wirename = print_name(op->name);
     stream << "// creating counter for " << wirename << "\n";
     
@@ -1519,6 +1576,7 @@ void CodeGen_CoreIR_Target::CodeGen_CoreIR_C::visit(const For *op) {
     // connect wen wire
     if (contain_for_loop(op->body)) {
       string varname = print_name(name_for_loop(op->body));
+      hw_def_set[varname] = NULL;  // define this to ensure it's created
       op->body.accept(this);
       close_scope("for " + print_name(op->name));
       
@@ -1623,6 +1681,31 @@ void CodeGen_CoreIR_Target::CodeGen_CoreIR_C::visit(const Allocate *op) {
   stream << print_type(op->type) << ' '
          << print_name(alloc_name)
          << "[" << constant_size << "]; [alloc]\n";
+
+  // define a rom that can be created and used later
+  // FIXME: better way to decide to use rom
+  // FIXME: use an array of constants to load the rom
+  if (variable_index_load(new_body, alloc_name) &&
+      can_use_rom(new_body, alloc_name) &&
+      constant_size > 100) {
+    CoreIR_Inst_Args rom_args;
+    rom_args.ref_name = alloc_name;
+    rom_args.name = "rom_" + alloc_name;
+    rom_args.gen = gens["rom2"];
+    rom_args.args = {{"width",CoreIR::Const::make(context,bitwidth)},
+                     {"depth",CoreIR::Const::make(context,constant_size)}};
+
+    // set initial values for rom
+    nlohmann::json jdata;
+    jdata["init"][0] = 0;
+    CoreIR::Values modparams = {{"init", CoreIR::Const::make(context, jdata)}};
+    rom_args.genargs = modparams;
+    rom_args.selname = "rdata";
+
+    hw_def_set[alloc_name] = std::make_shared<CoreIR_Inst_Args>(rom_args);
+    stream << "// created a rom called " << rom_args.name << "\n";
+                    
+  }
 
   //  CoreIR::Type* type_input = context->Bit()->Arr(bitwidth)->Arr(constant_size);
   //  CoreIR::Wireable* wire_array = def->addInstance("array", gens["passthrough"], {{"type", CoreIR::Const::make(context,type_input)}});
@@ -1807,6 +1890,9 @@ void CodeGen_CoreIR_Target::CodeGen_CoreIR_C::visit(const Call *op) {
       connected_wen = connect_linebuffer(lb_in_name, coreir_lb->sel("wen"));
 
       def->connect({"self", "reset"}, {lb_name, "reset"});
+    } else {
+      def->addInstance(lb_name + "_reset", gens["bitconst"], {{"value", CoreIR::Const::make(context,false)}});
+      def->connect({lb_name + "_reset", "out"}, {lb_name, "reset"});
     }
 					
     // connect linebuffer
@@ -2458,6 +2544,21 @@ void CodeGen_CoreIR_Target::CodeGen_CoreIR_C::visit(const Load *op) {
     string in_var = name + "_" + id_index;
     rename_wire(out_var, in_var, Expr());      
 
+  } else if (is_defined(name)) {
+    stream << "loading from rom " << name << std::endl;
+
+    std::shared_ptr<CoreIR_Inst_Args> inst_args = hw_def_set[name];
+		string inst_name = unique_name(inst_args->name);
+    CoreIR::Wireable* inst = def->addInstance(inst_name, inst_args->gen, inst_args->args, inst_args->genargs);
+    add_wire(out_var, inst->sel(inst_args->selname));
+
+    // attach the read address
+    CoreIR::Wireable* raddr_wire = get_wire(id_index, op->index);
+    def->connect(raddr_wire, inst->sel("raddr"));
+    //attach a read enable
+    CoreIR::Wireable* rom_ren = def->addInstance(inst_name + "_ren", gens["bitconst"], {{"value", CoreIR::Const::make(context,true)}});
+    def->connect(rom_ren->sel("out"), inst->sel("ren"));
+    
   } else { // variable load: use a mux for where data originates
     std::vector<const Variable*> dep_vars = find_dep_vars(op->index);
     stream << "// vars for " << name << ": ";
@@ -2543,9 +2644,8 @@ std::vector<const Variable*> CodeGen_CoreIR_Target::CodeGen_CoreIR_C::find_dep_v
   std::vector<const Variable*> vars;
   
   if (is_const(e)) {
+    stream << "encountering const\n";
     // no variable to add
-  } else if (const Variable *v = e.as<Variable>()) {
-    vars.push_back(v);
   } else if (const Max* max = e.as<Max>()) {
     auto vec_a = find_dep_vars(max->a);
     auto vec_b = find_dep_vars(max->b);
@@ -2564,6 +2664,7 @@ std::vector<const Variable*> CodeGen_CoreIR_Target::CodeGen_CoreIR_C::find_dep_v
     vars.insert( vars.end(), vec_fals.begin(), vec_fals.end() );
     vars.insert( vars.end(), vec_cond.begin(), vec_cond.end() );
   } else if (const Add* add = e.as<Add>()) {
+    stream << "encountering add" << "\n";
     auto vec_a = find_dep_vars(add->a);
     auto vec_b = find_dep_vars(add->b);
     vars.insert( vars.end(), vec_a.begin(), vec_a.end() );
@@ -2591,6 +2692,26 @@ std::vector<const Variable*> CodeGen_CoreIR_Target::CodeGen_CoreIR_C::find_dep_v
   } else if (const Cast* cast = e.as<Cast>()) {
     auto vec_v = find_dep_vars(cast->value);
     vars.insert( vars.end(), vec_v.begin(), vec_v.end() );
+  } else if (const Call* call = e.as<Call>()) {
+    if (call->is_intrinsic(Call::shift_right)) {
+      std::cout << "found right shift" << std::endl;
+    }
+    
+  } else if (const Variable *v = e.as<Variable>()) {
+    stream << "encountering var " << v->name << " " << "\n";
+    if (v->reduction_domain.defined()) {
+      stream << "it's a rdom " << v->reduction_domain.domain()[0].var << "\n";
+    }
+    if (v->param.defined()) {
+      stream << "it's a param " << v->param.name() << "\n";
+    }
+
+    if (v->image.defined()) {
+      stream << "it's a image " << v->image.name() << "\n";
+    }
+
+    vars.push_back(v);
+
   } else {
     internal_error << "function " << e << " not supported in simplification...\n";
     stream << "// function not supported...";

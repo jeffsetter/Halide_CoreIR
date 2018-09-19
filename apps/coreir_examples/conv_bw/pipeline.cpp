@@ -86,6 +86,9 @@ public:
     //hw_output.tile(x, y, xo, yo, xi, yi, 1920, 1080).reorder(xi, yi, xo, yo);
     hw_output.tile(x, y, xo, yo, xi, yi, 62,62).reorder(xi, yi, xo, yo);
     //hw_output.unroll(xi, 2);
+    //Var xo2,xi2;
+    //hw_output.split(xi,xo2,xi2,2).unroll(xi2);
+    conv1.unroll(x,2);
     hw_output.accelerate({clamped}, xi, xo, {});  // define the inputs and the output
     conv1.linebuffer();
 
@@ -103,6 +106,9 @@ public:
     hw_output.compute_root();
     conv1.linebuffer();
     hw_output.tile(x, y, xo, yo, xi, yi, 64-2,64-2).reorder(xi,yi,xo,yo);
+    //conv1.unroll(xi,2);
+    hw_output.unroll(xi,2);
+
     hw_output.accelerate({clamped}, xi, xo, {});
 
     Target coreir_target = get_target_from_environment();

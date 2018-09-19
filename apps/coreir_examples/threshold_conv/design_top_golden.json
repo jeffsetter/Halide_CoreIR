@@ -252,6 +252,10 @@
             "genref":"commonlib.linebuffer",
             "genargs":{"has_valid":["Bool",false], "image_type":["CoreIRType",["Array",14,["Array",14,["Array",16,"Bit"]]]], "input_type":["CoreIRType",["Array",1,["Array",1,["Array",16,"BitIn"]]]], "output_type":["CoreIRType",["Array",5,["Array",5,["Array",16,"Bit"]]]]}
           },
+          "lb_p4_clamped_stencil_update_stream_reset":{
+            "modref":"corebit.const",
+            "modargs":{"value":["Bool",false]}
+          },
           "lb_p4_clamped_stencil_update_stream_wen":{
             "modref":"corebit.const",
             "modargs":{"value":["Bool",true]}
@@ -471,6 +475,7 @@
           ["mul_6364_637.in0","lb_p4_clamped_stencil_update_stream.out.4.2"],
           ["mul_6414_642.in0","lb_p4_clamped_stencil_update_stream.out.4.3"],
           ["mul_6464_647.in0","lb_p4_clamped_stencil_update_stream.out.4.4"],
+          ["lb_p4_clamped_stencil_update_stream_reset.out","lb_p4_clamped_stencil_update_stream.reset"],
           ["lb_p4_clamped_stencil_update_stream_wen.out","lb_p4_clamped_stencil_update_stream.wen"],
           ["self.out.0.0","mux_651_6520.out"],
           ["ult_649_650_651.out","mux_651_6520.sel"]

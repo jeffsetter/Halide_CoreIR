@@ -33,8 +33,9 @@ namespace Halide {
       std::string wirename;
       std::string selname;
 
-    CoreIR_Inst_Args(std::string name, std::string wirename, std::string selname,
-                     std::string gen, CoreIR::Values args, CoreIR::Values genargs) :
+      CoreIR_Inst_Args() {}
+     CoreIR_Inst_Args(std::string name, std::string wirename, std::string selname,
+                      std::string gen, CoreIR::Values args, CoreIR::Values genargs) :
       name(name), gen(gen), args(args), genargs(genargs), wirename(wirename), selname(selname) {}
 
     };

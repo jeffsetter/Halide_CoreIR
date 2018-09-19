@@ -151,6 +151,7 @@ public:
     contiguous_darker.compute_at(hw_output,xi).unroll(l);
 
     Target coreir_target = get_target_from_environment();
+    coreir_target.set_feature(Target::CoreIRValid);
     coreir_target.set_feature(Target::CPlusPlusMangling);
     output.compile_to_lowered_stmt("pipeline_coreir.ir.html", args, HTML, coreir_target);
     output.compile_to_coreir("pipeline_coreir.cpp", args, "pipeline_coreir", coreir_target);
