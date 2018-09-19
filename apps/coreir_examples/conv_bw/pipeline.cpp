@@ -88,7 +88,7 @@ public:
     //hw_output.unroll(xi, 2);
     //Var xo2,xi2;
     //hw_output.split(xi,xo2,xi2,2).unroll(xi2);
-    conv1.unroll(x,2);
+    //conv1.unroll(x,2);
     hw_output.accelerate({clamped}, xi, xo, {});  // define the inputs and the output
     conv1.linebuffer();
 
@@ -107,7 +107,7 @@ public:
     conv1.linebuffer();
     hw_output.tile(x, y, xo, yo, xi, yi, 64-2,64-2).reorder(xi,yi,xo,yo);
     //conv1.unroll(xi,2);
-    hw_output.unroll(xi,2);
+    //hw_output.unroll(xi,2);
 
     hw_output.accelerate({clamped}, xi, xo, {});
 
