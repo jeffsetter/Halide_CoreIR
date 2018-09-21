@@ -16,25 +16,22 @@ using namespace Halide::Tools;
 using namespace CoreIR;
 
 int main(int argc, char **argv) {
-  int stencil_size = 2;
-  Image<uint8_t> in(64, 64, 1);
-  Image<uint8_t> weight(5,5);
+  int stencil_size = 6;
+  Image<uint8_t> input(64, 64, 1);
 
-  Image<uint8_t> out_native(in.width()-stencil_size, in.height()-stencil_size, in.channels());
-  Image<uint8_t> out_hls(in.width()-stencil_size, in.height()-stencil_size, in.channels());
-  Image<uint8_t> out_coreir(in.width(), in.height(), in.channels());
+  Image<uint8_t> out_native(input.width()-stencil_size, input.height()-stencil_size, input.channels());
+  Image<uint8_t> out_hls(input.width()-stencil_size, input.height()-stencil_size, input.channels());
+  Image<uint8_t> out_coreir(input.width(), input.height(), input.channels());
 
-  in = load_image(argv[1]);
+  input = load_image(argv[1]);
 
   printf("start.\n");
 
-  pipeline_native(in, out_native);
+  pipeline_native(input, out_native);
   save_image(out_native, "out.png");
-
   printf("finish running native code\n");
 
-  pipeline_hls(in, out_hls);
-
+  pipeline_hls(input, out_hls);
   printf("finish running HLS code\n");
 
   bool success = true;
@@ -68,14 +65,15 @@ int main(int argc, char **argv) {
   SimulatorState state(m);
 
   state.setValue("self.in_arg_1_0_0", BitVector(16));
+  state.setValue("self.reset", BitVector(1));
   state.resetCircuit();
   state.setClock("self.clk", 0, 1);
 
-  for (int y = 0; y < in.height(); y++) {
-    for (int x = 0; x < in.width(); x++) {
-      for (int c = 0; c < in.channels(); c++) {
+  for (int y = 0; y < input.height(); y++) {
+    for (int x = 0; x < input.width(); x++) {
+      for (int c = 0; c < input.channels(); c++) {
         // set input value
-        state.setValue("self.in_arg_1_0_0", BitVector(16, in(x,y,c)));
+        state.setValue("self.in_arg_1_0_0", BitVector(16, input(x,y,c)));
         // propogate to all wires
         state.exeCombinational();
             

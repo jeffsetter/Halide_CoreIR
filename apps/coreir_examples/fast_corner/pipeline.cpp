@@ -28,7 +28,7 @@ public:
                  ring_win(0,16), seg_win(0, min_seg_len) {
     
     // define the algorithm
-    hw_in(x,y) = input(x,y);
+    hw_in(x,y) = input(x+3,y+3);
     segment(x,y,l) = select(l==0,  hw_in(x  , y-3),
                             l==1,  hw_in(x+1, y-3),
                             l==2,  hw_in(x+2, y-2),
@@ -97,7 +97,7 @@ public:
   void compile_cpu() {
     std::cout << "\ncompiling cpu code..." << std::endl;
 
-    output.tile(x, y, xo, yo, xi, yi, 64-5,64-5);
+    output.tile(x, y, xo, yo, xi, yi, 32,32);
     output.fuse(xo, yo, xo).parallel(xo);
 
     output.vectorize(xi, 8);
@@ -118,7 +118,7 @@ public:
     // level
     hw_output.compute_root();
     //hw_output.tile(x, y, xo, yo, xi, yi, 1920, 1080).reorder(xi, yi, xo, yo);
-    hw_output.tile(x, y, xo, yo, xi, yi, 62,62).reorder(xi, yi, xo, yo);
+    hw_output.tile(x, y, xo, yo, xi, yi, 64-7,64-7).reorder(xi, yi, xo, yo);
     lighter.compute_at(hw_output,xi).unroll(l);
     darker.compute_at(hw_output,xi).unroll(l);
     lighter8.compute_at(hw_output,xi).unroll(l);
@@ -141,7 +141,7 @@ public:
     std::cout << "\ncompiling CoreIR code..." << std::endl;
     hw_in.compute_root();
     hw_output.compute_root();
-    hw_output.tile(x, y, xo, yo, xi, yi, 64-2,64-2).reorder(xi,yi,xo,yo);
+    hw_output.tile(x, y, xo, yo, xi, yi, 64-6,64-6).reorder(xi,yi,xo,yo);
     hw_output.accelerate({hw_in}, xi, xo, {});
     lighter.compute_at(hw_output,xi).unroll(l);
     darker.compute_at(hw_output,xi).unroll(l);

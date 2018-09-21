@@ -1,4 +1,5 @@
 SHELL := /bin/bash
+CXX ?= g++-4.9
 OUTPUT_REDIRECTION ?= &>/dev/null
 
 APP_PATH := $(dir $(realpath $(firstword $(MAKEFILE_LIST))))
