@@ -198,9 +198,9 @@ public:
 
     grad_x.linebuffer().unroll(x);
     grad_y.linebuffer().unroll(x);
-    grad_xx.linebuffer().unroll(x);
-    grad_yy.linebuffer().unroll(x);
-    grad_xy.linebuffer().unroll(x);
+    lxx.linebuffer().unroll(x);
+    lyy.linebuffer().unroll(x);
+    lxy.linebuffer().unroll(x);
     //lgxx.linebuffer().unroll(x);
     //      grad_gx.update(0).unroll(x);
     //lgyy.linebuffer().unroll(x);

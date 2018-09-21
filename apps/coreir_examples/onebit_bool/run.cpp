@@ -19,8 +19,8 @@ int main(int argc, char **argv) {
 	Image<uint8_t> in(10,10 , 1);
 
 	Image<uint8_t> out_native(in.width(), in.height(), in.channels());
-	Image<uint8_t> out_hls(in.width(), in.height(), in.channels());
-	Image<uint8_t> out_coreir(in.width(), in.height());
+	Image<uint16_t> out_hls(in.width(), in.height(), in.channels());
+	Image<uint16_t> out_coreir(in.width(), in.height());
 	in = load_image(argv[1]);
 
 	printf("start.\n");
@@ -61,7 +61,7 @@ int main(int argc, char **argv) {
 				state.exeCombinational();
             
 				// read output wire
-				out_coreir(x,y,c) = state.getBitVec("self.out_0").to_type<bool>();
+				out_coreir(x,y,c) = state.getBitVec("self.out_0_0").to_type<uint16_t>();
 				int xd = 0;	int yd = 0;
 				if (x>=xd && y>=yd && out_native(x-xd, y-yd, c) != out_coreir(x, y, c)) {
 					printf("out_native(%d, %d, %d) = %d, but out_coreir(%d, %d, %d) = %d\n",

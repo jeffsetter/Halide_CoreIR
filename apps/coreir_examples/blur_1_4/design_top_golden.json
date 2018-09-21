@@ -70,7 +70,11 @@
           },
           "lb_p3_clamped_stencil_update_stream":{
             "genref":"commonlib.linebuffer",
-            "genargs":{"has_valid":["Bool",false], "image_type":["CoreIRType",["Array",16,["Array",16,["Array",16,"Bit"]]]], "input_type":["CoreIRType",["Array",1,["Array",1,["Array",16,"BitIn"]]]], "is_last_lb":["Bool",true], "output_type":["CoreIRType",["Array",1,["Array",4,["Array",16,"Bit"]]]]}
+            "genargs":{"has_valid":["Bool",false], "image_type":["CoreIRType",["Array",16,["Array",16,["Array",16,"Bit"]]]], "input_type":["CoreIRType",["Array",1,["Array",1,["Array",16,"BitIn"]]]], "output_type":["CoreIRType",["Array",1,["Array",4,["Array",16,"Bit"]]]]}
+          },
+          "lb_p3_clamped_stencil_update_stream_reset":{
+            "modref":"corebit.const",
+            "modargs":{"value":["Bool",false]}
           },
           "lb_p3_clamped_stencil_update_stream_wen":{
             "modref":"corebit.const",
@@ -125,6 +129,7 @@
           ["mul_3805_381.in0","lb_p3_clamped_stencil_update_stream.out.0.1"],
           ["mul_3855_386.in0","lb_p3_clamped_stencil_update_stream.out.0.2"],
           ["mul_3903_391.in0","lb_p3_clamped_stencil_update_stream.out.0.3"],
+          ["lb_p3_clamped_stencil_update_stream_reset.out","lb_p3_clamped_stencil_update_stream.reset"],
           ["lb_p3_clamped_stencil_update_stream_wen.out","lb_p3_clamped_stencil_update_stream.wen"],
           ["self.out.0.0","mux_3949_396.out"],
           ["slt159_393_394.out","mux_3949_396.sel"]

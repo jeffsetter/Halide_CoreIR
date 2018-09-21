@@ -29,6 +29,7 @@ public:
     modified(x,y) = select(logic(x,y), logic(x,y), big(x,y));
     modified16(x,y) = select(modified(x,y), cast<uint8_t>(1), 0);
 
+    //hw_output(x,y) = cast<uint16_t>(modified16(x,y));
     hw_output(x,y) = modified16(x,y);
     output(x, y) = hw_output(x, y);
 
@@ -73,7 +74,7 @@ public:
   ImageParam input;
   Func clamped;
   Func logic, threshold, ceiling, big;
-  Func modified, output;
+  Func modified, modified16, output;
   Func hw_output;
   std::vector<Argument> args;
 
@@ -88,8 +89,8 @@ public:
     big(x,y) = clamped(x,y) >= 50;
     logic(x,y) = !((threshold(x,y) & ceiling(x,y)) | (big(x,y) ^ ceiling(x,y)));
     modified(x,y) = select(logic(x,y), logic(x,y), big(x,y));
-
-    hw_output(x,y) = modified(x,y);
+    modified16(x,y) = cast<uint16_t>(select(modified(x,y), 1, 0));
+    hw_output(x,y) = modified16(x,y);
     output(x, y) = hw_output(x, y);
 
     args.push_back(input);

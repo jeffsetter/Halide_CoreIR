@@ -1,0 +1,85 @@
+{"top":"global.DesignTop",
+"namespaces":{
+  "global":{
+    "modules":{
+      "DesignTop":{
+        "type":["Record",[
+          ["in",["Record",[["arg_3",["Array",1,["Array",1,["Array",16,"BitIn"]]]]]]],
+          ["out",["Array",1,["Array",1,["Array",16,"Bit"]]]]
+        ]],
+        "instances":{
+          "add_337_hw_output_2_y___scan_dim_1_354":{
+            "genref":"coreir.add",
+            "genargs":{"width":["Int",16]}
+          },
+          "add_344_hw_output_2_x___scan_dim_0_351":{
+            "genref":"coreir.add",
+            "genargs":{"width":["Int",16]}
+          },
+          "add_351_352_353":{
+            "genref":"coreir.add",
+            "genargs":{"width":["Int",16]}
+          },
+          "add_353_355_356":{
+            "genref":"coreir.add",
+            "genargs":{"width":["Int",16]}
+          },
+          "add_354_352_355":{
+            "genref":"coreir.add",
+            "genargs":{"width":["Int",16]}
+          },
+          "count__hw_output_2_x___scan_dim_0":{
+            "genref":"commonlib.counter",
+            "genargs":{"inc":["Int",1], "max":["Int",63], "min":["Int",0], "width":["Int",16]}
+          },
+          "count__hw_output_2_x___scan_dim_0_reset":{
+            "modref":"corebit.const",
+            "modargs":{"value":["Bool",false]}
+          },
+          "count__hw_output_2_x___scan_dim_0_wen":{
+            "modref":"corebit.const",
+            "modargs":{"value":["Bool",true]}
+          },
+          "count__hw_output_2_y___scan_dim_1":{
+            "genref":"commonlib.counter",
+            "genargs":{"inc":["Int",1], "max":["Int",63], "min":["Int",0], "width":["Int",16]}
+          },
+          "count__hw_output_2_y___scan_dim_1_reset":{
+            "modref":"corebit.const",
+            "modargs":{"value":["Bool",false]}
+          },
+          "tap_337":{
+            "genref":"coreir.const",
+            "genargs":{"width":["Int",16]},
+            "modargs":{"value":[["BitVector",16],"16'h0000"]},
+            "metadata":{"tap":"This constant is expected to be changed as a tap value."}
+          },
+          "tap_344":{
+            "genref":"coreir.const",
+            "genargs":{"width":["Int",16]},
+            "modargs":{"value":[["BitVector",16],"16'h0000"]},
+            "metadata":{"tap":"This constant is expected to be changed as a tap value."}
+          }
+        },
+        "connections":[
+          ["tap_337.out","add_337_hw_output_2_y___scan_dim_1_354.in0"],
+          ["count__hw_output_2_y___scan_dim_1.out","add_337_hw_output_2_y___scan_dim_1_354.in1"],
+          ["add_354_352_355.in0","add_337_hw_output_2_y___scan_dim_1_354.out"],
+          ["tap_344.out","add_344_hw_output_2_x___scan_dim_0_351.in0"],
+          ["count__hw_output_2_x___scan_dim_0.out","add_344_hw_output_2_x___scan_dim_0_351.in1"],
+          ["add_351_352_353.in0","add_344_hw_output_2_x___scan_dim_0_351.out"],
+          ["self.in.arg_3.0.0","add_351_352_353.in1"],
+          ["add_353_355_356.in0","add_351_352_353.out"],
+          ["add_354_352_355.out","add_353_355_356.in1"],
+          ["self.out.0.0","add_353_355_356.out"],
+          ["self.in.arg_3.0.0","add_354_352_355.in1"],
+          ["count__hw_output_2_x___scan_dim_0_wen.out","count__hw_output_2_x___scan_dim_0.en"],
+          ["count__hw_output_2_y___scan_dim_1.en","count__hw_output_2_x___scan_dim_0.overflow"],
+          ["count__hw_output_2_x___scan_dim_0_reset.out","count__hw_output_2_x___scan_dim_0.reset"],
+          ["count__hw_output_2_y___scan_dim_1_reset.out","count__hw_output_2_y___scan_dim_1.reset"]
+        ]
+      }
+    }
+  }
+}
+}
