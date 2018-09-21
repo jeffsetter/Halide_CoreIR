@@ -106,7 +106,7 @@ int main(int argc, char **argv) {
   pipeline_native(in, out_native);
   save_image(out_native, "out.png");
   save_image(out_native, "out.pgm");
-  exit(0);
+
   printf("finished running native code\n");
 
   pipeline_hls(in, out_hls);

@@ -42,7 +42,9 @@ run: run.cpp pipeline_hls.cpp pipeline_native.o hls_target.cpp
 	$(CXX) $(CXXFLAGS) -O1 -DNDEBUG $(HLS_CXXFLAGS) -g -Wall -Werror $^ -lpthread -ldl $(LIB_HALIDE) -o $@ $(PNGFLAGS) $(LDFLAGS)
 
 out.png: run input.png design_top.json
-	./run input.png
+	./run input.png quick
+out_coreir.png: run input.png design_top.json
+	./run input.png all
 
 
 # Use graphviz to create graph of processing nodes.
@@ -79,7 +81,7 @@ test:
 
 # Run design on cpu and coreir interpreter, and print if it passes/fails.
 testrun:
-		@-$(MAKE) out.png $(OUTPUT_REDIRECTION); \
+		@-$(MAKE) out_coreir.png $(OUTPUT_REDIRECTION); \
 		EXIT_CODE=$$?; \
 		if [[ $$EXIT_CODE = "0" && -f "out.png" ]]; then \
 			printf "%-15s \033[1;33m%s\033[0m\n" $(APPNAME) "PASSED, but needs golden updated"; \
@@ -89,7 +91,7 @@ testrun:
 
 # Update golden file, run design, and store result in md5 filename.
 updategolden update_golden passed.md5 failed.md5:
-	@$(MAKE) out.png; \
+	@$(MAKE) out_coreir.png; \
 	EXIT_CODE=$$?; \
 	if [[ $$EXIT_CODE = "0" && -f "out.png" ]]; then \
 		rm -f failed.md5; \

@@ -29,9 +29,12 @@ int main(int argc, char **argv) {
   printf("start.\n");
   
   pipeline_native(in, out_native);
-  save_image(out_native, "out.png");
-  
+  save_image(out_native, "out.png");  
   printf("finish running native code\n");
+  if (strcmp(argv[2], "quick") == 0) {
+    exit(0);
+  }
+
   
   /*pipeline_hls(in, 0, out_hls);
   

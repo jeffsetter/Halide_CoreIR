@@ -590,7 +590,6 @@ void CodeGen_CoreIR_Target::CodeGen_CoreIR_C::add_kernel(Stmt stmt,
           CoreIR::Values mod_args = {{"value",CoreIR::Const::make(context,(bool)const_value)}};
           const_inst = def->addInstance(tap_name, gens["bitconst"], mod_args);
         } else {
-          // FIXME: use proper bitwidth
           int bw = inst_bitwidth(const_bitwidth);
           CoreIR::Values gen_args = {{"width", CoreIR::Const::make(context,bw)}};
           CoreIR::Values mod_args = {{"value",CoreIR::Const::make(context,BitVector(bw,const_value))}};
@@ -848,7 +847,7 @@ void CodeGen_CoreIR_Target::CodeGen_CoreIR_C::add_wire(string out_name, CoreIR::
       // use the found passthrough
       if (pt_struct->was_written && pt_struct->was_read) {
         // create a new passthrough, since this one is already connected
-        string pt_name = unique_name("pt" + out_name);
+        string pt_name = "pt" + out_name + "_" + unique_name('p');
         CoreIR::Type* ptype = pt_struct->ptype;
         stream << "// created passthrough with name " << pt_name << endl;
 
@@ -1534,7 +1533,6 @@ void CodeGen_CoreIR_Target::CodeGen_CoreIR_C::visit(const For *op) {
   }
 
   // pass down linebuffer
-  // FIXME: do this a better way
   if (lb_kernel_map.count(op->name) && contain_for_loop(op->body)) {
     string varname = name_for_loop(op->body);
     lb_kernel_map[varname] = lb_kernel_map[op->name];
@@ -1553,7 +1551,6 @@ void CodeGen_CoreIR_Target::CodeGen_CoreIR_C::visit(const For *op) {
     int inc_value = 1;
     string counter_name = "count_" + wirename;
 
-    // FIXME: use proper bitwidth
     CoreIR::Values args = {{"width",CoreIR::Const::make(context,bitwidth)},
                            {"min",CoreIR::Const::make(context,min_value)},
                            {"max",CoreIR::Const::make(context,max_value)},
@@ -1581,7 +1578,6 @@ void CodeGen_CoreIR_Target::CodeGen_CoreIR_C::visit(const For *op) {
       close_scope("for " + print_name(op->name));
       
       // connect inner for loop overflow to wen
-      //  FIXME: assumes inner counter is used and created
       CoreIR::Select* inner_for_loop = static_cast<CoreIR::Select*>(get_wire(varname, Expr()));
       CoreIR::Wireable* inner_overflow = inner_for_loop->getParent()->sel("overflow");
       def->connect(inner_overflow, counter_inst->sel("en"));
@@ -2084,7 +2080,7 @@ void CodeGen_CoreIR_Target::CodeGen_CoreIR_C::visit(const Call *op) {
         ptype = context->Bit()->Arr(bitwidth);
       }
 
-      string pt_name = unique_name("pt" + out_var);
+      string pt_name = "pt" + out_var + "_" + unique_name('p');
       stream << "// created passthrough with name " << pt_name << endl;
 
       CoreIR::Wireable* pt = def->addInstance(pt_name, gens["passthrough"], {{"type",CoreIR::Const::make(context,ptype)}});
@@ -2424,8 +2420,8 @@ void CodeGen_CoreIR_Target::CodeGen_CoreIR_C::visit(const Realize *op) {
     }
 
     // create coreir instance
-    stream << "// created a passthrough for " << print_name(op->name) << endl;
-    string pt_name = unique_name("pt" + print_name(op->name));
+    string pt_name = "pt" + print_name(op->name)+ "_" + unique_name('p');
+    stream << "// created a passthrough for " << pt_name << endl;
     CoreIR::Wireable* pt = def->addInstance(pt_name, gens["passthrough"], {{"type",CoreIR::Const::make(context,ptype)}});
 
     // store passthrough in storage in case variable reused multiple times
