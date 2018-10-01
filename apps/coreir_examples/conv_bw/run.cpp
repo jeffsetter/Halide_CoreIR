@@ -86,7 +86,7 @@ int main(int argc, char **argv) {
     }
 
     c->runPasses({"rungenerators", "wireclocks-coreir"});
-		c->runPasses({"verifyconnectivity -onlyinputs"},{"global","commonlib","memory","mantle"});
+		c->runPasses({"verifyconnectivity --onlyinputs"},{"global","commonlib","memory","mantle"});
     c->runPasses({"flattentypes", "flatten"});
 
     if (!saveToFile(g,"design_flattened.json")) {

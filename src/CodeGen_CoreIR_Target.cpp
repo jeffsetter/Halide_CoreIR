@@ -152,7 +152,7 @@ CodeGen_CoreIR_Target::CodeGen_CoreIR_C::~CodeGen_CoreIR_C() {
 
     //context->runPasses({"rungenerators", "removewires"});
 		context->runPasses({"rungenerators","flatten","removewires"});
-		context->runPasses({"verifyconnectivity -onlyinputs -noclkrst"},{"global","commonlib","memory","mantle"});
+		context->runPasses({"verifyconnectivity --onlyinputs --noclkrst"},{"global","commonlib","memory","mantle"});
 		//context->runPasses({"rungenerators", "flattentypes", "flatten", "wireclocks-coreir"});
 
     cout << "Validating json" << endl;
