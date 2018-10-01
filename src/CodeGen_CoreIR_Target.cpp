@@ -138,7 +138,7 @@ CodeGen_CoreIR_Target::CodeGen_CoreIR_C::~CodeGen_CoreIR_C() {
     }
 
 
-    context->runPasses({"rungenerators","removepassthroughs"});
+    context->runPasses({"rungenerators","removewires"});
     //context->runPasses({"rungenerators"});
     if (!saveToFile(global_ns, "design_top.json", design)) {
       cout << RED << "Could not save to json!!" << RESET << endl;
@@ -150,9 +150,9 @@ CodeGen_CoreIR_Target::CodeGen_CoreIR_C::~CodeGen_CoreIR_C() {
       context->die();
     }
 
-    //context->runPasses({"rungenerators", "removepassthroughs"});
-		context->runPasses({"rungenerators","flatten","removepassthroughs"});
-		context->runPasses({"verifyconnectivity-onlyinputs-noclkrst"},{"global","commonlib","memory","mantle"});
+    //context->runPasses({"rungenerators", "removewires"});
+		context->runPasses({"rungenerators","flatten","removewires"});
+		context->runPasses({"verifyconnectivity -onlyinputs -noclkrst"},{"global","commonlib","memory","mantle"});
 		//context->runPasses({"rungenerators", "flattentypes", "flatten", "wireclocks-coreir"});
 
     cout << "Validating json" << endl;
@@ -183,7 +183,7 @@ CodeGen_CoreIR_Target::CodeGen_CoreIR_C::~CodeGen_CoreIR_C() {
       context->die();
     }
 
-		context->runPasses({"removepassthroughs"});
+		context->runPasses({"removewires"});
 //    if (!saveToDot(mod2, "design_top.txt")) {
 //      cout << RED << "Could not save to dot file :(" << RESET << endl;
 //      context->die();

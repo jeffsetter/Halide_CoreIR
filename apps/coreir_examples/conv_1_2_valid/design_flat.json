@@ -144,10 +144,10 @@
             "modref":"corebit.const",
             "modargs":{"value":["Bool",false]}
           },
-          "lb_p4_clamped_stencil_update_stream$valid_andr$join":{
+          "lb_p4_clamped_stencil_update_stream$valid_andr$_join":{
             "modref":"corebit.and"
           },
-          "lb_p4_clamped_stencil_update_stream$valid_andr$opN_0$join":{
+          "lb_p4_clamped_stencil_update_stream$valid_andr$opN_0$_join":{
             "modref":"corebit.and"
           },
           "lb_p4_clamped_stencil_update_stream_wen":{
@@ -177,9 +177,9 @@
           ["self.in_arg_1_0_0","lb_p4_clamped_stencil_update_stream$lb1d_0$reg_1.in"],
           ["mul_325_326_327.in0","lb_p4_clamped_stencil_update_stream$lb1d_0$reg_1.out"],
           ["lb_p4_clamped_stencil_update_stream$valcounter_0$count$reg0.out","lb_p4_clamped_stencil_update_stream$valcompare_0.in1"],
-          ["lb_p4_clamped_stencil_update_stream$valid_andr$opN_0$join.in1","lb_p4_clamped_stencil_update_stream$valcompare_0.out"],
+          ["lb_p4_clamped_stencil_update_stream$valid_andr$opN_0$_join.in1","lb_p4_clamped_stencil_update_stream$valcompare_0.out"],
           ["lb_p4_clamped_stencil_update_stream$valcounter_1$count$reg0.out","lb_p4_clamped_stencil_update_stream$valcompare_1.in1"],
-          ["lb_p4_clamped_stencil_update_stream$valid_andr$join.in1","lb_p4_clamped_stencil_update_stream$valcompare_1.out"],
+          ["lb_p4_clamped_stencil_update_stream$valid_andr$_join.in1","lb_p4_clamped_stencil_update_stream$valcompare_1.out"],
           ["lb_p4_clamped_stencil_update_stream$valcounter_0$count$reg0.out","lb_p4_clamped_stencil_update_stream$valcounter_0$add.in0"],
           ["lb_p4_clamped_stencil_update_stream$valcounter_0$inc.out","lb_p4_clamped_stencil_update_stream$valcounter_0$add.in1"],
           ["lb_p4_clamped_stencil_update_stream$valcounter_0$count$clrMux.in0","lb_p4_clamped_stencil_update_stream$valcounter_0$add.out"],
@@ -208,9 +208,9 @@
           ["lb_p4_clamped_stencil_update_stream$valcounter_1$ult.in0","lb_p4_clamped_stencil_update_stream$valcounter_1$max.out"],
           ["lb_p4_clamped_stencil_update_stream$valcounter_1$ult.out","lb_p4_clamped_stencil_update_stream$valcounter_1$resetOr.in0.0"],
           ["lb_p4_clamped_stencil_update_stream$valcounter_1_reset.out","lb_p4_clamped_stencil_update_stream$valcounter_1$resetOr.in1.0"],
-          ["lb_p4_clamped_stencil_update_stream$valid_andr$opN_0$join.out","lb_p4_clamped_stencil_update_stream$valid_andr$join.in0"],
-          ["self.valid","lb_p4_clamped_stencil_update_stream$valid_andr$join.out"],
-          ["lb_p4_clamped_stencil_update_stream_wen.out","lb_p4_clamped_stencil_update_stream$valid_andr$opN_0$join.in0"],
+          ["lb_p4_clamped_stencil_update_stream$valid_andr$opN_0$_join.out","lb_p4_clamped_stencil_update_stream$valid_andr$_join.in0"],
+          ["self.valid","lb_p4_clamped_stencil_update_stream$valid_andr$_join.out"],
+          ["lb_p4_clamped_stencil_update_stream_wen.out","lb_p4_clamped_stencil_update_stream$valid_andr$opN_0$_join.in0"],
           ["self.in_arg_1_0_0","mul_331_332_333.in0"]
         ]
       }
