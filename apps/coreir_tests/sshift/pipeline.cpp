@@ -10,19 +10,20 @@ class MyPipeline {
 public:
 	ImageParam in;
 	Func hw_input;
-	Func shiftr, shiftl;
+	Func negatives, shiftr, shiftl;
 	Func output, hw_output;
 	std::vector<Argument> args;
 
 	MyPipeline()
-		: in(UInt(8), 2),
+		: in(Int(8), 2),
 			output("output"), hw_output("hw_output")
     {
 			// Pointwise operations
-			hw_input(x,y) = cast<uint16_t>( in(x,y) );
+			hw_input(x,y) = cast<int16_t>( in(x,y) );
+      negatives(x,y) = hw_input(x,y) - 100;
 
-			shiftr(x,y) = hw_input(x,y) >> 4;
-			shiftl(x,y) = hw_input(x,y) << 3;
+			shiftr(x,y) = negatives(x,y) >> 12;
+			shiftl(x,y) = negatives(x,y) << 12;
 
 			hw_output(x, y) = shiftr(x,y) + shiftl(x,y);
 			output(x, y) = hw_output(x, y);

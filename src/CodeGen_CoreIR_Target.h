@@ -33,8 +33,9 @@ namespace Halide {
       std::string wirename;
       std::string selname;
 
-    CoreIR_Inst_Args(std::string name, std::string wirename, std::string selname,
-                     std::string gen, CoreIR::Values args, CoreIR::Values genargs) :
+      CoreIR_Inst_Args() {}
+     CoreIR_Inst_Args(std::string name, std::string wirename, std::string selname,
+                      std::string gen, CoreIR::Values args, CoreIR::Values genargs) :
       name(name), gen(gen), args(args), genargs(genargs), wirename(wirename), selname(selname) {}
 
     };
@@ -106,9 +107,10 @@ namespace Halide {
 
         // keep track for valid network
 				std::map<std::string, std::vector<std::string> > hw_dispatch_set;
-        std::map<std::string, CoreIR::Wireable*> lb_valid_map;
+        std::map<std::string, CoreIR::Wireable*> lb_map;          // lb name to lb wire
+        std::map<std::string, CoreIR::Wireable*> lb_kernel_map;   // element in kernel to lb wire
         void record_dispatch(std::string producer_name, std::string consumer_name);
-        void record_linebuffer_valid(std::string producer_name, CoreIR::Wireable* wire);
+        void record_linebuffer(std::string producer_name, CoreIR::Wireable* wire);
         bool connect_linebuffer(std::string consumer_name, CoreIR::Wireable* consumer_wen_wire);
 
         // coreir methods to wire things together
@@ -147,15 +149,15 @@ namespace Halide {
         void visit_ternop(Type t, Expr a, Expr b, Expr c, const char*  op_sym1, const char* op_sym2, std::string op_name);
         void visit(const Select *op);
 
-        void visit(const For *op);        // create counter with loop
-        void visit(const Realize *op);    // create reusable variable, create passthrough for indirection, 
-        void visit(const Call *op);       // bitwise, streams, etc
-        void visit(const Allocate *op);   // allocate an array (unused so far)
-        void visit(const Provide *op);    // stencil store including init values
-        void visit(const IfThenElse *op); // wire up enable,reset for conditional
-        void visit(const Store *op);      // load a single index from an array
-        void visit(const Load *op);       // load from array; variable load -> mux
-
+        void visit(const For *op);               // create counter with loop
+        void visit(const Realize *op);           // create reusable variable, create passthrough for indirection, 
+        void visit(const Call *op);              // bitwise, streams, etc
+        void visit(const Allocate *op);          // allocate an array (unused so far)
+        void visit(const Provide *op);           // stencil store including init values
+        void visit(const IfThenElse *op);        // wire up enable,reset for conditional
+        void visit(const Store *op);             // load a single index from an array
+        void visit(const Load *op);              // load from array; variable load -> mux
+        void visit(const ProducerConsumer *op);  
 
         // analysis functions of Halide IR
         std::vector<const Variable*> find_dep_vars(Expr e);

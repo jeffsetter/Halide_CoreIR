@@ -5,70 +5,87 @@
       "DesignTop":{
         "type":["Record",[
           ["in",["Record",[["arg_1",["Array",1,["Array",1,["Array",16,"BitIn"]]]]]]],
-          ["out",["Array",1,["Array",1,"Bit"]]]
+          ["out",["Array",1,["Array",1,["Array",16,"Bit"]]]]
         ]],
         "instances":{
-          "bitand_330_328_331":{
+          "bitand_332_330_333":{
             "modref":"corebit.and"
           },
-          "bitmux_334_334_326":{
+          "bitmux_336_336_328":{
             "modref":"corebit.mux"
           },
-          "bitnot_333":{
+          "bitnot_335":{
             "modref":"corebit.not"
           },
-          "bitor_331_332_333":{
+          "bitor_333_334_335":{
             "modref":"corebit.or"
           },
-          "bitxor_326_328_332":{
+          "bitxor_328_330_334":{
             "modref":"corebit.xor"
           },
-          "const10__329":{
+          "const0_0":{
+            "genref":"coreir.const",
+            "genargs":{"width":["Int",16]},
+            "modargs":{"value":[["BitVector",16],"16'h0000"]}
+          },
+          "const10__331":{
             "genref":"coreir.const",
             "genargs":{"width":["Int",16]},
             "modargs":{"value":[["BitVector",16],"16'h000a"]}
           },
-          "const20__327":{
+          "const1_1":{
+            "genref":"coreir.const",
+            "genargs":{"width":["Int",16]},
+            "modargs":{"value":[["BitVector",16],"16'h0001"]}
+          },
+          "const20__329":{
             "genref":"coreir.const",
             "genargs":{"width":["Int",16]},
             "modargs":{"value":[["BitVector",16],"16'h0014"]}
           },
-          "const50__325":{
+          "const50__327":{
             "genref":"coreir.const",
             "genargs":{"width":["Int",16]},
             "modargs":{"value":[["BitVector",16],"16'h0032"]}
           },
-          "ule_325_324_326":{
+          "mux_33710":{
+            "genref":"coreir.mux",
+            "genargs":{"width":["Int",16]}
+          },
+          "ule_327_326_328":{
             "genref":"coreir.ule",
             "genargs":{"width":["Int",16]}
           },
-          "ult_324_327_328":{
+          "ult_326_329_330":{
             "genref":"coreir.ult",
             "genargs":{"width":["Int",16]}
           },
-          "ult_329_324_330":{
+          "ult_331_326_332":{
             "genref":"coreir.ult",
             "genargs":{"width":["Int",16]}
           }
         },
         "connections":[
-          ["ult_329_324_330.out","bitand_330_328_331.in0"],
-          ["ult_324_327_328.out","bitand_330_328_331.in1"],
-          ["bitor_331_332_333.in0","bitand_330_328_331.out"],
-          ["ule_325_324_326.out","bitmux_334_334_326.in0"],
-          ["bitnot_333.out","bitmux_334_334_326.in1"],
-          ["self.out.0.0","bitmux_334_334_326.out"],
-          ["bitnot_333.out","bitmux_334_334_326.sel"],
-          ["bitor_331_332_333.out","bitnot_333.in"],
-          ["bitxor_326_328_332.out","bitor_331_332_333.in1"],
-          ["ule_325_324_326.out","bitxor_326_328_332.in0"],
-          ["ult_324_327_328.out","bitxor_326_328_332.in1"],
-          ["ult_329_324_330.in0","const10__329.out"],
-          ["ult_324_327_328.in1","const20__327.out"],
-          ["ule_325_324_326.in0","const50__325.out"],
-          ["ule_325_324_326.in1","self.in.arg_1.0.0"],
-          ["ult_324_327_328.in0","self.in.arg_1.0.0"],
-          ["ult_329_324_330.in1","self.in.arg_1.0.0"]
+          ["ult_331_326_332.out","bitand_332_330_333.in0"],
+          ["ult_326_329_330.out","bitand_332_330_333.in1"],
+          ["bitor_333_334_335.in0","bitand_332_330_333.out"],
+          ["ule_327_326_328.out","bitmux_336_336_328.in0"],
+          ["bitnot_335.out","bitmux_336_336_328.in1"],
+          ["mux_33710.sel","bitmux_336_336_328.out"],
+          ["bitnot_335.out","bitmux_336_336_328.sel"],
+          ["bitor_333_334_335.out","bitnot_335.in"],
+          ["bitxor_328_330_334.out","bitor_333_334_335.in1"],
+          ["ule_327_326_328.out","bitxor_328_330_334.in0"],
+          ["ult_326_329_330.out","bitxor_328_330_334.in1"],
+          ["mux_33710.in0","const0_0.out"],
+          ["ult_331_326_332.in0","const10__331.out"],
+          ["mux_33710.in1","const1_1.out"],
+          ["ult_326_329_330.in1","const20__329.out"],
+          ["ule_327_326_328.in0","const50__327.out"],
+          ["self.out.0.0","mux_33710.out"],
+          ["ule_327_326_328.in1","self.in.arg_1.0.0"],
+          ["ult_326_329_330.in0","self.in.arg_1.0.0"],
+          ["ult_331_326_332.in1","self.in.arg_1.0.0"]
         ]
       }
     }

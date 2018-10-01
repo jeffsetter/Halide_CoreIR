@@ -93,6 +93,7 @@ int main(int argc, char **argv) {
   SimulatorState state(m);
 
   state.setValue("self.in_arg_1_0_0", BitVector(16));
+  state.setValue("self.reset", BitVector(1));
   state.resetCircuit();
   state.setClock("self.clk", 0, 1);
 
