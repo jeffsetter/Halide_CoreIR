@@ -52,44 +52,6 @@ int main(int argc, char **argv) {
         }
       }
     }
-<<<<<<< HEAD
-
-    // New context for coreir test
-    Context* c = newContext();
-    Namespace* g = c->getGlobal();
-
-    CoreIRLoadLibrary_commonlib(c);
-    if (!loadFromFile(c,"./design_prepass.json")) {
-      std::cout << "Could not Load from json!!" << std::endl;
-      c->die();
-    }
-
-    c->runPasses({"rungenerators", "wireclocks-coreir"});
-		c->runPasses({"verifyconnectivity --onlyinputs"},{"global","commonlib","memory","mantle"});
-    c->runPasses({"flattentypes", "flatten"});
-
-    if (!saveToFile(g,"design_flattened.json")) {
-      std::cout << "Could not save to json!!" << std::endl;
-      c->die();
-    }
-
-
-    Module* m = g->getModule("DesignTop");
-    assert(m != nullptr);
-    SimulatorState state(m);
-
-    state.setValue("self.in_arg_1_0_0", BitVector(16));
-    state.resetCircuit();
-    state.setClock("self.clk", 0, 1);
-
-    for (int y = 0; y < in.height(); y++) {
-      for (int x = 0; x < in.width(); x++) {
-        for (int c = 0; c < in.channels(); c++) {
-          // set input value
-          state.setValue("self.in_arg_1_0_0", BitVector(16, in(x,y,c)));
-          // propogate to all wires
-          state.exeCombinational();
-=======
   }
 
   // New context for coreir test
@@ -119,7 +81,6 @@ int main(int argc, char **argv) {
         state.setValue("self.in_arg_1_0_0", BitVector(16, in(x,y,c)));
         // propogate to all wires
         state.exeCombinational();
->>>>>>> master
             
         // read output wire
         out_coreir(x,y,c) = state.getBitVec("self.out_0_0").to_type<uint16_t>();
