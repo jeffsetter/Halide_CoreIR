@@ -44,6 +44,9 @@
             "genargs":{"width":["Int",16]},
             "modargs":{"clk_posedge":["Bool",true], "init":[["BitVector",16],"16'hxxxx"]}
           },
+          "lb_p4_clamped_stencil_update_stream$lb_recurse$lb1d_0$reset_term":{
+            "modref":"corebit.term"
+          },
           "lb_p4_clamped_stencil_update_stream$lb_recurse$valcompare_0":{
             "genref":"coreir.ule",
             "genargs":{"width":["Int",16]}
@@ -115,6 +118,7 @@
           ["self.clk","lb_p4_clamped_stencil_update_stream$lb_recurse$lb1d_0$reg_1.clk"],
           ["self.in_arg_1_0_0","lb_p4_clamped_stencil_update_stream$lb_recurse$lb1d_0$reg_1.in"],
           ["mul_325_326_327.in0","lb_p4_clamped_stencil_update_stream$lb_recurse$lb1d_0$reg_1.out"],
+          ["self.reset","lb_p4_clamped_stencil_update_stream$lb_recurse$lb1d_0$reset_term.in"],
           ["lb_p4_clamped_stencil_update_stream$lb_recurse$valcounter_0$count$reg0.out","lb_p4_clamped_stencil_update_stream$lb_recurse$valcompare_0.in1"],
           ["lb_p4_clamped_stencil_update_stream$lb_recurse$valid_andr$_join.in1","lb_p4_clamped_stencil_update_stream$lb_recurse$valcompare_0.out"],
           ["lb_p4_clamped_stencil_update_stream$lb_recurse$valcounter_0$count$reg0.out","lb_p4_clamped_stencil_update_stream$lb_recurse$valcounter_0$add.in0"],
