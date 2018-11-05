@@ -332,10 +332,6 @@
             "genref":"coreir.add",
             "genargs":{"width":["Int",16]}
           },
-          "ashr_1104_1439_1440":{
-            "genref":"coreir.ashr",
-            "genargs":{"width":["Int",16]}
-          },
           "const0__1103":{
             "genref":"coreir.const",
             "genargs":{"width":["Int",16]},
@@ -733,11 +729,19 @@
           },
           "lb_p3_in_bounded_stencil_update_stream":{
             "genref":"commonlib.linebuffer",
-            "genargs":{"has_valid":["Bool",false], "image_type":["CoreIRType",["Array",648,["Array",488,["Array",16,"Bit"]]]], "input_type":["CoreIRType",["Array",1,["Array",1,["Array",16,"BitIn"]]]], "is_last_lb":["Bool",true], "output_type":["CoreIRType",["Array",9,["Array",9,["Array",16,"Bit"]]]]}
+            "genargs":{"has_valid":["Bool",false], "image_type":["CoreIRType",["Array",648,["Array",488,["Array",16,"Bit"]]]], "input_type":["CoreIRType",["Array",1,["Array",1,["Array",16,"BitIn"]]]], "output_type":["CoreIRType",["Array",9,["Array",9,["Array",16,"Bit"]]]]}
+          },
+          "lb_p3_in_bounded_stencil_update_stream_reset":{
+            "modref":"corebit.const",
+            "modargs":{"value":["Bool",false]}
           },
           "lb_p3_in_bounded_stencil_update_stream_wen":{
             "modref":"corebit.const",
             "modargs":{"value":["Bool",true]}
+          },
+          "lshr_1104_1439_1440":{
+            "genref":"coreir.lshr",
+            "genargs":{"width":["Int",16]}
           },
           "mul_1109_1110_1111":{
             "genref":"coreir.mul",
@@ -1211,9 +1215,7 @@
           ["mul_1433_1110_1434.out","add_1104_1434_1435.in1"],
           ["add_1104_1437_1438.in0","add_1104_1434_1435.out"],
           ["lb_p3_in_bounded_stencil_update_stream.out.8.8","add_1104_1437_1438.in1"],
-          ["ashr_1104_1439_1440.in0","add_1104_1437_1438.out"],
-          ["const16__1439.out","ashr_1104_1439_1440.in1"],
-          ["self.out.0.0","ashr_1104_1439_1440.out"],
+          ["lshr_1104_1439_1440.in0","add_1104_1437_1438.out"],
           ["mul_1207_1198_1208.in1","const1458__1198$1.out"],
           ["mul_1231_1198_1232.in1","const1458__1198$2.out"],
           ["mul_1249_1198_1250.in1","const1458__1198$3.out"],
@@ -1222,6 +1224,7 @@
           ["mul_1346_1198_1347.in1","const1458__1198$6.out"],
           ["mul_1354_1198_1355.in1","const1458__1198$7.out"],
           ["mul_1197_1198_1199.in1","const1458__1198.out"],
+          ["lshr_1104_1439_1440.in1","const16__1439.out"],
           ["mul_1269_1203_1270.in1","const1809__1203$1.out"],
           ["mul_1286_1203_1287.in1","const1809__1203$2.out"],
           ["mul_1350_1203_1351.in1","const1809__1203$3.out"],
@@ -1369,7 +1372,9 @@
           ["mul_1425_1120_1426.in0","lb_p3_in_bounded_stencil_update_stream.out.8.5"],
           ["mul_1429_1115_1430.in0","lb_p3_in_bounded_stencil_update_stream.out.8.6"],
           ["mul_1433_1110_1434.in0","lb_p3_in_bounded_stencil_update_stream.out.8.7"],
-          ["lb_p3_in_bounded_stencil_update_stream_wen.out","lb_p3_in_bounded_stencil_update_stream.wen"]
+          ["lb_p3_in_bounded_stencil_update_stream_reset.out","lb_p3_in_bounded_stencil_update_stream.reset"],
+          ["lb_p3_in_bounded_stencil_update_stream_wen.out","lb_p3_in_bounded_stencil_update_stream.wen"],
+          ["self.out.0.0","lshr_1104_1439_1440.out"]
         ]
       }
     }
